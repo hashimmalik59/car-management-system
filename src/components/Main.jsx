@@ -7,7 +7,6 @@ const Main = ({ customer, setCustomer }) => {
   const [editingCustomer, setEditingCustomer] = useState(null);
 
   function handleCustomer(newCustomer) {
-    // CRITICAL: Ensure numbers are actually numbers before saving
     const sanitizedCustomer = {
       ...newCustomer,
       totalAmount: Number(newCustomer.totalAmount) || 0,
@@ -41,7 +40,6 @@ const Main = ({ customer, setCustomer }) => {
     setEditingCustomer({ ...target });
   };
 
-  // Filtered list calculation
   const filteredCustomers = customer.filter((item) => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -53,15 +51,25 @@ const Main = ({ customer, setCustomer }) => {
   });
 
   return (
-    <main className="flex p-5 gap-10">
-      <Form onAddCustomer={handleCustomer} editingData={editingCustomer} />
-      <Data
-        customerData={filteredCustomers}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        onDelete={handleDelete}
-        onEdit={handleEdit}
-      />
+    /* CHANGE: 'flex-col' for mobile (stacking) 
+       'lg:flex-row' for desktop (side-by-side)
+    */
+    <main className="flex flex-col lg:flex-row p-4 md:p-8 gap-6 lg:gap-10 bg-gray-50 min-h-screen">
+      {/* Form Container: Mobile par full width, Desktop par thora chota */}
+      <div className="w-full lg:w-1/3">
+        <Form onAddCustomer={handleCustomer} editingData={editingCustomer} />
+      </div>
+
+      {/* Data/Table Container: Mobile par full width, Desktop par baqi jagah */}
+      <div className="w-full lg:w-2/3 overflow-x-auto">
+        <Data
+          customerData={filteredCustomers}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
+      </div>
     </main>
   );
 };
