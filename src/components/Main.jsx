@@ -41,26 +41,40 @@ const Main = ({ customer, setCustomer }) => {
   };
 
   const filteredCustomers = customer.filter((item) => {
-    const searchLower = searchTerm.toLowerCase();
+    const s = searchTerm.toLowerCase();
+
+    // Safely grabbing all searchable fields
+    const party = item.partyName?.toLowerCase() || "";
+    const plate = item.plate?.toLowerCase() || "";
+    const phone = item.phone || "";
+    const cnic = item.cnic || "";
+    const service = item.serviceType?.toLowerCase() || "";
+    const region = item.region?.toLowerCase() || "";
+    const received = item.receivedBy?.toLowerCase() || "";
+    const handover = item.handoverTo?.toLowerCase() || "";
+
     return (
-      item.firstName.toLowerCase().includes(searchLower) ||
-      item.lastName.toLowerCase().includes(searchLower) ||
-      item.phone.includes(searchTerm) ||
-      item.plate.toLowerCase().includes(searchLower)
+      party.includes(s) ||
+      plate.includes(s) ||
+      phone.includes(s) ||
+      cnic.includes(s) ||
+      service.includes(s) ||
+      region.includes(s) ||
+      received.includes(s) ||
+      handover.includes(s)
     );
   });
 
   return (
-    /* CHANGE: 'flex-col' for mobile (stacking) 
-       'lg:flex-row' for desktop (side-by-side)
-    */
     <main className="flex flex-col lg:flex-row p-4 md:p-8 gap-6 lg:gap-10 bg-gray-50 min-h-screen">
-      {/* Form Container: Mobile par full width, Desktop par thora chota */}
       <div className="w-full lg:w-1/3">
-        <Form onAddCustomer={handleCustomer} editingData={editingCustomer} />
+        <Form
+          onAddCustomer={handleCustomer}
+          editingData={editingCustomer}
+          onCancelEdit={() => setEditingCustomer(null)}
+        />
       </div>
 
-      {/* Data/Table Container: Mobile par full width, Desktop par baqi jagah */}
       <div className="w-full lg:w-2/3 overflow-x-auto">
         <Data
           customerData={filteredCustomers}
