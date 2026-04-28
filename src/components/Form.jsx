@@ -50,7 +50,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
       <h1
         className={`font-bold text-xl mb-2 ${editingData ? "text-orange-600" : "text-blue-600"}`}
       >
-        {editingData ? "Update Ledger 🔄" : "New Register Entry 📝"}
+        {editingData ? "Update Entry" : "New Entry"}
       </h1>
 
       {/* Customer Core Info */}
@@ -92,7 +92,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           <input
             type="text"
             className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="42xxx-xxxxxxx-x"
+            placeholder="17301xxxxxxxx"
             value={formData.cnic}
             onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
           />
@@ -108,7 +108,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           <input
             type="text"
             className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="ISL-492"
+            placeholder="ISL-786"
             required
             value={formData.plate}
             onChange={(e) =>
@@ -123,7 +123,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           <input
             type="text"
             className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="e.g. Mehran 2015"
+            placeholder="e.g. Civic-2015"
             value={formData.model}
             onChange={(e) =>
               setFormData({ ...formData, model: e.target.value })
