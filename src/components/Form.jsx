@@ -65,6 +65,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     "Name Transfer",
     "Permit Transfer",
     "Conversion",
+    "Permit Renewel",
+    "Fitness Renewel",
+    "Fresh Fitness",
   ];
 
   return (
