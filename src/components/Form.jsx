@@ -2,17 +2,19 @@ import React, { useState, useEffect } from "react";
 
 const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
   const initialForm = {
+    type: "individual",
     partyName: "",
-    plate: "",
-    model: "",
     phone: "",
     cnic: "",
+    ntn: "",
+    plate: "",
+    model: "",
     serviceType: "",
     region: "",
-    receivedBy: "",
-    handoverTo: "",
+    receivedBy: "", // Jis se gadi li
+    handoverTo: "", // Jisko gadi di
     remarks: "",
-    bankName: "",
+    bankName: "Cash",
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
@@ -36,265 +38,266 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     setFormData(updatedData);
   };
 
-  function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault();
     onAddCustomer(formData);
     setFormData(initialForm);
-  }
+  };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto"
-    >
-      <h1
-        className={`font-bold text-xl mb-2 ${editingData ? "text-orange-600" : "text-blue-600"}`}
-      >
-        {editingData ? "Update Entry" : "New Entry"}
-      </h1>
-
-      {/* Customer Core Info */}
-      <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Party Name
-        </label>
-        <input
-          type="text"
-          className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
-          placeholder="e.g. Al-Madina Motors"
-          required
-          value={formData.partyName}
-          onChange={(e) =>
-            setFormData({ ...formData, partyName: e.target.value })
-          }
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Phone
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="03xxxxxxxx"
-            value={formData.phone}
-            onChange={(e) =>
-              setFormData({ ...formData, phone: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            CNIC
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="17301xxxxxxxx"
-            value={formData.cnic}
-            onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
-          />
-        </div>
-      </div>
-
-      {/* Vehicle Info */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Vehicle No (Plate)
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="ISL-786"
-            required
-            value={formData.plate}
-            onChange={(e) =>
-              setFormData({ ...formData, plate: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Car Model
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="e.g. Civic-2015"
-            value={formData.model}
-            onChange={(e) =>
-              setFormData({ ...formData, model: e.target.value })
-            }
-          />
-        </div>
-      </div>
-
-      {/* Service & Region */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Service Type
-          </label>
-          <select
-            className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
-            required
-            value={formData.serviceType}
-            onChange={(e) =>
-              setFormData({ ...formData, serviceType: e.target.value })
-            }
-          >
-            <option value="">Select Service</option>
-            <option value="New Registration">New Registration</option>
-            <option value="Name Transfer">Name Transfer</option>
-            <option value="Permit Transfer">Permit Transfer</option>
-            <option value="Conversion">Conversion</option>
-            <option value="Permit Renewal">Permit Renewal</option>
-            <option value="Fitness Renewal">Fitness Renewal</option>
-            <option value="Fresh Fitness">Fresh Fitness</option>
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Region
-          </label>
-          <select
-            className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
-            value={formData.region}
-            onChange={(e) =>
-              setFormData({ ...formData, region: e.target.value })
-            }
-          >
-            <option value="">Select Region</option>
-            <option value="Punjab">Punjab</option>
-            <option value="Sindh">Sindh</option>
-            <option value="KPK">KPK</option>
-            <option value="G.B Region">G.B Region</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Process Tracking */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Received From
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="Owner Name"
-            value={formData.receivedBy}
-            onChange={(e) =>
-              setFormData({ ...formData, receivedBy: e.target.value })
-            }
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Handover To
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none"
-            placeholder="Agent Name"
-            value={formData.handoverTo}
-            onChange={(e) =>
-              setFormData({ ...formData, handoverTo: e.target.value })
-            }
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Payment Method
-        </label>
-        <select
-          className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
-          value={formData.bankName}
-          onChange={(e) =>
-            setFormData({ ...formData, bankName: e.target.value })
-          }
-        >
-          <option value="Cash">Cash</option>
-          <option value="Meezan Bank">Meezan Bank</option>
-          <option value="HBL">HBL</option>
-          <option value="Easypaisa">Easypaisa</option>
-          <option value="Jazzcash">Jazzcash</option>
-        </select>
-      </div>
-
-      <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Remarks
-        </label>
-        <textarea
-          className="rounded p-2 border border-gray-300 text-sm outline-none h-16 resize-none"
-          placeholder="Extra details..."
-          value={formData.remarks}
-          onChange={(e) =>
-            setFormData({ ...formData, remarks: e.target.value })
-          }
-        />
-      </div>
-
-      {/* Payment Summary */}
-      <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-blue-800 uppercase">
-            Rate (Total)
-          </label>
-          <input
-            type="number"
-            className="rounded p-1.5 border border-blue-200 text-sm outline-none"
-            value={formData.totalAmount}
-            onChange={(e) => handleAmountChange(e, "totalAmount")}
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-blue-800 uppercase">
-            Advance
-          </label>
-          <input
-            type="number"
-            className="rounded p-1.5 border border-blue-200 text-sm outline-none"
-            value={formData.advancePaid}
-            onChange={(e) => handleAmountChange(e, "advancePaid")}
-          />
-        </div>
-      </div>
-
-      <div className="p-3 bg-gray-800 rounded-lg text-white flex justify-between items-center">
-        <span className="text-[10px] font-bold text-gray-400 uppercase">
-          Baqaya
-        </span>
-        <span className="text-lg font-mono font-bold text-yellow-400">
-          Rs. {formData.remainingBalance.toLocaleString()}
-        </span>
-      </div>
-
-      <button
-        type="submit"
-        className={`font-bold rounded-lg py-3 mt-2 transition-all shadow-md active:scale-95 ${
-          editingData ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
-        }`}
-      >
-        {editingData ? "Update Record" : "Save to Register"}
-      </button>
-
-      {editingData && (
+    <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
+      {/* Tab Switcher */}
+      <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
         <button
           type="button"
-          onClick={onCancelEdit}
-          className="text-xs text-red-500 font-bold py-1 hover:underline"
+          onClick={() => setFormData({ ...initialForm, type: "individual" })}
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${formData.type === "individual" ? "bg-white shadow text-blue-600" : "text-gray-500"}`}
         >
-          Cancel Edit
+          INDIVIDUAL
         </button>
-      )}
-    </form>
+        <button
+          type="button"
+          onClick={() => setFormData({ ...initialForm, type: "party" })}
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${formData.type === "party" ? "bg-white shadow text-orange-600" : "text-gray-500"}`}
+        >
+          PARTY / BUSINESS
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <h1
+          className={`font-bold text-xl ${formData.type === "individual" ? "text-blue-600" : "text-orange-600"}`}
+        >
+          {editingData ? "Update" : "New"}{" "}
+          {formData.type === "individual" ? "Individual" : "Party"} Entry
+        </h1>
+
+        {/* Dynamic Name Field */}
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
+            {formData.type === "individual"
+              ? "Customer Name"
+              : "Business / Party Name"}
+          </label>
+          <input
+            type="text"
+            className="rounded p-2 border border-gray-300 text-sm focus:border-blue-500 outline-none"
+            placeholder={
+              formData.type === "individual"
+                ? "e.g. Ali Khan"
+                : "e.g. Al-Madina Motors"
+            }
+            required
+            value={formData.partyName}
+            onChange={(e) =>
+              setFormData({ ...formData, partyName: e.target.value })
+            }
+          />
+        </div>
+
+        {/* Contact & Identity */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Phone
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              placeholder="03xxxxxxxx"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              {formData.type === "individual" ? "CNIC" : "NTN / Reg No"}
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              placeholder={
+                formData.type === "individual" ? "17301..." : "NTN-786..."
+              }
+              value={
+                formData.type === "individual" ? formData.cnic : formData.ntn
+              }
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  [formData.type === "individual" ? "cnic" : "ntn"]:
+                    e.target.value,
+                })
+              }
+            />
+          </div>
+        </div>
+
+        {/* Handover Details (Simple To & From) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Received From
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              placeholder="Reciever name"
+              value={formData.receivedBy}
+              onChange={(e) =>
+                setFormData({ ...formData, receivedBy: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Handover To
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              placeholder="Handover name"
+              value={formData.handoverTo}
+              onChange={(e) =>
+                setFormData({ ...formData, handoverTo: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        {/* Vehicle Info */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Vehicle No
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              placeholder="ISL-786"
+              required
+              value={formData.plate}
+              onChange={(e) =>
+                setFormData({ ...formData, plate: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Model
+            </label>
+            <input
+              type="text"
+              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              placeholder="Civic-2015"
+              value={formData.model}
+              onChange={(e) =>
+                setFormData({ ...formData, model: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        {/* Service & Region */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Service
+            </label>
+            <select
+              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
+              required
+              value={formData.serviceType}
+              onChange={(e) =>
+                setFormData({ ...formData, serviceType: e.target.value })
+              }
+            >
+              <option value="">Select</option>
+              <option value="New Registration">New Registration</option>
+              <option value="Name Transfer">Name Transfer</option>
+              <option value="Permit Transfer">Permit Transfer</option>
+              <option value="Conversion">Conversion</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Region
+            </label>
+            <select
+              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
+              value={formData.region}
+              onChange={(e) =>
+                setFormData({ ...formData, region: e.target.value })
+              }
+            >
+              <option value="">Select</option>
+              <option value="KPK">KPK</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Sindh">Sindh</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Payment Summary */}
+        <div
+          className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${formData.type === "individual" ? "bg-blue-50 border-blue-100" : "bg-orange-50 border-orange-100"}`}
+        >
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold uppercase">
+              Total Rate
+            </label>
+            <input
+              type="number"
+              className="rounded p-1.5 border border-gray-200 text-sm outline-none"
+              value={formData.totalAmount}
+              onChange={(e) => handleAmountChange(e, "totalAmount")}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold uppercase">Advance</label>
+            <input
+              type="number"
+              className="rounded p-1.5 border border-gray-200 text-sm outline-none"
+              value={formData.advancePaid}
+              onChange={(e) => handleAmountChange(e, "advancePaid")}
+            />
+          </div>
+        </div>
+
+        {/* Baqaya Display */}
+        <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
+          <span className="text-[10px] font-bold text-gray-400 uppercase">
+            Remaining Balance
+          </span>
+          <span className="text-lg font-mono font-bold text-yellow-400">
+            Rs. {formData.remainingBalance.toLocaleString()}
+          </span>
+        </div>
+
+        <button
+          type="submit"
+          className={`font-bold rounded-xl py-4 mt-2 transition-all shadow-lg active:scale-95 text-white ${
+            formData.type === "individual"
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-orange-500 hover:bg-orange-600"
+          }`}
+        >
+          {editingData ? "Update Record" : "Save to Khata"}
+        </button>
+
+        {editingData && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="text-xs text-red-500 font-bold hover:underline self-center"
+          >
+            Cancel Edit
+          </button>
+        )}
+      </form>
+    </div>
   );
 };
 
