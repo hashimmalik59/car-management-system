@@ -9,10 +9,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     ntn: "",
     plate: "",
     model: "",
-    serviceType: "",
+    serviceType: [], // Changed to Array for multiple selection
     region: "",
-    receivedBy: "", // Jis se gadi li
-    handoverTo: "", // Jisko gadi di
+    receivedBy: "",
+    handoverTo: "",
     remarks: "",
     bankName: "Cash",
     totalAmount: 0,
@@ -30,6 +30,18 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     }
   }, [editingData]);
 
+  // Handle Checkbox Toggling
+  const handleServiceChange = (service) => {
+    setFormData((prev) => {
+      const isSelected = prev.serviceType.includes(service);
+      const updatedServices = isSelected
+        ? prev.serviceType.filter((s) => s !== service)
+        : [...prev.serviceType, service];
+
+      return { ...prev, serviceType: updatedServices };
+    });
+  };
+
   const handleAmountChange = (e, field) => {
     const value = Number(e.target.value) || 0;
     const updatedData = { ...formData, [field]: value };
@@ -40,9 +52,20 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (formData.serviceType.length === 0) {
+      alert("Please select at least one service!");
+      return;
+    }
     onAddCustomer(formData);
     setFormData(initialForm);
   };
+
+  const serviceOptions = [
+    "New Registration",
+    "Name Transfer",
+    "Permit Transfer",
+    "Conversion",
+  ];
 
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
@@ -72,7 +95,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           {formData.type === "individual" ? "Individual" : "Party"} Entry
         </h1>
 
-        {/* Dynamic Name Field */}
+        {/* Customer/Party Name */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
             {formData.type === "individual"
@@ -135,7 +158,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* Handover Details (Simple To & From) */}
+        {/* Handover Details */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -200,27 +223,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* Service & Region */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Service
-            </label>
-            <select
-              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
-              required
-              value={formData.serviceType}
-              onChange={(e) =>
-                setFormData({ ...formData, serviceType: e.target.value })
-              }
-            >
-              <option value="">Select</option>
-              <option value="New Registration">New Registration</option>
-              <option value="Name Transfer">Name Transfer</option>
-              <option value="Permit Transfer">Permit Transfer</option>
-              <option value="Conversion">Conversion</option>
-            </select>
-          </div>
+        {/* Region & Services */}
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               Region
@@ -232,11 +236,38 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                 setFormData({ ...formData, region: e.target.value })
               }
             >
-              <option value="">Select</option>
+              <option value="">Select Region</option>
               <option value="KPK">KPK</option>
               <option value="Punjab">Punjab</option>
               <option value="Sindh">Sindh</option>
+              <option value="Gilgit Baltistan">Gilgit Baltistan</option>
+              <option value="Lasbela">Lasbela</option>
+              <option value="Quetta">Quetta</option>
             </select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Services (Select Multiple)
+            </label>
+            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+              {serviceOptions.map((service) => (
+                <label
+                  key={service}
+                  className="flex items-center gap-2 cursor-pointer group"
+                >
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={formData.serviceType.includes(service)}
+                    onChange={() => handleServiceChange(service)}
+                  />
+                  <span className="text-[11px] text-gray-600 group-hover:text-blue-600 transition-colors">
+                    {service}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 

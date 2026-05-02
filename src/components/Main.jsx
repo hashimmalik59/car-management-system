@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import Form from "./Form";
 import Data from "./Data";
 
@@ -39,16 +40,19 @@ const Main = ({ customer, setCustomer }) => {
     const target = customer.find((c) => c.id === idToEdit);
     setEditingCustomer({ ...target });
   };
-
   const filteredCustomers = customer.filter((item) => {
     const s = searchTerm.toLowerCase();
 
-    // Safely grabbing all searchable fields
+    // ERROR FIX: Check if serviceType is array, then join it.
+    // Otherwise use empty string.
+    const service = Array.isArray(item.serviceType)
+      ? item.serviceType.join(" ").toLowerCase()
+      : item.serviceType?.toLowerCase() || "";
+
     const party = item.partyName?.toLowerCase() || "";
     const plate = item.plate?.toLowerCase() || "";
     const phone = item.phone || "";
     const cnic = item.cnic || "";
-    const service = item.serviceType?.toLowerCase() || "";
     const region = item.region?.toLowerCase() || "";
     const received = item.receivedBy?.toLowerCase() || "";
     const handover = item.handoverTo?.toLowerCase() || "";
@@ -58,7 +62,7 @@ const Main = ({ customer, setCustomer }) => {
       plate.includes(s) ||
       phone.includes(s) ||
       cnic.includes(s) ||
-      service.includes(s) ||
+      service.includes(s) || // Now this will work with Arrays
       region.includes(s) ||
       received.includes(s) ||
       handover.includes(s)
@@ -67,13 +71,18 @@ const Main = ({ customer, setCustomer }) => {
 
   return (
     <main className="flex flex-col lg:flex-row p-4 md:p-8 gap-6 lg:gap-10 bg-gray-50 min-h-screen">
-      <div className="w-full lg:w-1/3">
+      <motion.div
+        className="w-full lg:w-1/3"
+        initial={{ opacity: 0, x: -30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <Form
           onAddCustomer={handleCustomer}
           editingData={editingCustomer}
           onCancelEdit={() => setEditingCustomer(null)}
         />
-      </div>
+      </motion.div>
 
       <div className="w-full lg:w-2/3 overflow-x-auto">
         <Data
