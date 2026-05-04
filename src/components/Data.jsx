@@ -175,6 +175,33 @@ const Data = ({
                       </div>
                     </td>
 
+                    {/* Column 4: Payment */}
+                    <td className="p-2 md:p-4 block md:table-cell">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between md:justify-start gap-2">
+                          <span
+                            className={`text-[8px] font-black uppercase ${item.remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}
+                          >
+                            {item.remainingBalance > 0
+                              ? "● Pending"
+                              : "● Cleared"}
+                          </span>
+
+                          {/* SHOWING PAYMENT METHOD HERE */}
+                          <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md font-bold border border-gray-200">
+                            {item.bankName || "Cash"}
+                          </span>
+                        </div>
+
+                        <div className="text-[10px] text-gray-600">
+                          Total: {Number(item.totalAmount).toLocaleString()}
+                        </div>
+                        <div className="text-[11px] font-bold text-red-600">
+                          Bal: {Number(item.remainingBalance).toLocaleString()}
+                        </div>
+                      </div>
+                    </td>
+
                     {/* Column 3: Tracking */}
                     <td className="p-2 md:p-4 block md:table-cell">
                       <div className="text-[10px] text-gray-700">

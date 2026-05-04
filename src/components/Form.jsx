@@ -20,6 +20,22 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     remainingBalance: 0,
   };
 
+  const bankOptions = [
+    "Cash",
+    "HBL",
+    "UBL",
+    "MCB",
+    "Allied",
+    "Askari",
+    "Meezan",
+    "Bank Alfalah",
+    "Faysal Bank",
+    "Standard Chartered",
+    "Easypaisa",
+    "JazzCash",
+    "Others",
+  ];
+
   const [formData, setFormData] = useState(initialForm);
 
   useEffect(() => {
@@ -246,6 +262,26 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               <option value="Gilgit Baltistan">Gilgit Baltistan</option>
               <option value="Lasbela">Lasbela</option>
               <option value="Quetta">Quetta</option>
+            </select>
+          </div>
+
+          {/* 🔥 NEW: Bank Selection */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Payment Method / Bank
+            </label>
+            <select
+              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
+              value={formData.bankName}
+              onChange={(e) =>
+                setFormData({ ...formData, bankName: e.target.value })
+              }
+            >
+              {bankOptions.map((bank) => (
+                <option key={bank} value={bank}>
+                  {bank}
+                </option>
+              ))}
             </select>
           </div>
 
