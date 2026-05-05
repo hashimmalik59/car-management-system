@@ -1,15 +1,132 @@
 import React, { useState, useEffect } from "react";
 
+const serviceOptions = [
+  "New Registration",
+  "Name Transfer",
+  "Permit Transfer",
+  "Conversion",
+  "Permit Renewel",
+  "Fitness Renewel",
+  "Fresh Fitness",
+];
+
+const bankOptions = [
+  "Cash",
+  "HBL",
+  "UBL",
+  "MCB",
+  "Allied",
+  "Askari",
+  "Meezan",
+  "Bank Alfalah",
+  "Faysal Bank",
+  "Standard Chartered",
+  "Easypaisa",
+  "JazzCash",
+  "Others",
+];
+
+// ─── Reusable single-vehicle card (party only) ───────────────────────────────
+const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
+  const handleServiceToggle = (service) => {
+    const isSelected = vehicle.serviceType.includes(service);
+    const updated = isSelected
+      ? vehicle.serviceType.filter((s) => s !== service)
+      : [...vehicle.serviceType, service];
+    onChange(index, "serviceType", updated);
+  };
+
+  return (
+    <div className="relative flex flex-col gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+      {/* Card header */}
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">
+          Vehicle #{index + 1}
+        </span>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
+          >
+            ✕ Remove
+          </button>
+        )}
+      </div>
+
+      {/* Plate & Model */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
+            Vehicle No
+          </label>
+          <input
+            type="text"
+            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            placeholder="ISL-786"
+            required
+            value={vehicle.plate}
+            onChange={(e) => onChange(index, "plate", e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
+            Model
+          </label>
+          <input
+            type="text"
+            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            placeholder="Civic-2015"
+            value={vehicle.model}
+            onChange={(e) => onChange(index, "model", e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Services for this vehicle */}
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
+          Services
+        </label>
+        <div className="grid grid-cols-2 gap-1.5 bg-white p-2.5 rounded-lg border border-orange-100">
+          {serviceOptions.map((service) => (
+            <label
+              key={service}
+              className="flex items-center gap-2 cursor-pointer group"
+            >
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 accent-orange-500"
+                checked={vehicle.serviceType.includes(service)}
+                onChange={() => handleServiceToggle(service)}
+              />
+              <span className="text-[11px] text-gray-600 group-hover:text-orange-600 transition-colors">
+                {service}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Form ────────────────────────────────────────────────────────────────
 const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
+  const emptyVehicle = { plate: "", model: "", serviceType: [] };
+
   const initialForm = {
     type: "individual",
     partyName: "",
     phone: "",
     cnic: "",
     ntn: "",
+    // individual-only single vehicle fields
     plate: "",
     model: "",
-    serviceType: [], // Changed to Array for multiple selection
+    serviceType: [],
+    // party-only multi-vehicle list
+    vehicles: [{ ...emptyVehicle }],
     region: "",
     receivedBy: "",
     handoverTo: "",
@@ -20,44 +137,58 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     remainingBalance: 0,
   };
 
-  const bankOptions = [
-    "Cash",
-    "HBL",
-    "UBL",
-    "MCB",
-    "Allied",
-    "Askari",
-    "Meezan",
-    "Bank Alfalah",
-    "Faysal Bank",
-    "Standard Chartered",
-    "Easypaisa",
-    "JazzCash",
-    "Others",
-  ];
-
   const [formData, setFormData] = useState(initialForm);
 
   useEffect(() => {
     if (editingData) {
-      setFormData(editingData);
+      // Make sure older records without vehicles array still work
+      setFormData({
+        ...editingData,
+        vehicles: editingData.vehicles ?? [{ ...emptyVehicle }],
+      });
     } else {
       setFormData(initialForm);
     }
   }, [editingData]);
 
-  // Handle Checkbox Toggling
+  // ── Individual: service checkbox ──
   const handleServiceChange = (service) => {
     setFormData((prev) => {
       const isSelected = prev.serviceType.includes(service);
-      const updatedServices = isSelected
-        ? prev.serviceType.filter((s) => s !== service)
-        : [...prev.serviceType, service];
-
-      return { ...prev, serviceType: updatedServices };
+      return {
+        ...prev,
+        serviceType: isSelected
+          ? prev.serviceType.filter((s) => s !== service)
+          : [...prev.serviceType, service],
+      };
     });
   };
 
+  // ── Party: vehicle field update ──
+  const handleVehicleChange = (idx, field, value) => {
+    setFormData((prev) => {
+      const updated = prev.vehicles.map((v, i) =>
+        i === idx ? { ...v, [field]: value } : v,
+      );
+      return { ...prev, vehicles: updated };
+    });
+  };
+
+  const addVehicle = () => {
+    setFormData((prev) => ({
+      ...prev,
+      vehicles: [...prev.vehicles, { ...emptyVehicle }],
+    }));
+  };
+
+  const removeVehicle = (idx) => {
+    setFormData((prev) => ({
+      ...prev,
+      vehicles: prev.vehicles.filter((_, i) => i !== idx),
+    }));
+  };
+
+  // ── Amount ──
   const handleAmountChange = (e, field) => {
     const value = Number(e.target.value) || 0;
     const updatedData = { ...formData, [field]: value };
@@ -66,25 +197,33 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     setFormData(updatedData);
   };
 
+  // ── Submit ──
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.serviceType.length === 0) {
-      alert("Please select at least one service!");
-      return;
+
+    if (formData.type === "individual") {
+      if (formData.serviceType.length === 0) {
+        alert("Please select at least one service!");
+        return;
+      }
+    } else {
+      // Party: every vehicle must have at least one service
+      const invalid = formData.vehicles.some(
+        (v) => v.serviceType.length === 0 || !v.plate.trim(),
+      );
+      if (invalid) {
+        alert(
+          "Har gaadi ka plate no aur kam az kam ek service zaroor fill karein!",
+        );
+        return;
+      }
     }
+
     onAddCustomer(formData);
     setFormData(initialForm);
   };
 
-  const serviceOptions = [
-    "New Registration",
-    "Name Transfer",
-    "Permit Transfer",
-    "Conversion",
-    "Permit Renewel",
-    "Fitness Renewel",
-    "Fresh Fitness",
-  ];
+  const isParty = formData.type === "party";
 
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
@@ -93,14 +232,18 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
         <button
           type="button"
           onClick={() => setFormData({ ...initialForm, type: "individual" })}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${formData.type === "individual" ? "bg-white shadow text-blue-600" : "text-gray-500"}`}
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
+            !isParty ? "bg-white shadow text-blue-600" : "text-gray-500"
+          }`}
         >
           INDIVIDUAL
         </button>
         <button
           type="button"
           onClick={() => setFormData({ ...initialForm, type: "party" })}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${formData.type === "party" ? "bg-white shadow text-orange-600" : "text-gray-500"}`}
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
+            isParty ? "bg-white shadow text-orange-600" : "text-gray-500"
+          }`}
         >
           PARTY / BUSINESS
         </button>
@@ -108,27 +251,23 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <h1
-          className={`font-bold text-xl ${formData.type === "individual" ? "text-blue-600" : "text-orange-600"}`}
+          className={`font-bold text-xl ${
+            isParty ? "text-orange-600" : "text-blue-600"
+          }`}
         >
-          {editingData ? "Update" : "New"}{" "}
-          {formData.type === "individual" ? "Individual" : "Party"} Entry
+          {editingData ? "Update" : "New"} {isParty ? "Party" : "Individual"}{" "}
+          Entry
         </h1>
 
         {/* Customer/Party Name */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
-            {formData.type === "individual"
-              ? "Customer Name"
-              : "Business / Party Name"}
+            {isParty ? "Business / Party Name" : "Customer Name"}
           </label>
           <input
             type="text"
             className="rounded p-2 border border-gray-300 text-sm focus:border-blue-500 outline-none"
-            placeholder={
-              formData.type === "individual"
-                ? "e.g. Ali Khan"
-                : "e.g. Al-Madina Motors"
-            }
+            placeholder={isParty ? "e.g. Al-Madina Motors" : "e.g. Ali Khan"}
             required
             value={formData.partyName}
             onChange={(e) =>
@@ -155,22 +294,17 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
-              {formData.type === "individual" ? "CNIC" : "NTN / Reg No"}
+              {isParty ? "NTN / Reg No" : "CNIC"}
             </label>
             <input
               type="text"
               className="rounded p-2 border border-gray-300 text-sm outline-none"
-              placeholder={
-                formData.type === "individual" ? "17301..." : "NTN-786..."
-              }
-              value={
-                formData.type === "individual" ? formData.cnic : formData.ntn
-              }
+              placeholder={isParty ? "NTN-786..." : "17301..."}
+              value={isParty ? formData.ntn : formData.cnic}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  [formData.type === "individual" ? "cnic" : "ntn"]:
-                    e.target.value,
+                  [isParty ? "ntn" : "cnic"]: e.target.value,
                 })
               }
             />
@@ -186,7 +320,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             <input
               type="text"
               className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
-              placeholder="Reciever name"
+              placeholder="Receiver name"
               value={formData.receivedBy}
               onChange={(e) =>
                 setFormData({ ...formData, receivedBy: e.target.value })
@@ -209,40 +343,42 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* Vehicle Info */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Vehicle No
-            </label>
-            <input
-              type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none"
-              placeholder="ISL-786"
-              required
-              value={formData.plate}
-              onChange={(e) =>
-                setFormData({ ...formData, plate: e.target.value })
-              }
-            />
+        {/* ── INDIVIDUAL: single vehicle block (unchanged logic) ── */}
+        {!isParty && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Vehicle No
+              </label>
+              <input
+                type="text"
+                className="rounded p-2 border border-gray-300 text-sm outline-none"
+                placeholder="ISL-786"
+                required
+                value={formData.plate}
+                onChange={(e) =>
+                  setFormData({ ...formData, plate: e.target.value })
+                }
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Model
+              </label>
+              <input
+                type="text"
+                className="rounded p-2 border border-gray-300 text-sm outline-none"
+                placeholder="Civic-2015"
+                value={formData.model}
+                onChange={(e) =>
+                  setFormData({ ...formData, model: e.target.value })
+                }
+              />
+            </div>
           </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Model
-            </label>
-            <input
-              type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none"
-              placeholder="Civic-2015"
-              value={formData.model}
-              onChange={(e) =>
-                setFormData({ ...formData, model: e.target.value })
-              }
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Region & Services */}
+        {/* Region & Bank */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -265,7 +401,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </select>
           </div>
 
-          {/* 🔥 NEW: Bank Selection */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               Payment Method / Bank
@@ -285,34 +420,72 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </select>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Services (Select Multiple)
-            </label>
-            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
-              {serviceOptions.map((service) => (
-                <label
-                  key={service}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    checked={formData.serviceType.includes(service)}
-                    onChange={() => handleServiceChange(service)}
-                  />
-                  <span className="text-[11px] text-gray-600 group-hover:text-blue-600 transition-colors">
-                    {service}
-                  </span>
-                </label>
+          {/* ── INDIVIDUAL: services ── */}
+          {!isParty && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Services (Select Multiple)
+              </label>
+              <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                {serviceOptions.map((service) => (
+                  <label
+                    key={service}
+                    className="flex items-center gap-2 cursor-pointer group"
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={formData.serviceType.includes(service)}
+                      onChange={() => handleServiceChange(service)}
+                    />
+                    <span className="text-[11px] text-gray-600 group-hover:text-blue-600 transition-colors">
+                      {service}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── PARTY: dynamic multi-vehicle section ── */}
+        {isParty && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Vehicles ({formData.vehicles.length})
+              </label>
+              <button
+                type="button"
+                onClick={addVehicle}
+                className="flex items-center gap-1 text-[11px] font-bold text-orange-600 border border-orange-300 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg transition-all active:scale-95"
+              >
+                + Add Vehicle
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {formData.vehicles.map((vehicle, idx) => (
+                <VehicleCard
+                  key={idx}
+                  index={idx}
+                  vehicle={vehicle}
+                  onChange={handleVehicleChange}
+                  onRemove={removeVehicle}
+                  canRemove={formData.vehicles.length > 1}
+                />
               ))}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Payment Summary */}
         <div
-          className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${formData.type === "individual" ? "bg-blue-50 border-blue-100" : "bg-orange-50 border-orange-100"}`}
+          className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${
+            isParty
+              ? "bg-orange-50 border-orange-100"
+              : "bg-blue-50 border-blue-100"
+          }`}
         >
           <div className="flex flex-col">
             <label className="text-[10px] font-bold uppercase">
@@ -336,7 +509,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* Baqaya Display */}
+        {/* Remaining Balance */}
         <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
           <span className="text-[10px] font-bold text-gray-400 uppercase">
             Remaining Balance
@@ -349,9 +522,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
         <button
           type="submit"
           className={`font-bold rounded-xl py-4 mt-2 transition-all shadow-lg active:scale-95 text-white ${
-            formData.type === "individual"
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-orange-500 hover:bg-orange-600"
+            isParty
+              ? "bg-orange-500 hover:bg-orange-600"
+              : "bg-blue-600 hover:bg-blue-700"
           }`}
         >
           {editingData ? "Update Record" : "Save to Khata"}
