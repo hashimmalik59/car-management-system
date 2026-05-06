@@ -36,6 +36,25 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "serviceType", updated);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onChange(index, "attachment", {
+          file: file,
+          name: file.name,
+          preview: reader.result,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeAttachment = () => {
+    onChange(index, "attachment", null);
+  };
+
   return (
     <div className="relative flex flex-col gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
       {/* Card header */}
@@ -107,13 +126,60 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           ))}
         </div>
       </div>
+
+      {/* Attachment for this vehicle */}
+      <div className="flex flex-col gap-2">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
+          Attachment
+        </label>
+        {!vehicle.attachment ? (
+          <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-lg bg-white hover:bg-orange-50 cursor-pointer transition-colors">
+            <span className="text-orange-600 text-lg">📎</span>
+            <span className="text-[11px] text-gray-600">Upload Doc/Image</span>
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*,.pdf"
+              onChange={handleFileChange}
+            />
+          </label>
+        ) : (
+          <div className="flex items-center gap-2 p-2 bg-white border border-orange-200 rounded-lg">
+            {vehicle.attachment.preview &&
+            vehicle.attachment.file.type.startsWith("image/") ? (
+              <img
+                src={vehicle.attachment.preview}
+                alt="preview"
+                className="w-10 h-10 object-cover rounded"
+              />
+            ) : (
+              <span className="text-2xl">📄</span>
+            )}
+            <span className="text-[11px] text-gray-700 flex-1 truncate">
+              {vehicle.attachment.name}
+            </span>
+            <button
+              type="button"
+              onClick={removeAttachment}
+              className="text-red-500 hover:text-red-700 text-xs font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
-  const emptyVehicle = { plate: "", model: "", serviceType: [] };
+  const emptyVehicle = {
+    plate: "",
+    model: "",
+    serviceType: [],
+    attachment: null,
+  };
 
   const initialForm = {
     type: "individual",
@@ -125,6 +191,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     plate: "",
     model: "",
     serviceType: [],
+    attachment: null,
     // party-only multi-vehicle list
     vehicles: [{ ...emptyVehicle }],
     region: "",
@@ -145,6 +212,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
       setFormData({
         ...editingData,
         vehicles: editingData.vehicles ?? [{ ...emptyVehicle }],
+        attachment: editingData.attachment ?? null,
       });
     } else {
       setFormData(initialForm);
@@ -162,6 +230,29 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           : [...prev.serviceType, service],
       };
     });
+  };
+
+  // ── Individual: attachment handling ──
+  const handleIndividualFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({
+          ...prev,
+          attachment: {
+            file: file,
+            name: file.name,
+            preview: reader.result,
+          },
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeIndividualAttachment = () => {
+    setFormData((prev) => ({ ...prev, attachment: null }));
   };
 
   // ── Party: vehicle field update ──
@@ -343,7 +434,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* ── INDIVIDUAL: single vehicle block (unchanged logic) ── */}
+        {/* ── INDIVIDUAL: single vehicle block ── */}
         {!isParty && (
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col">
@@ -444,6 +535,52 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                   </label>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ── INDIVIDUAL: attachment ── */}
+          {!isParty && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Attachment
+              </label>
+              {!formData.attachment ? (
+                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors">
+                  <span className="text-blue-600 text-lg">📎</span>
+                  <span className="text-[11px] text-gray-600">
+                    Upload Doc/Image
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf"
+                    onChange={handleIndividualFileChange}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center gap-2 p-2 bg-white border border-blue-200 rounded-lg">
+                  {formData.attachment.preview &&
+                  formData.attachment.file.type.startsWith("image/") ? (
+                    <img
+                      src={formData.attachment.preview}
+                      alt="preview"
+                      className="w-10 h-10 object-cover rounded"
+                    />
+                  ) : (
+                    <span className="text-2xl">📄</span>
+                  )}
+                  <span className="text-[11px] text-gray-700 flex-1 truncate">
+                    {formData.attachment.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeIndividualAttachment}
+                    className="text-red-500 hover:text-red-700 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,9 +1,96 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const rowVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0 },
+};
+
+// ─── Attachment Display with click-to-view ───────────────────────────
+const AttachmentDisplay = ({ attachment }) => {
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
+
+  const isImage =
+    attachment.preview && attachment.file?.type?.startsWith("image/");
+
+  return (
+    <>
+      <div
+        onClick={() => setViewerOpen(true)}
+        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+      >
+        {isImage ? (
+          <img
+            src={attachment.preview}
+            alt="attach"
+            className="w-6 h-6 object-cover rounded border border-gray-200"
+          />
+        ) : (
+          <span className="text-base">📄</span>
+        )}
+        <span
+          className="text-[10px] text-gray-600 truncate max-w-[100px]"
+          title={attachment.name}
+        >
+          {attachment.name}
+        </span>
+      </div>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {viewerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setViewerOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl"
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setViewerOpen(false)}
+                className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center text-xl"
+              >
+                ✕
+              </button>
+
+              {/* Content */}
+              {isImage ? (
+                <img
+                  src={attachment.preview}
+                  alt={attachment.name}
+                  className="max-w-full max-h-[90vh] object-contain"
+                />
+              ) : (
+                <div className="p-8 text-center">
+                  <span className="text-6xl mb-4 block">📄</span>
+                  <p className="text-gray-700 font-mono text-sm mb-4">
+                    {attachment.name}
+                  </p>
+                  <a
+                    href={attachment.preview}
+                    download={attachment.name}
+                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                  >
+                    Download File
+                  </a>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 };
 
 // ─── Party Ledger Block (one per party record) ────────────────────────────────
@@ -67,6 +154,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5">#</th>
               <th className="px-4 py-2.5">Vehicle No / Model</th>
               <th className="px-4 py-2.5">Purpose / Services</th>
+              <th className="px-4 py-2.5">Attachment</th>
               <th className="px-4 py-2.5 text-right">Amount</th>
               <th className="px-4 py-2.5 text-right">Closing Balance</th>
             </tr>
@@ -76,7 +164,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-4 text-center text-gray-400 text-xs"
                 >
                   No vehicles recorded.
@@ -84,10 +172,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               </tr>
             ) : (
               <>
-                {/* ── One row per vehicle ── */}
                 {vehicles.map((v, idx) => {
-                  // Running balance: after all vehicles, before advance
-                  // We don't have per-vehicle amounts so we show total on last row only
                   const isLast = idx === vehicles.length - 1;
                   return (
                     <tr
@@ -122,7 +207,9 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                           )}
                         </div>
                       </td>
-                      {/* Amount & closing balance: show on last vehicle row only */}
+                      <td className="px-4 py-3">
+                        <AttachmentDisplay attachment={v.attachment} />
+                      </td>
                       <td className="px-4 py-3 text-right text-xs font-mono text-gray-700">
                         {isLast
                           ? Number(item.totalAmount || 0).toLocaleString()
@@ -137,14 +224,13 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   );
                 })}
 
-                {/* ── Advance Received row (red, like screenshot) ── */}
                 {Number(item.advancePaid) > 0 && (
                   <tr className="bg-red-50 border-t border-red-100">
                     <td className="px-4 py-2.5 text-red-500 font-mono text-xs">
                       —
                     </td>
                     <td
-                      colSpan={2}
+                      colSpan={3}
                       className="px-4 py-2.5 text-red-600 font-bold text-xs uppercase tracking-wide"
                     >
                       AMOUNT RECEIVED
@@ -163,7 +249,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         </table>
       </div>
 
-      {/* ── Footer: Balance ── */}
       <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-end gap-6">
         <div className="text-right">
           <p className="text-[10px] font-bold text-gray-400 uppercase">
@@ -171,20 +256,12 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           </p>
         </div>
         <div
-          className={`text-lg font-mono font-bold ${
-            Number(item.remainingBalance) > 0
-              ? "text-red-600"
-              : "text-green-600"
-          }`}
+          className={`text-lg font-mono font-bold ${Number(item.remainingBalance) > 0 ? "text-red-600" : "text-green-600"}`}
         >
           {Number(item.remainingBalance || 0).toLocaleString()}
         </div>
         <span
-          className={`text-[9px] font-black uppercase px-2 py-1 rounded ${
-            Number(item.remainingBalance) > 0
-              ? "bg-red-100 text-red-600"
-              : "bg-green-100 text-green-600"
-          }`}
+          className={`text-[9px] font-black uppercase px-2 py-1 rounded ${Number(item.remainingBalance) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
         >
           {Number(item.remainingBalance) > 0 ? "● PENDING" : "● CLEARED"}
         </span>
@@ -206,7 +283,6 @@ const Data = ({
   const filteredData = customerData.filter((item) => {
     const matchesTab = item.type === activeTab;
 
-    // Search across vehicles array for party records
     let matchesSearch = false;
     if (item.type === "party") {
       const vehicleSearch = (item.vehicles ?? []).some(
@@ -230,7 +306,6 @@ const Data = ({
         item.plate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         serviceString.includes(searchTerm.toLowerCase());
     }
-
     return matchesTab && matchesSearch;
   });
 
@@ -241,7 +316,6 @@ const Data = ({
       transition={{ duration: 0.4 }}
       className="shadow-xl md:shadow-2xl w-full rounded-2xl px-4 md:px-6 py-5 flex flex-col gap-5 bg-white border border-gray-100"
     >
-      {/* Header & Search */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b pb-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800">
@@ -258,7 +332,6 @@ const Data = ({
             </span>
           </p>
         </div>
-
         <div className="relative w-full sm:w-80">
           <motion.input
             initial={{ opacity: 0, x: 20 }}
@@ -273,7 +346,6 @@ const Data = ({
         </div>
       </div>
 
-      {/* Tab Switcher */}
       <div className="flex bg-gray-100 p-1 rounded-xl w-fit border border-gray-200">
         <motion.button
           whileHover={{ scale: 1.03 }}
@@ -301,46 +373,31 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* ── INDIVIDUAL: original table (untouched) ── */}
+      {/* INDIVIDUAL TABLE */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
             <table className="min-w-full text-left border-collapse">
               <thead className="hidden md:table-header-group bg-gray-50">
-                <motion.tr
-                  variants={rowVariants}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="text-[10px] font-bold text-gray-500 uppercase tracking-wider"
-                >
+                <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                   <th className="p-4">Customer & ID</th>
                   <th className="p-4">Service & Vehicle</th>
                   <th className="p-4">Tracking (From/To)</th>
                   <th className="p-4">Payment & Advance</th>
+                  <th className="p-4">Attachment</th>
                   <th className="p-4 text-center">Action</th>
-                </motion.tr>
+                </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-100 block md:table-row-group">
                 {filteredData.length === 0 ? (
-                  <motion.tr
-                    variants={rowVariants}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                  >
-                    <td colSpan="5" className="p-10 text-center text-gray-400">
+                  <tr>
+                    <td colSpan="6" className="p-10 text-center text-gray-400">
                       No individual records found.
                     </td>
-                  </motion.tr>
+                  </tr>
                 ) : (
                   filteredData.map((item) => (
-                    <motion.tr
-                      variants={rowVariants}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25 }}
+                    <tr
                       key={item.id}
                       className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-50/30 md:bg-transparent hover:bg-blue-50/40"
                     >
@@ -355,7 +412,6 @@ const Data = ({
                           {item.phone}
                         </div>
                       </td>
-
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {Array.isArray(item.serviceType) ? (
@@ -380,7 +436,6 @@ const Data = ({
                           {item.model || "---"}
                         </div>
                       </td>
-
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="text-[10px] text-gray-700">
                           <span className="text-gray-400 font-bold">FROM:</span>{" "}
@@ -391,16 +446,11 @@ const Data = ({
                           {item.handoverTo || "---"}
                         </div>
                       </td>
-
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between md:justify-start gap-2">
                             <span
-                              className={`text-[8px] font-black uppercase ${
-                                item.remainingBalance > 0
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }`}
+                              className={`text-[8px] font-black uppercase ${item.remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}
                             >
                               {item.remainingBalance > 0
                                 ? "● Pending"
@@ -419,28 +469,26 @@ const Data = ({
                           </div>
                         </div>
                       </td>
-
+                      <td className="p-2 md:p-4 block md:table-cell">
+                        <AttachmentDisplay attachment={item.attachment} />
+                      </td>
                       <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
                         <div className="flex gap-2 justify-end md:justify-center">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.92 }}
+                          <button
                             onClick={() => onEdit(item.id)}
                             className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all"
                           >
                             Edit
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.92 }}
+                          </button>
+                          <button
                             onClick={() => onDelete(item.id)}
                             className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all"
                           >
                             Del
-                          </motion.button>
+                          </button>
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))
                 )}
               </tbody>
@@ -449,7 +497,7 @@ const Data = ({
         </div>
       )}
 
-      {/* ── PARTY: ledger block per record ── */}
+      {/* PARTY LEDGER BLOCKS */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (
