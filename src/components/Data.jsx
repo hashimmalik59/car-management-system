@@ -90,12 +90,166 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Party Ledger Block (one per party record) with per-vehicle amounts ──────
-const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
-  const vehicles = item.vehicles ?? [];
-  const hasVehicles = vehicles.length > 0;
+// ─── Print Individual Receipt ─────────────────────────────────────────
+const printIndividualReceipt = (item) => {
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Receipt - ${item.partyName}</title>
+      <style>
+        body {
+          font-family: 'Courier New', monospace;
+          padding: 20px;
+          margin: 0;
+          font-size: 12px;
+        }
+        .receipt {
+          max-width: 800px;
+          margin: 0 auto;
+          border: 1px solid #ddd;
+          padding: 20px;
+          border-radius: 10px;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 2px solid #333;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 18px;
+        }
+        .header p {
+          margin: 5px 0;
+          color: #666;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          padding: 5px 0;
+          border-bottom: 1px dotted #ccc;
+        }
+        .label {
+          font-weight: bold;
+          width: 150px;
+        }
+        .value {
+          flex: 1;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+        }
+        .table th, .table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+        .table th {
+          background-color: #f2f2f2;
+        }
+        .footer {
+          margin-top: 20px;
+          text-align: center;
+          border-top: 1px solid #ddd;
+          padding-top: 10px;
+          font-size: 10px;
+        }
+        .amount {
+          font-size: 14px;
+          font-weight: bold;
+        }
+        .text-right {
+          text-align: right;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <div class="header">
+          <h1>IQRA MOTOR INSURANCE</h1>
+          <p>Individual Customer Receipt</p>
+          <p>Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="info-row">
+          <span class="label">Customer Name:</span>
+          <span class="value">${item.partyName || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Phone:</span>
+          <span class="value">${item.phone || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">CNIC:</span>
+          <span class="value">${item.cnic || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Vehicle No:</span>
+          <span class="value">${item.plate || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Model:</span>
+          <span class="value">${item.model || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Region:</span>
+          <span class="value">${item.region || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Payment Method:</span>
+          <span class="value">${item.bankName || "Cash"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Received From:</span>
+          <span class="value">${item.receivedBy || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Handover To:</span>
+          <span class="value">${item.handoverTo || "N/A"}</span>
+        </div>
+        
+        <h3>Services:</h3>
+        <div class="info-row">
+          <span class="value">${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</span>
+        </div>
+        
+        <h3>Payment Summary:</h3>
+        <div class="info-row">
+          <span class="label">Total Amount:</span>
+          <span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Advance Paid:</span>
+          <span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Remaining Balance:</span>
+          <span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">
+            Rs. ${(item.remainingBalance || 0).toLocaleString()}
+          </span>
+        </div>
+        
+        <div class="footer">
+          <p>Thank you for choosing Iqra Motor Insurance</p>
+          <p>This is a computer generated receipt</p>
+        </div>
+      </div>
+      <script>window.print();</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
 
-  // Calculate totals from all vehicles
+// ─── Print Party Receipt (All Vehicles) ─────────────────────────────────
+const printPartyReceipt = (item) => {
+  const vehicles = item.vehicles ?? [];
   const totalAllVehicles = vehicles.reduce(
     (sum, v) => sum + (v.vehicleTotal || 0),
     0,
@@ -109,15 +263,189 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
     0,
   );
 
-  // Use vehicle totals if available, otherwise fallback to item level fields
-  const displayTotal =
-    totalAllVehicles > 0 ? totalAllVehicles : item.totalAmount || 0;
-  const displayAdvance =
-    advanceAllVehicles > 0 ? advanceAllVehicles : item.advancePaid || 0;
-  const displayRemaining =
-    remainingAllVehicles > 0
-      ? remainingAllVehicles
-      : item.remainingBalance || 0;
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Receipt - ${item.partyName}</title>
+      <style>
+        body {
+          font-family: 'Courier New', monospace;
+          padding: 20px;
+          margin: 0;
+          font-size: 12px;
+        }
+        .receipt {
+          max-width: 1000px;
+          margin: 0 auto;
+          border: 1px solid #ddd;
+          padding: 20px;
+          border-radius: 10px;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 2px solid #333;
+          padding-bottom: 10px;
+          margin-bottom: 20px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 18px;
+        }
+        .header p {
+          margin: 5px 0;
+          color: #666;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          padding: 5px 0;
+          border-bottom: 1px dotted #ccc;
+        }
+        .label {
+          font-weight: bold;
+          width: 150px;
+        }
+        .value {
+          flex: 1;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 15px 0;
+        }
+        .table th, .table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+        .table th {
+          background-color: #f2f2f2;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .footer {
+          margin-top: 20px;
+          text-align: center;
+          border-top: 1px solid #ddd;
+          padding-top: 10px;
+          font-size: 10px;
+        }
+        .amount {
+          font-size: 14px;
+          font-weight: bold;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <div class="header">
+          <h1>IQRA MOTOR INSURANCE</h1>
+          <p>Party/Business Customer Receipt</p>
+          <p>Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="info-row">
+          <span class="label">Party/Business Name:</span>
+          <span class="value">${item.partyName || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Phone:</span>
+          <span class="value">${item.phone || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">NTN/Reg No:</span>
+          <span class="value">${item.ntn || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Region:</span>
+          <span class="value">${item.region || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Payment Method:</span>
+          <span class="value">${item.bankName || "Cash"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Received From:</span>
+          <span class="value">${item.receivedBy || "N/A"}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Handover To:</span>
+          <span class="value">${item.handoverTo || "N/A"}</span>
+        </div>
+        
+        <h3>Vehicles Details:</h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vehicle No</th>
+              <th>Model</th>
+              <th>Services</th>
+              <th class="text-right">Total (Rs.)</th>
+              <th class="text-right">Advance (Rs.)</th>
+              <th class="text-right">Remaining (Rs.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${vehicles
+              .map(
+                (v, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${v.plate || "---"}</td>
+                <td>${v.model || "---"}</td>
+                <td>${(v.serviceType || []).join(", ") || "---"}</td>
+                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+          <tfoot style="background-color: #f2f2f2;">
+            <tr>
+              <td colspan="4" class="text-right"><strong>GRAND TOTAL</strong></td>
+              <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+        
+        <div class="footer">
+          <p>Thank you for choosing Iqra Motor Insurance</p>
+          <p>This is a computer generated receipt</p>
+        </div>
+      </div>
+      <script>window.print();</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
+// ─── Party Ledger Block (one per party record) with per-vehicle amounts ──────
+const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
+  const vehicles = item.vehicles ?? [];
+  const hasVehicles = vehicles.length > 0;
+
+  const totalAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleTotal || 0),
+    0,
+  );
+  const advanceAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleAdvance || 0),
+    0,
+  );
+  const remainingAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleRemaining || 0),
+    0,
+  );
 
   return (
     <motion.div
@@ -127,7 +455,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
       transition={{ duration: 0.3 }}
       className="w-full rounded-xl border border-gray-200 overflow-hidden shadow-sm"
     >
-      {/* ── Orange Header ── */}
       <div className="bg-orange-600 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
         <p className="text-white font-bold text-sm tracking-wide uppercase">
           PARTY LEDGER :{" "}
@@ -139,6 +466,12 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           )}
         </p>
         <div className="flex gap-2">
+          <button
+            onClick={() => printPartyReceipt(item)}
+            className="px-3 py-1 bg-green-500/70 hover:bg-green-500 text-white rounded text-[10px] font-bold transition-all"
+          >
+            🖨️ Print
+          </button>
           <button
             onClick={() => onEdit(item.id)}
             className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold transition-all"
@@ -154,7 +487,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         </div>
       </div>
 
-      {/* ── Sub-info row ── */}
       <div className="bg-gray-50 px-4 py-1.5 flex flex-wrap gap-x-6 gap-y-1 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase">
         {item.phone && <span>📞 {item.phone}</span>}
         {item.region && <span>📍 {item.region}</span>}
@@ -167,7 +499,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         )}
       </div>
 
-      {/* ── Ledger Table with Per-Vehicle Amounts ── */}
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
           <thead className="bg-gray-100 border-b border-gray-200">
@@ -181,7 +512,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5 text-right">Remaining (Rs.)</th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-gray-100">
             {!hasVehicles ? (
               <tr>
@@ -211,19 +541,14 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {Array.isArray(v.serviceType) &&
-                      v.serviceType.length > 0 ? (
-                        v.serviceType.map((s, si) => (
-                          <span
-                            key={si}
-                            className="bg-orange-100 text-orange-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
-                          >
-                            {s}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-gray-400 text-xs">---</span>
-                      )}
+                      {v.serviceType?.map((s, si) => (
+                        <span
+                          key={si}
+                          className="bg-orange-100 text-orange-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                        >
+                          {s}
+                        </span>
+                      ))}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -232,7 +557,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-700">
                     {Number(v.vehicleTotal || 0).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-xs font-mono text-green-600">
+                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-green-600">
                     {Number(v.vehicleAdvance || 0).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right text-xs font-mono font-bold text-orange-600">
@@ -242,8 +567,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               ))
             )}
           </tbody>
-
-          {/* Summary Row */}
           {hasVehicles && (
             <tfoot className="bg-orange-50 border-t-2 border-orange-200">
               <tr className="text-xs font-bold">
@@ -251,22 +574,16 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   colSpan={4}
                   className="px-4 py-3 text-right text-gray-700 uppercase"
                 >
-                  TOTAL SUMMARY
+                  GRAND TOTAL
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-gray-800">
-                  {Number(
-                    totalAllVehicles || item.totalAmount || 0,
-                  ).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold text-gray-800 bg-orange-100">
+                  {Number(totalAllVehicles).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-green-700">
-                  {Number(
-                    advanceAllVehicles || item.advancePaid || 0,
-                  ).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold text-green-700 bg-orange-100">
+                  {Number(advanceAllVehicles).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-red-600">
-                  {Number(
-                    remainingAllVehicles || item.remainingBalance || 0,
-                  ).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold text-red-600 bg-orange-100">
+                  {Number(remainingAllVehicles).toLocaleString()}
                 </td>
               </tr>
             </tfoot>
@@ -274,23 +591,22 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         </table>
       </div>
 
-      {/* Footer with Balance Status */}
       <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-4 text-[10px] text-gray-500">
-          <span>💰 Total: Rs. {displayTotal.toLocaleString()}</span>
-          <span>💵 Advance: Rs. {displayAdvance.toLocaleString()}</span>
-          <span>📊 Remaining: Rs. {displayRemaining.toLocaleString()}</span>
+          <span>💰 Total: Rs. {totalAllVehicles.toLocaleString()}</span>
+          <span>💵 Advance: Rs. {advanceAllVehicles.toLocaleString()}</span>
+          <span>📊 Remaining: Rs. {remainingAllVehicles.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-3">
           <div
-            className={`text-lg font-mono font-bold ${displayRemaining > 0 ? "text-red-600" : "text-green-600"}`}
+            className={`text-lg font-mono font-bold ${remainingAllVehicles > 0 ? "text-red-600" : "text-green-600"}`}
           >
-            {displayRemaining.toLocaleString()}
+            {remainingAllVehicles.toLocaleString()}
           </div>
           <span
-            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${displayRemaining > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${remainingAllVehicles > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
           >
-            {displayRemaining > 0 ? "● PENDING" : "● CLEARED"}
+            {remainingAllVehicles > 0 ? "● PENDING" : "● CLEARED"}
           </span>
         </div>
       </div>
@@ -478,9 +794,9 @@ const Data = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between md:justify-start gap-2">
                             <span
-                              className={`text-[8px] font-black uppercase ${(item.indRemaining || item.remainingBalance) > 0 ? "text-red-600" : "text-green-600"}`}
+                              className={`text-[8px] font-black uppercase ${(item.remainingBalance || 0) > 0 ? "text-red-600" : "text-green-600"}`}
                             >
-                              {(item.indRemaining || item.remainingBalance) > 0
+                              {(item.remainingBalance || 0) > 0
                                 ? "● Pending"
                                 : "● Cleared"}
                             </span>
@@ -489,20 +805,10 @@ const Data = ({
                             </span>
                           </div>
                           <div className="text-[10px] text-gray-600">
-                            Total:{" "}
-                            {(
-                              item.indTotal ||
-                              item.totalAmount ||
-                              0
-                            ).toLocaleString()}
+                            Total: {(item.totalAmount || 0).toLocaleString()}
                           </div>
                           <div className="text-[11px] font-bold text-red-600">
-                            Bal:{" "}
-                            {(
-                              item.indRemaining ||
-                              item.remainingBalance ||
-                              0
-                            ).toLocaleString()}
+                            Bal: {(item.remainingBalance || 0).toLocaleString()}
                           </div>
                         </div>
                       </td>
@@ -511,6 +817,12 @@ const Data = ({
                       </td>
                       <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
                         <div className="flex gap-2 justify-end md:justify-center">
+                          <button
+                            onClick={() => printIndividualReceipt(item)}
+                            className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all"
+                          >
+                            🖨️ Print
+                          </button>
                           <button
                             onClick={() => onEdit(item.id)}
                             className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all"
@@ -534,7 +846,7 @@ const Data = ({
         </div>
       )}
 
-      {/* PARTY LEDGER BLOCKS with per-vehicle amounts */}
+      {/* PARTY LEDGER BLOCKS */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (
