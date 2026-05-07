@@ -26,7 +26,7 @@ const bankOptions = [
   "Others",
 ];
 
-// ─── Reusable single-vehicle card (party only) ───────────────────────────────
+// ─── Reusable single-vehicle card with its own Total, Advance, and Remaining ──
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const handleServiceToggle = (service) => {
     const isSelected = vehicle.serviceType.includes(service);
@@ -55,33 +55,49 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "attachment", null);
   };
 
+  // Handle amount changes and auto-calculate remaining for this vehicle
+  const handleAmountChange = (field, value) => {
+    const numValue = Number(value) || 0;
+    onChange(index, field, numValue);
+
+    if (field === "vehicleTotal") {
+      const remaining = numValue - (vehicle.vehicleAdvance || 0);
+      onChange(index, "vehicleRemaining", remaining);
+    } else if (field === "vehicleAdvance") {
+      const remaining = (vehicle.vehicleTotal || 0) - numValue;
+      onChange(index, "vehicleRemaining", remaining);
+    }
+  };
+
   return (
-    <div className="relative flex flex-col gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+    <div className="relative flex flex-col gap-3 p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm">
       {/* Card header */}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">
-          Vehicle #{index + 1}
-        </span>
+        <div>
+          <span className="text-[11px] font-bold text-orange-600 uppercase tracking-widest bg-orange-100 px-2 py-0.5 rounded">
+            Vehicle #{index + 1}
+          </span>
+        </div>
         {canRemove && (
           <button
             type="button"
             onClick={() => onRemove(index)}
             className="text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
           >
-            ✕ Remove
+            ✕ Remove Vehicle
           </button>
         )}
       </div>
 
-      {/* Plate & Model */}
+      {/* Vehicle Details Row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
+          <label className="text-[10px] font-bold text-gray-500 uppercase">
             Vehicle No
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded-lg p-2 border border-gray-300 text-sm outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
             placeholder="ISL-786"
             required
             value={vehicle.plate}
@@ -89,12 +105,12 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           />
         </div>
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
+          <label className="text-[10px] font-bold text-gray-500 uppercase">
             Model
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded-lg p-2 border border-gray-300 text-sm outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
             placeholder="Civic-2015"
             value={vehicle.model}
             onChange={(e) => onChange(index, "model", e.target.value)}
@@ -102,12 +118,57 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
+      {/* ── Per-Vehicle Amounts (Total, Advance, Remaining) ── */}
+      <div className="bg-white rounded-lg border border-orange-100 p-3 space-y-2">
+        <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+          Payment Details for this Vehicle
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-600">
+              Total Amount (Rs.)
+            </label>
+            <input
+              type="number"
+              className="rounded-lg p-2 border border-gray-200 text-sm outline-none focus:border-orange-400"
+              placeholder="0"
+              value={vehicle.vehicleTotal || 0}
+              onChange={(e) =>
+                handleAmountChange("vehicleTotal", e.target.value)
+              }
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-600">
+              Advance Paid (Rs.)
+            </label>
+            <input
+              type="number"
+              className="rounded-lg p-2 border border-gray-200 text-sm outline-none focus:border-orange-400"
+              placeholder="0"
+              value={vehicle.vehicleAdvance || 0}
+              onChange={(e) =>
+                handleAmountChange("vehicleAdvance", e.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md">
+          <span className="text-[10px] font-bold text-gray-600">
+            Remaining for this Vehicle
+          </span>
+          <span className="text-base font-bold text-orange-600">
+            Rs. {(vehicle.vehicleRemaining || 0).toLocaleString()}
+          </span>
+        </div>
+      </div>
+
       {/* Services for this vehicle */}
-      <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Services
+      <div className="flex flex-col gap-2">
+        <label className="text-[10px] font-bold text-gray-500 uppercase">
+          Services Required
         </label>
-        <div className="grid grid-cols-2 gap-1.5 bg-white p-2.5 rounded-lg border border-orange-100">
+        <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-lg border border-orange-100">
           {serviceOptions.map((service) => (
             <label
               key={service}
@@ -129,13 +190,15 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
       {/* Attachment for this vehicle */}
       <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Attachment
+        <label className="text-[10px] font-bold text-gray-500 uppercase">
+          Attachment (if any)
         </label>
         {!vehicle.attachment ? (
           <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-lg bg-white hover:bg-orange-50 cursor-pointer transition-colors">
             <span className="text-orange-600 text-lg">📎</span>
-            <span className="text-[11px] text-gray-600">Upload Doc/Image</span>
+            <span className="text-[11px] text-gray-600">
+              Upload Document / Image
+            </span>
             <input
               type="file"
               className="hidden"
@@ -179,6 +242,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     model: "",
     serviceType: [],
     attachment: null,
+    vehicleTotal: 0,
+    vehicleAdvance: 0,
+    vehicleRemaining: 0,
   };
 
   const initialForm = {
@@ -192,13 +258,17 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     model: "",
     serviceType: [],
     attachment: null,
-    // party-only multi-vehicle list
+    indTotal: 0,
+    indAdvance: 0,
+    indRemaining: 0,
+    // party-only multi-vehicle list (each vehicle has its own amounts)
     vehicles: [{ ...emptyVehicle }],
     region: "",
     receivedBy: "",
     handoverTo: "",
     remarks: "",
     bankName: "Cash",
+    // Optional overall summary (can be used for global reference)
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
@@ -208,11 +278,23 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
 
   useEffect(() => {
     if (editingData) {
-      // Make sure older records without vehicles array still work
+      // Ensure each vehicle has the amount fields (backward compatibility)
+      const vehiclesWithAmounts = (
+        editingData.vehicles || [{ ...emptyVehicle }]
+      ).map((v) => ({
+        ...emptyVehicle,
+        ...v,
+        vehicleTotal: v.vehicleTotal || 0,
+        vehicleAdvance: v.vehicleAdvance || 0,
+        vehicleRemaining: v.vehicleRemaining || 0,
+      }));
       setFormData({
         ...editingData,
-        vehicles: editingData.vehicles ?? [{ ...emptyVehicle }],
+        vehicles: vehiclesWithAmounts,
         attachment: editingData.attachment ?? null,
+        indTotal: editingData.indTotal || 0,
+        indAdvance: editingData.indAdvance || 0,
+        indRemaining: editingData.indRemaining || 0,
       });
     } else {
       setFormData(initialForm);
@@ -255,6 +337,20 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     setFormData((prev) => ({ ...prev, attachment: null }));
   };
 
+  // Individual amount changes with remaining calculation
+  const handleIndividualAmountChange = (field, value) => {
+    const numValue = Number(value) || 0;
+    setFormData((prev) => {
+      let updated = { ...prev, [field]: numValue };
+      if (field === "indTotal") {
+        updated.indRemaining = numValue - prev.indAdvance;
+      } else if (field === "indAdvance") {
+        updated.indRemaining = prev.indTotal - numValue;
+      }
+      return updated;
+    });
+  };
+
   // ── Party: vehicle field update ──
   const handleVehicleChange = (idx, field, value) => {
     setFormData((prev) => {
@@ -279,8 +375,23 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     }));
   };
 
-  // ── Amount ──
-  const handleAmountChange = (e, field) => {
+  // Calculate overall totals from all vehicles (for display only)
+  const calculateOverallTotals = () => {
+    let totalAll = 0;
+    let advanceAll = 0;
+    let remainingAll = 0;
+    formData.vehicles.forEach((vehicle) => {
+      totalAll += vehicle.vehicleTotal || 0;
+      advanceAll += vehicle.vehicleAdvance || 0;
+      remainingAll += vehicle.vehicleRemaining || 0;
+    });
+    return { totalAll, advanceAll, remainingAll };
+  };
+
+  const { totalAll, advanceAll, remainingAll } = calculateOverallTotals();
+
+  // ── Overall Amount change (manual override) ──
+  const handleOverallAmountChange = (e, field) => {
     const value = Number(e.target.value) || 0;
     const updatedData = { ...formData, [field]: value };
     updatedData.remainingBalance =
@@ -298,13 +409,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
         return;
       }
     } else {
-      // Party: every vehicle must have at least one service
+      // Party: every vehicle must have at least one service and plate number
       const invalid = formData.vehicles.some(
         (v) => v.serviceType.length === 0 || !v.plate.trim(),
       );
       if (invalid) {
         alert(
-          "Har gaadi ka plate no aur kam az kam ek service zaroor fill karein!",
+          "Har gaadi ka plate number aur kam az kam ek service zaroor fill karein!",
         );
         return;
       }
@@ -357,7 +468,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm focus:border-blue-500 outline-none"
+            className="rounded-lg p-2 border border-gray-300 text-sm focus:border-blue-500 outline-none"
             placeholder={isParty ? "e.g. Al-Madina Motors" : "e.g. Ali Khan"}
             required
             value={formData.partyName}
@@ -375,7 +486,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none"
               placeholder="03xxxxxxxx"
               value={formData.phone}
               onChange={(e) =>
@@ -389,7 +500,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none"
               placeholder={isParty ? "NTN-786..." : "17301..."}
               value={isParty ? formData.ntn : formData.cnic}
               onChange={(e) =>
@@ -410,7 +521,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
               placeholder="Receiver name"
               value={formData.receivedBy}
               onChange={(e) =>
@@ -424,7 +535,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
               placeholder="Handover name"
               value={formData.handoverTo}
               onChange={(e) =>
@@ -434,39 +545,84 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* ── INDIVIDUAL: single vehicle block ── */}
+        {/* ── INDIVIDUAL SECTION ── */}
         {!isParty && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Vehicle No
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-300 text-sm outline-none"
-                placeholder="ISL-786"
-                required
-                value={formData.plate}
-                onChange={(e) =>
-                  setFormData({ ...formData, plate: e.target.value })
-                }
-              />
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Vehicle No
+                </label>
+                <input
+                  type="text"
+                  className="rounded-lg p-2 border border-gray-300 text-sm outline-none"
+                  placeholder="ISL-786"
+                  required
+                  value={formData.plate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, plate: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Model
+                </label>
+                <input
+                  type="text"
+                  className="rounded-lg p-2 border border-gray-300 text-sm outline-none"
+                  placeholder="Civic-2015"
+                  value={formData.model}
+                  onChange={(e) =>
+                    setFormData({ ...formData, model: e.target.value })
+                  }
+                />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Model
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-300 text-sm outline-none"
-                placeholder="Civic-2015"
-                value={formData.model}
-                onChange={(e) =>
-                  setFormData({ ...formData, model: e.target.value })
-                }
-              />
+
+            {/* Individual Amounts */}
+            <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 space-y-2">
+              <div className="text-[10px] font-bold text-gray-500 uppercase">
+                Payment Details
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-semibold text-gray-600">
+                    Total Amount (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    className="rounded-lg p-2 border border-gray-200 text-sm outline-none"
+                    value={formData.indTotal}
+                    onChange={(e) =>
+                      handleIndividualAmountChange("indTotal", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-semibold text-gray-600">
+                    Advance Paid (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    className="rounded-lg p-2 border border-gray-200 text-sm outline-none"
+                    value={formData.indAdvance}
+                    onChange={(e) =>
+                      handleIndividualAmountChange("indAdvance", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center bg-white px-3 py-2 rounded-md">
+                <span className="text-[10px] font-bold text-gray-600">
+                  Remaining Balance
+                </span>
+                <span className="text-base font-bold text-blue-600">
+                  Rs. {(formData.indRemaining || 0).toLocaleString()}
+                </span>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Region & Bank */}
@@ -476,7 +632,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               Region
             </label>
             <select
-              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none bg-white"
               value={formData.region}
               onChange={(e) =>
                 setFormData({ ...formData, region: e.target.value })
@@ -497,7 +653,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               Payment Method / Bank
             </label>
             <select
-              className="rounded p-2 border border-gray-300 text-sm outline-none bg-white"
+              className="rounded-lg p-2 border border-gray-300 text-sm outline-none bg-white"
               value={formData.bankName}
               onChange={(e) =>
                 setFormData({ ...formData, bankName: e.target.value })
@@ -585,7 +741,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           )}
         </div>
 
-        {/* ── PARTY: dynamic multi-vehicle section ── */}
+        {/* ── PARTY: dynamic multi-vehicle section (each vehicle has its own amounts) ── */}
         {isParty && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -601,7 +757,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               </button>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               {formData.vehicles.map((vehicle, idx) => (
                 <VehicleCard
                   key={idx}
@@ -613,48 +769,75 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                 />
               ))}
             </div>
+
+            {/* Party Overall Summary (auto-calculated from all vehicles) */}
+            <div className="bg-orange-100 rounded-lg p-3 mt-2">
+              <div className="text-[10px] font-bold text-gray-600 uppercase mb-2">
+                Party Total Summary
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-600">Total All Vehicles:</span>
+                  <div className="font-bold text-orange-700">
+                    Rs. {totalAll.toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Total Advance:</span>
+                  <div className="font-bold text-green-700">
+                    Rs. {advanceAll.toLocaleString()}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-600">Total Remaining:</span>
+                  <div className="font-bold text-red-600 text-base">
+                    Rs. {remainingAll.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Payment Summary */}
-        <div
-          className={`grid grid-cols-2 gap-3 p-3 rounded-lg border ${
-            isParty
-              ? "bg-orange-50 border-orange-100"
-              : "bg-blue-50 border-blue-100"
-          }`}
-        >
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold uppercase">
-              Total Rate
-            </label>
-            <input
-              type="number"
-              className="rounded p-1.5 border border-gray-200 text-sm outline-none"
-              value={formData.totalAmount}
-              onChange={(e) => handleAmountChange(e, "totalAmount")}
-            />
+        {/* Optional Manual Overall Summary (can be used as override) */}
+        {!isParty && (
+          <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-blue-50 border-blue-100">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold uppercase">
+                Overall Total (Optional)
+              </label>
+              <input
+                type="number"
+                className="rounded p-1.5 border border-gray-200 text-sm outline-none"
+                value={formData.totalAmount}
+                onChange={(e) => handleOverallAmountChange(e, "totalAmount")}
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold uppercase">
+                Overall Advance (Optional)
+              </label>
+              <input
+                type="number"
+                className="rounded p-1.5 border border-gray-200 text-sm outline-none"
+                value={formData.advancePaid}
+                onChange={(e) => handleOverallAmountChange(e, "advancePaid")}
+              />
+            </div>
           </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold uppercase">Advance</label>
-            <input
-              type="number"
-              className="rounded p-1.5 border border-gray-200 text-sm outline-none"
-              value={formData.advancePaid}
-              onChange={(e) => handleAmountChange(e, "advancePaid")}
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Remaining Balance */}
-        <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
-          <span className="text-[10px] font-bold text-gray-400 uppercase">
-            Remaining Balance
-          </span>
-          <span className="text-lg font-mono font-bold text-yellow-400">
-            Rs. {formData.remainingBalance.toLocaleString()}
-          </span>
-        </div>
+        {/* Overall Remaining Balance (manual) */}
+        {!isParty && (
+          <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">
+              Overall Remaining
+            </span>
+            <span className="text-lg font-mono font-bold text-yellow-400">
+              Rs. {formData.remainingBalance.toLocaleString()}
+            </span>
+          </div>
+        )}
 
         <button
           type="submit"

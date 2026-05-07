@@ -55,15 +55,12 @@ const AttachmentDisplay = ({ attachment }) => {
               onClick={(e) => e.stopPropagation()}
               className="relative max-w-4xl max-h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl"
             >
-              {/* Close button */}
               <button
                 onClick={() => setViewerOpen(false)}
                 className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center text-xl"
               >
                 ✕
               </button>
-
-              {/* Content */}
               {isImage ? (
                 <img
                   src={attachment.preview}
@@ -93,10 +90,34 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Party Ledger Block (one per party record) ────────────────────────────────
+// ─── Party Ledger Block (one per party record) with per-vehicle amounts ──────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = item.vehicles ?? [];
   const hasVehicles = vehicles.length > 0;
+
+  // Calculate totals from all vehicles
+  const totalAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleTotal || 0),
+    0,
+  );
+  const advanceAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleAdvance || 0),
+    0,
+  );
+  const remainingAllVehicles = vehicles.reduce(
+    (sum, v) => sum + (v.vehicleRemaining || 0),
+    0,
+  );
+
+  // Use vehicle totals if available, otherwise fallback to item level fields
+  const displayTotal =
+    totalAllVehicles > 0 ? totalAllVehicles : item.totalAmount || 0;
+  const displayAdvance =
+    advanceAllVehicles > 0 ? advanceAllVehicles : item.advancePaid || 0;
+  const displayRemaining =
+    remainingAllVehicles > 0
+      ? remainingAllVehicles
+      : item.remainingBalance || 0;
 
   return (
     <motion.div
@@ -106,13 +127,13 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
       transition={{ duration: 0.3 }}
       className="w-full rounded-xl border border-gray-200 overflow-hidden shadow-sm"
     >
-      {/* ── Blue Header ── */}
-      <div className="bg-blue-600 px-4 py-2.5 flex items-center justify-between">
+      {/* ── Orange Header ── */}
+      <div className="bg-orange-600 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
         <p className="text-white font-bold text-sm tracking-wide uppercase">
-          LEDGER REPORT OF{" "}
-          <span className="text-yellow-300">{item.partyName || "N/A"}</span>
+          PARTY LEDGER :{" "}
+          <span className="text-yellow-200">{item.partyName || "N/A"}</span>
           {(item.ntn || item.phone) && (
-            <span className="text-blue-200 font-normal text-xs ml-2">
+            <span className="text-orange-200 font-normal text-xs ml-2">
               ({item.ntn || item.phone})
             </span>
           )}
@@ -146,17 +167,18 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         )}
       </div>
 
-      {/* ── Ledger Table ── */}
+      {/* ── Ledger Table with Per-Vehicle Amounts ── */}
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+          <thead className="bg-gray-100 border-b border-gray-200">
+            <tr className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
               <th className="px-4 py-2.5">#</th>
-              <th className="px-4 py-2.5">Vehicle No / Model</th>
-              <th className="px-4 py-2.5">Purpose / Services</th>
+              <th className="px-4 py-2.5">Vehicle Details</th>
+              <th className="px-4 py-2.5">Services</th>
               <th className="px-4 py-2.5">Attachment</th>
-              <th className="px-4 py-2.5 text-right">Amount</th>
-              <th className="px-4 py-2.5 text-right">Closing Balance</th>
+              <th className="px-4 py-2.5 text-right">Total (Rs.)</th>
+              <th className="px-4 py-2.5 text-right">Advance (Rs.)</th>
+              <th className="px-4 py-2.5 text-right">Remaining (Rs.)</th>
             </tr>
           </thead>
 
@@ -164,107 +186,113 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-4 text-center text-gray-400 text-xs"
                 >
                   No vehicles recorded.
                 </td>
               </tr>
             ) : (
-              <>
-                {vehicles.map((v, idx) => {
-                  const isLast = idx === vehicles.length - 1;
-                  return (
-                    <tr
-                      key={idx}
-                      className="text-sm hover:bg-blue-50/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">
-                        {String(idx + 1).padStart(2, "0")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-gray-800 text-xs uppercase">
-                          {v.plate || "---"}
-                        </div>
-                        <div className="text-[10px] text-gray-400 italic">
-                          {v.model || "---"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {Array.isArray(v.serviceType) &&
-                          v.serviceType.length > 0 ? (
-                            v.serviceType.map((s, si) => (
-                              <span
-                                key={si}
-                                className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
-                              >
-                                {s}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-400 text-xs">---</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <AttachmentDisplay attachment={v.attachment} />
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs font-mono text-gray-700">
-                        {isLast
-                          ? Number(item.totalAmount || 0).toLocaleString()
-                          : ""}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs font-mono font-bold text-blue-600">
-                        {isLast
-                          ? Number(item.totalAmount || 0).toLocaleString()
-                          : ""}
-                      </td>
-                    </tr>
-                  );
-                })}
-
-                {Number(item.advancePaid) > 0 && (
-                  <tr className="bg-red-50 border-t border-red-100">
-                    <td className="px-4 py-2.5 text-red-500 font-mono text-xs">
-                      —
-                    </td>
-                    <td
-                      colSpan={3}
-                      className="px-4 py-2.5 text-red-600 font-bold text-xs uppercase tracking-wide"
-                    >
-                      AMOUNT RECEIVED
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-xs font-mono font-bold text-red-600">
-                      {Number(item.advancePaid).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-xs font-mono font-bold text-blue-600">
-                      {Number(item.remainingBalance || 0).toLocaleString()}
-                    </td>
-                  </tr>
-                )}
-              </>
+              vehicles.map((v, idx) => (
+                <tr
+                  key={idx}
+                  className="text-sm hover:bg-orange-50/30 transition-colors"
+                >
+                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                    {String(idx + 1).padStart(2, "0")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-gray-800 text-xs uppercase">
+                      {v.plate || "---"}
+                    </div>
+                    <div className="text-[10px] text-gray-400 italic">
+                      {v.model || "---"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(v.serviceType) &&
+                      v.serviceType.length > 0 ? (
+                        v.serviceType.map((s, si) => (
+                          <span
+                            key={si}
+                            className="bg-orange-100 text-orange-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                          >
+                            {s}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-400 text-xs">---</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <AttachmentDisplay attachment={v.attachment} />
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-700">
+                    {Number(v.vehicleTotal || 0).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-mono text-green-600">
+                    {Number(v.vehicleAdvance || 0).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-orange-600">
+                    {Number(v.vehicleRemaining || 0).toLocaleString()}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
+
+          {/* Summary Row */}
+          {hasVehicles && (
+            <tfoot className="bg-orange-50 border-t-2 border-orange-200">
+              <tr className="text-xs font-bold">
+                <td
+                  colSpan={4}
+                  className="px-4 py-3 text-right text-gray-700 uppercase"
+                >
+                  TOTAL SUMMARY
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-gray-800">
+                  {Number(
+                    totalAllVehicles || item.totalAmount || 0,
+                  ).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-green-700">
+                  {Number(
+                    advanceAllVehicles || item.advancePaid || 0,
+                  ).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-mono font-bold text-red-600">
+                  {Number(
+                    remainingAllVehicles || item.remainingBalance || 0,
+                  ).toLocaleString()}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
-      <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-end gap-6">
-        <div className="text-right">
-          <p className="text-[10px] font-bold text-gray-400 uppercase">
-            Balance / Advance
-          </p>
+      {/* Footer with Balance Status */}
+      <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-4 text-[10px] text-gray-500">
+          <span>💰 Total: Rs. {displayTotal.toLocaleString()}</span>
+          <span>💵 Advance: Rs. {displayAdvance.toLocaleString()}</span>
+          <span>📊 Remaining: Rs. {displayRemaining.toLocaleString()}</span>
         </div>
-        <div
-          className={`text-lg font-mono font-bold ${Number(item.remainingBalance) > 0 ? "text-red-600" : "text-green-600"}`}
-        >
-          {Number(item.remainingBalance || 0).toLocaleString()}
+        <div className="flex items-center gap-3">
+          <div
+            className={`text-lg font-mono font-bold ${displayRemaining > 0 ? "text-red-600" : "text-green-600"}`}
+          >
+            {displayRemaining.toLocaleString()}
+          </div>
+          <span
+            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${displayRemaining > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+          >
+            {displayRemaining > 0 ? "● PENDING" : "● CLEARED"}
+          </span>
         </div>
-        <span
-          className={`text-[9px] font-black uppercase px-2 py-1 rounded ${Number(item.remainingBalance) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
-        >
-          {Number(item.remainingBalance) > 0 ? "● PENDING" : "● CLEARED"}
-        </span>
       </div>
     </motion.div>
   );
@@ -338,7 +366,7 @@ const Data = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
             type="search"
-            placeholder="Search Name, Service, Plate..."
+            placeholder="Search Name, Plate, Service..."
             className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -383,7 +411,7 @@ const Data = ({
                   <th className="p-4">Customer & ID</th>
                   <th className="p-4">Service & Vehicle</th>
                   <th className="p-4">Tracking (From/To)</th>
-                  <th className="p-4">Payment & Advance</th>
+                  <th className="p-4">Payment Details</th>
                   <th className="p-4">Attachment</th>
                   <th className="p-4 text-center">Action</th>
                 </tr>
@@ -450,9 +478,9 @@ const Data = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between md:justify-start gap-2">
                             <span
-                              className={`text-[8px] font-black uppercase ${item.remainingBalance > 0 ? "text-red-600" : "text-green-600"}`}
+                              className={`text-[8px] font-black uppercase ${(item.indRemaining || item.remainingBalance) > 0 ? "text-red-600" : "text-green-600"}`}
                             >
-                              {item.remainingBalance > 0
+                              {(item.indRemaining || item.remainingBalance) > 0
                                 ? "● Pending"
                                 : "● Cleared"}
                             </span>
@@ -461,11 +489,20 @@ const Data = ({
                             </span>
                           </div>
                           <div className="text-[10px] text-gray-600">
-                            Total: {Number(item.totalAmount).toLocaleString()}
+                            Total:{" "}
+                            {(
+                              item.indTotal ||
+                              item.totalAmount ||
+                              0
+                            ).toLocaleString()}
                           </div>
                           <div className="text-[11px] font-bold text-red-600">
                             Bal:{" "}
-                            {Number(item.remainingBalance).toLocaleString()}
+                            {(
+                              item.indRemaining ||
+                              item.remainingBalance ||
+                              0
+                            ).toLocaleString()}
                           </div>
                         </div>
                       </td>
@@ -497,7 +534,7 @@ const Data = ({
         </div>
       )}
 
-      {/* PARTY LEDGER BLOCKS */}
+      {/* PARTY LEDGER BLOCKS with per-vehicle amounts */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (

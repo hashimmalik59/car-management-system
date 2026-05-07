@@ -22,7 +22,7 @@ const Header = ({ totalReceivable = 0 }) => {
             </svg>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">
-            Auto<span className="text-blue-600">Khata</span>
+            Iqra <span className="text-blue-600">Motor Insurance</span>
           </h1>
         </div>
 
