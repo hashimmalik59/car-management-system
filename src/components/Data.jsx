@@ -90,154 +90,177 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print Individual Receipt ─────────────────────────────────────────
-const printIndividualReceipt = (item) => {
+// ─── Print All Remaining Balance Report ─────────────────────────────────────────
+const printRemainingBalanceReport = (allCustomerData) => {
+  const individualData = allCustomerData.filter(
+    (item) => item.type === "individual",
+  );
+  const partyData = allCustomerData.filter((item) => item.type === "party");
+
+  const calculateTotalRemaining = (data) => {
+    return data.reduce((sum, item) => {
+      if (item.type === "party") {
+        const vehicles = item.vehicles ?? [];
+        const partyTotal = vehicles.reduce(
+          (vSum, v) => vSum + (v.vehicleRemaining || 0),
+          0,
+        );
+        return sum + partyTotal;
+      } else {
+        return sum + (item.remainingBalance || 0);
+      }
+    }, 0);
+  };
+
+  const individualTotal = calculateTotalRemaining(individualData);
+  const partyTotal = calculateTotalRemaining(partyData);
+  const grandTotal = individualTotal + partyTotal;
+
+  const getDetailedRemaining = (data, type) => {
+    return data.filter((item) => {
+      if (type === "party") {
+        const vehicles = item.vehicles ?? [];
+        const partyRemaining = vehicles.reduce(
+          (sum, v) => sum + (v.vehicleRemaining || 0),
+          0,
+        );
+        return partyRemaining > 0;
+      } else {
+        return (item.remainingBalance || 0) > 0;
+      }
+    });
+  };
+
+  const pendingIndividuals = getDetailedRemaining(individualData, "individual");
+  const pendingParties = getDetailedRemaining(partyData, "party");
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Receipt - ${item.partyName}</title>
+      <title>Remaining Balance Report</title>
       <style>
-        body {
-          font-family: 'Courier New', monospace;
-          padding: 20px;
-          margin: 0;
-          font-size: 12px;
-        }
-        .receipt {
-          max-width: 800px;
-          margin: 0 auto;
-          border: 1px solid #ddd;
-          padding: 20px;
-          border-radius: 10px;
-        }
-        .header {
-          text-align: center;
-          border-bottom: 2px solid #333;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 18px;
-        }
-        .header p {
-          margin: 5px 0;
-          color: #666;
-        }
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-          padding: 5px 0;
-          border-bottom: 1px dotted #ccc;
-        }
-        .label {
-          font-weight: bold;
-          width: 150px;
-        }
-        .value {
-          flex: 1;
-        }
-        .table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 15px 0;
-        }
-        .table th, .table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        .table th {
-          background-color: #f2f2f2;
-        }
-        .footer {
-          margin-top: 20px;
-          text-align: center;
-          border-top: 1px solid #ddd;
-          padding-top: 10px;
-          font-size: 10px;
-        }
-        .amount {
-          font-size: 14px;
-          font-weight: bold;
-        }
-        .text-right {
-          text-align: right;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; background: white; }
+        .report { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 3px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { color: #666; font-size: 12px; }
+        .summary-cards { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
+        .card { flex: 1; border: 1px solid #ddd; border-radius: 10px; padding: 15px; text-align: center; background: #f9f9f9; }
+        .card h3 { font-size: 14px; margin-bottom: 10px; color: #666; }
+        .card .amount { font-size: 28px; font-weight: bold; color: #dc2626; }
+        .section { margin-bottom: 30px; }
+        .section h2 { font-size: 16px; border-left: 4px solid #3b82f6; padding-left: 10px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-size: 11px; }
+        td { font-size: 11px; }
+        .text-right { text-align: right; }
+        .footer { margin-top: 30px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 10px; color: #999; }
+        @media print { body { padding: 10px; } }
       </style>
     </head>
     <body>
-      <div class="receipt">
+      <div class="report">
         <div class="header">
-          <h1>IQRA MOTOR INSURANCE</h1>
-          <p>Individual Customer Receipt</p>
-          <p>Date: ${new Date().toLocaleDateString()}</p>
+          <h1>🏢 IQRA MOTOR INSURANCE</h1>
+          <p>Remaining Balance Report</p>
+          <p>Generated: ${new Date().toLocaleString()}</p>
+          <p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p>
         </div>
-        
-        <div class="info-row">
-          <span class="label">Customer Name:</span>
-          <span class="value">${item.partyName || "N/A"}</span>
+        <div class="summary-cards">
+          <div class="card">
+            <h3>👤 Individual Customers</h3>
+            <div class="amount">Rs. ${individualTotal.toLocaleString()}</div>
+          </div>
+          <div class="card">
+            <h3>🏢 Party/Business</h3>
+            <div class="amount">Rs. ${partyTotal.toLocaleString()}</div>
+          </div>
+          <div class="card" style="background: #fef3c7;">
+            <h3>💰 GRAND TOTAL</h3>
+            <div class="amount" style="color: #dc2626; font-size: 32px;">Rs. ${grandTotal.toLocaleString()}</div>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="label">Phone:</span>
-          <span class="value">${item.phone || "N/A"}</span>
+        ${
+          pendingIndividuals.length > 0
+            ? `
+        <div class="section">
+          <h2>📋 Individual Customers (Pending Balance)</h2>
+          <table>
+            <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Vehicle No</th><th>Services</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
+            <tbody>
+              ${pendingIndividuals
+                .map(
+                  (item, idx) => `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${item.partyName || "N/A"}</td>
+                  <td>${item.phone || "N/A"}</td>
+                  <td>${item.plate || "N/A"}</td>
+                  <td>${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</td>
+                  <td class="text-right">${(item.totalAmount || 0).toLocaleString()}</td>
+                  <td class="text-right">${(item.advancePaid || 0).toLocaleString()}</td>
+                  <td class="text-right" style="color: #dc2626; font-weight: bold;">${(item.remainingBalance || 0).toLocaleString()}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
         </div>
-        <div class="info-row">
-          <span class="label">CNIC:</span>
-          <span class="value">${item.cnic || "N/A"}</span>
+        `
+            : ""
+        }
+        ${
+          pendingParties.length > 0
+            ? `
+        <div class="section">
+          <h2>📋 Party/Business Customers (Pending Balance)</h2>
+          ${pendingParties
+            .map((item) => {
+              const vehicles = item.vehicles ?? [];
+              const pendingVehicles = vehicles.filter(
+                (v) => (v.vehicleRemaining || 0) > 0,
+              );
+              if (pendingVehicles.length === 0) return "";
+              return `
+              <h3 style="margin: 15px 0 10px 0; color: #3b82f6;">${item.partyName || "N/A"} (${item.phone || "N/A"})</h3>
+              <table>
+                <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
+                <tbody>
+                  ${pendingVehicles
+                    .map(
+                      (v, idx) => `
+                    <tr>
+                      <td>${idx + 1}</td>
+                      <td>${v.plate || "---"}</td>
+                      <td>${v.model || "---"}</td>
+                      <td>${(v.serviceType || []).join(", ") || "---"}</td>
+                      <td class="text-right">${(v.vehicleTotal || 0).toLocaleString()}</td>
+                      <td class="text-right">${(v.vehicleAdvance || 0).toLocaleString()}</td>
+                      <td class="text-right" style="color: #dc2626;">${(v.vehicleRemaining || 0).toLocaleString()}</td>
+                    </tr>
+                  `,
+                    )
+                    .join("")}
+                </tbody>
+                <tfoot style="background: #fef3c7;">
+                  <tr><td colspan="6" class="text-right"><strong>Party Total:</strong></td><td class="text-right"><strong>Rs. ${pendingVehicles.reduce((sum, v) => sum + (v.vehicleRemaining || 0), 0).toLocaleString()}</strong></td></tr>
+                </tfoot>
+              </table>
+            `;
+            })
+            .join("")}
         </div>
-        <div class="info-row">
-          <span class="label">Vehicle No:</span>
-          <span class="value">${item.plate || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Model:</span>
-          <span class="value">${item.model || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Region:</span>
-          <span class="value">${item.region || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Payment Method:</span>
-          <span class="value">${item.bankName || "Cash"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Received From:</span>
-          <span class="value">${item.receivedBy || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Handover To:</span>
-          <span class="value">${item.handoverTo || "N/A"}</span>
-        </div>
-        
-        <h3>Services:</h3>
-        <div class="info-row">
-          <span class="value">${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</span>
-        </div>
-        
-        <h3>Payment Summary:</h3>
-        <div class="info-row">
-          <span class="label">Total Amount:</span>
-          <span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Advance Paid:</span>
-          <span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Remaining Balance:</span>
-          <span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">
-            Rs. ${(item.remainingBalance || 0).toLocaleString()}
-          </span>
-        </div>
-        
+        `
+            : ""
+        }
         <div class="footer">
           <p>Thank you for choosing Iqra Motor Insurance</p>
-          <p>This is a computer generated receipt</p>
+          <p>Contact: +92 300 1234567 | info@iqramotors.com</p>
         </div>
       </div>
       <script>window.print();</script>
@@ -247,7 +270,54 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── Print Party Receipt (All Vehicles) ─────────────────────────────────
+// ─── Print Individual Receipt ─────────────────────────────────────────
+const printIndividualReceipt = (item) => {
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Receipt - ${item.partyName}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 18px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+        .label { font-weight: bold; width: 150px; }
+        .value { flex: 1; }
+        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
+        .amount { font-size: 14px; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <div class="header"><h1>IQRA MOTOR INSURANCE</h1><p>Individual Customer Receipt</p><p>Date: ${new Date().toLocaleDateString()}</p></div>
+        <div class="info-row"><span class="label">Customer Name:</span><span class="value">${item.partyName || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
+        <div class="info-row"><span class="label">CNIC:</span><span class="value">${item.cnic || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${item.plate || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Payment Method:</span><span class="value">${item.bankName || "Cash"}</span></div>
+        <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
+        <h3>Services:</h3>
+        <div class="info-row"><span class="value">${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</span></div>
+        <h3>Payment Summary:</h3>
+        <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
+        <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
+      </div>
+      <script>window.print();</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
+// ─── Print Party Receipt ─────────────────────────────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = vehicles.reduce(
@@ -270,126 +340,31 @@ const printPartyReceipt = (item) => {
     <head>
       <title>Receipt - ${item.partyName}</title>
       <style>
-        body {
-          font-family: 'Courier New', monospace;
-          padding: 20px;
-          margin: 0;
-          font-size: 12px;
-        }
-        .receipt {
-          max-width: 1000px;
-          margin: 0 auto;
-          border: 1px solid #ddd;
-          padding: 20px;
-          border-radius: 10px;
-        }
-        .header {
-          text-align: center;
-          border-bottom: 2px solid #333;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 18px;
-        }
-        .header p {
-          margin: 5px 0;
-          color: #666;
-        }
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-          padding: 5px 0;
-          border-bottom: 1px dotted #ccc;
-        }
-        .label {
-          font-weight: bold;
-          width: 150px;
-        }
-        .value {
-          flex: 1;
-        }
-        .table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 15px 0;
-        }
-        .table th, .table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        .table th {
-          background-color: #f2f2f2;
-        }
-        .text-right {
-          text-align: right;
-        }
-        .footer {
-          margin-top: 20px;
-          text-align: center;
-          border-top: 1px solid #ddd;
-          padding-top: 10px;
-          font-size: 10px;
-        }
-        .amount {
-          font-size: 14px;
-          font-weight: bold;
-        }
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+        .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 18px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+        .label { font-weight: bold; width: 150px; }
+        .value { flex: 1; }
+        .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .text-right { text-align: right; }
+        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
       </style>
     </head>
     <body>
       <div class="receipt">
-        <div class="header">
-          <h1>IQRA MOTOR INSURANCE</h1>
-          <p>Party/Business Customer Receipt</p>
-          <p>Date: ${new Date().toLocaleDateString()}</p>
-        </div>
-        
-        <div class="info-row">
-          <span class="label">Party/Business Name:</span>
-          <span class="value">${item.partyName || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Phone:</span>
-          <span class="value">${item.phone || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">NTN/Reg No:</span>
-          <span class="value">${item.ntn || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Region:</span>
-          <span class="value">${item.region || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Payment Method:</span>
-          <span class="value">${item.bankName || "Cash"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Received From:</span>
-          <span class="value">${item.receivedBy || "N/A"}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Handover To:</span>
-          <span class="value">${item.handoverTo || "N/A"}</span>
-        </div>
-        
+        <div class="header"><h1>IQRA MOTOR INSURANCE</h1><p>Party/Business Customer Receipt</p><p>Date: ${new Date().toLocaleDateString()}</p></div>
+        <div class="info-row"><span class="label">Party Name:</span><span class="value">${item.partyName || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
+        <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Payment Method:</span><span class="value">${item.bankName || "Cash"}</span></div>
         <h3>Vehicles Details:</h3>
         <table class="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Vehicle No</th>
-              <th>Model</th>
-              <th>Services</th>
-              <th class="text-right">Total (Rs.)</th>
-              <th class="text-right">Advance (Rs.)</th>
-              <th class="text-right">Remaining (Rs.)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
           <tbody>
             ${vehicles
               .map(
@@ -407,20 +382,11 @@ const printPartyReceipt = (item) => {
               )
               .join("")}
           </tbody>
-          <tfoot style="background-color: #f2f2f2;">
-            <tr>
-              <td colspan="4" class="text-right"><strong>GRAND TOTAL</strong></td>
-              <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
-              <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
-              <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
-            </tr>
+          <tfoot style="background: #f2f2f2;">
+            <tr><td colspan="4" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
           </tfoot>
         </table>
-        
-        <div class="footer">
-          <p>Thank you for choosing Iqra Motor Insurance</p>
-          <p>This is a computer generated receipt</p>
-        </div>
+        <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
     </body>
@@ -429,7 +395,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (one per party record) with per-vehicle amounts ──────
+// ─── Party Ledger Block ────────────────────────────────────────────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = item.vehicles ?? [];
   const hasVehicles = vehicles.length > 0;
@@ -468,25 +434,24 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         <div className="flex gap-2">
           <button
             onClick={() => printPartyReceipt(item)}
-            className="px-3 py-1 bg-green-500/70 hover:bg-green-500 text-white rounded text-[10px] font-bold transition-all"
+            className="px-3 py-1 bg-green-500/70 hover:bg-green-500 text-white rounded text-[10px] font-bold"
           >
             🖨️ Print
           </button>
           <button
             onClick={() => onEdit(item.id)}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold transition-all"
+            className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold"
           >
             Edit
           </button>
           <button
             onClick={() => onDelete(item.id)}
-            className="px-3 py-1 bg-red-500/70 hover:bg-red-500 text-white rounded text-[10px] font-bold transition-all"
+            className="px-3 py-1 bg-red-500/70 hover:bg-red-500 text-white rounded text-[10px] font-bold"
           >
             Del
           </button>
         </div>
       </div>
-
       <div className="bg-gray-50 px-4 py-1.5 flex flex-wrap gap-x-6 gap-y-1 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase">
         {item.phone && <span>📞 {item.phone}</span>}
         {item.region && <span>📍 {item.region}</span>}
@@ -497,8 +462,14 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         {item.bankName && (
           <span className="text-blue-600">💳 {item.bankName}</span>
         )}
-      </div>
+        {item.tokenTaxFrom && (
+          <span className="text-indigo-600">TAX FROM: {item.tokenTaxFrom}</span>
+        )}
 
+        {item.tokenTaxTo && (
+          <span className="text-pink-600">TAX TO: {item.tokenTaxTo}</span>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
           <thead className="bg-gray-100 border-b border-gray-200">
@@ -507,9 +478,9 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5">Vehicle Details</th>
               <th className="px-4 py-2.5">Services</th>
               <th className="px-4 py-2.5">Attachment</th>
-              <th className="px-4 py-2.5 text-right">Total (Rs.)</th>
-              <th className="px-4 py-2.5 text-right">Advance (Rs.)</th>
-              <th className="px-4 py-2.5 text-right">Remaining (Rs.)</th>
+              <th className="px-4 py-2.5 text-right">Total</th>
+              <th className="px-4 py-2.5 text-right">Advance</th>
+              <th className="px-4 py-2.5 text-right">Remaining</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -538,7 +509,19 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                     <div className="text-[10px] text-gray-400 italic">
                       {v.model || "---"}
                     </div>
+                    {v.tokenTaxFrom && (
+                      <div className="text-[9px] text-indigo-600 font-bold mt-1">
+                        TAX FROM: {v.tokenTaxFrom}
+                      </div>
+                    )}
+
+                    {v.tokenTaxTo && (
+                      <div className="text-[9px] text-pink-600 font-bold">
+                        TAX TO: {v.tokenTaxTo}
+                      </div>
+                    )}
                   </td>
+
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {v.serviceType?.map((s, si) => (
@@ -590,7 +573,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           )}
         </table>
       </div>
-
       <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-4 text-[10px] text-gray-500">
           <span>💰 Total: Rs. {totalAllVehicles.toLocaleString()}</span>
@@ -624,9 +606,27 @@ const Data = ({
 }) => {
   const [activeTab, setActiveTab] = useState("individual");
 
+  const calculateTotalRemaining = () => {
+    let total = 0;
+    customerData.forEach((item) => {
+      if (item.type === "party") {
+        const vehicles = item.vehicles ?? [];
+        const partyRemaining = vehicles.reduce(
+          (sum, v) => sum + (v.vehicleRemaining || 0),
+          0,
+        );
+        total += partyRemaining;
+      } else {
+        total += item.remainingBalance || 0;
+      }
+    });
+    return total;
+  };
+
+  const totalRemainingAll = calculateTotalRemaining();
+
   const filteredData = customerData.filter((item) => {
     const matchesTab = item.type === activeTab;
-
     let matchesSearch = false;
     if (item.type === "party") {
       const vehicleSearch = (item.vehicles ?? []).some(
@@ -676,18 +676,39 @@ const Data = ({
             </span>
           </p>
         </div>
-        <div className="relative w-full sm:w-80">
-          <motion.input
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            type="search"
-            placeholder="Search Name, Plate, Service..."
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl px-4 py-2 border border-red-200 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="text-center">
+                <p className="text-[8px] font-bold text-red-400 uppercase tracking-wider">
+                  Total Remaining
+                </p>
+                <p className="text-xl md:text-2xl font-black text-red-600 font-mono">
+                  Rs. {totalRemainingAll.toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => printRemainingBalanceReport(customerData)}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+              >
+                🖨️ Print Report
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="relative w-full">
+        <motion.input
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          type="search"
+          placeholder="Search Name, Plate, Service..."
+          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       <div className="flex bg-gray-100 p-1 rounded-xl w-fit border border-gray-200">
@@ -695,11 +716,7 @@ const Data = ({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("individual")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-            activeTab === "individual"
-              ? "bg-white shadow text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "individual" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
         >
           Individual Ledger
         </motion.button>
@@ -707,11 +724,7 @@ const Data = ({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("party")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-            activeTab === "party"
-              ? "bg-white shadow text-orange-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "party" ? "bg-white shadow text-orange-600" : "text-gray-500 hover:text-gray-700"}`}
         >
           Party / Business
         </motion.button>
@@ -807,6 +820,9 @@ const Data = ({
                           <div className="text-[10px] text-gray-600">
                             Total: {(item.totalAmount || 0).toLocaleString()}
                           </div>
+                          <div className="text-[10px] text-green-600 font-medium">
+                            Advance: {(item.advancePaid || 0).toLocaleString()}
+                          </div>
                           <div className="text-[11px] font-bold text-red-600">
                             Bal: {(item.remainingBalance || 0).toLocaleString()}
                           </div>
@@ -819,19 +835,19 @@ const Data = ({
                         <div className="flex gap-2 justify-end md:justify-center">
                           <button
                             onClick={() => printIndividualReceipt(item)}
-                            className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold border border-green-100 hover:bg-green-600 hover:text-white transition-all"
+                            className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold border border-green-100 hover:bg-green-600 hover:text-white"
                           >
                             🖨️ Print
                           </button>
                           <button
                             onClick={() => onEdit(item.id)}
-                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all"
+                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 hover:bg-blue-600 hover:text-white"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => onDelete(item.id)}
-                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all"
+                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold border border-red-100 hover:bg-red-600 hover:text-white"
                           >
                             Del
                           </button>

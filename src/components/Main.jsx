@@ -8,25 +8,68 @@ const Main = ({ customer, setCustomer }) => {
   const [editingCustomer, setEditingCustomer] = useState(null);
 
   function handleCustomer(newCustomer) {
-    const sanitizedCustomer = {
+    let sanitizedCustomer = {
       ...newCustomer,
-      totalAmount: Number(newCustomer.totalAmount) || 0,
-      advancePaid: Number(newCustomer.advancePaid) || 0,
-      remainingBalance:
-        Number(newCustomer.totalAmount) - Number(newCustomer.advancePaid),
     };
 
+    // INDIVIDUAL
+    if (newCustomer.type === "individual") {
+      sanitizedCustomer = {
+        ...newCustomer,
+
+        totalAmount: Number(newCustomer.totalAmount) || 0,
+
+        advancePaid: Number(newCustomer.advancePaid) || 0,
+
+        remainingBalance:
+          (Number(newCustomer.totalAmount) || 0) -
+          (Number(newCustomer.advancePaid) || 0),
+      };
+    }
+
+    // PARTY
+    if (newCustomer.type === "party") {
+      sanitizedCustomer = {
+        ...newCustomer,
+
+        vehicles: (newCustomer.vehicles || []).map((v) => ({
+          ...v,
+
+          vehicleTotal: Number(v.vehicleTotal) || 0,
+
+          vehicleAdvance: Number(v.vehicleAdvance) || 0,
+
+          vehicleRemaining:
+            (Number(v.vehicleTotal) || 0) - (Number(v.vehicleAdvance) || 0),
+        })),
+      };
+    }
+
+    // UPDATE
     if (editingCustomer) {
       setCustomer(
         customer.map((c) =>
           c.id === editingCustomer.id
-            ? { ...sanitizedCustomer, id: editingCustomer.id }
+            ? {
+                ...sanitizedCustomer,
+                id: editingCustomer.id,
+              }
             : c,
         ),
       );
+
       setEditingCustomer(null);
-    } else {
-      setCustomer([...customer, { ...sanitizedCustomer, id: Date.now() }]);
+    }
+
+    // NEW
+    else {
+      setCustomer([
+        ...customer,
+        {
+          ...sanitizedCustomer,
+          id: Date.now(),
+        },
+      ]);
     }
   }
 
@@ -38,6 +81,12 @@ const Main = ({ customer, setCustomer }) => {
 
   const handleEdit = (idToEdit) => {
     const target = customer.find((c) => c.id === idToEdit);
+
+    if (!target) {
+      console.error("Customer not found:", idToEdit);
+      return;
+    }
+
     setEditingCustomer({ ...target });
   };
   const filteredCustomers = customer.filter((item) => {
@@ -57,15 +106,32 @@ const Main = ({ customer, setCustomer }) => {
     const received = item.receivedBy?.toLowerCase() || "";
     const handover = item.handoverTo?.toLowerCase() || "";
 
+    const vehicleSearch =
+      item.type === "party"
+        ? (item.vehicles || []).some((v) => {
+            const vPlate = v.plate?.toLowerCase() || "";
+            const vModel = v.model?.toLowerCase() || "";
+
+            const vServices = Array.isArray(v.serviceType)
+              ? v.serviceType.join(" ").toLowerCase()
+              : "";
+
+            return (
+              vPlate.includes(s) || vModel.includes(s) || vServices.includes(s)
+            );
+          })
+        : false;
+
     return (
       party.includes(s) ||
       plate.includes(s) ||
       phone.includes(s) ||
       cnic.includes(s) ||
-      service.includes(s) || // Now this will work with Arrays
+      service.includes(s) ||
       region.includes(s) ||
       received.includes(s) ||
-      handover.includes(s)
+      handover.includes(s) ||
+      vehicleSearch
     );
   });
 
