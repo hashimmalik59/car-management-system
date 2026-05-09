@@ -194,7 +194,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         ) : (
           <div className="flex items-center gap-2 p-2 bg-white border border-orange-200 rounded-lg">
             {vehicle.attachment.preview &&
-            vehicle.attachment.file.type.startsWith("image/") ? (
+            vehicle.attachment?.file?.type?.startsWith("image/") ? (
               <img
                 src={vehicle.attachment.preview}
                 alt="preview"
@@ -243,6 +243,19 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           />
         </div>
       </div>
+
+      {/* Remarks */}
+      <div className="flex flex-col">
+        <label className="text-[10px] font-bold text-gray-500 uppercase">
+          Remarks
+        </label>
+        <textarea
+          className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+          placeholder="Vehicle remarks..."
+          value={vehicle.remarks || ""}
+          onChange={(e) => onChange(index, "remarks", e.target.value)}
+        />
+      </div>
     </div>
   );
 };
@@ -261,6 +274,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     // ✅ NEW: Individual Token Tax
     tokenTaxFrom: "",
     tokenTaxTo: "",
+
+    // New remarks
+    remarks: "",
   };
 
   const initialForm = {
@@ -287,6 +303,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     // ✅ NEW: Individual Token Tax
     tokenTaxFrom: "",
     tokenTaxTo: "",
+
+    // New: remarks
+    remarks: "",
   };
 
   const [formData, setFormData] = useState(initialForm);
@@ -302,6 +321,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           editingData.advancePaid || editingData.indAdvance || 0;
         normalized.remainingBalance =
           editingData.remainingBalance || editingData.indRemaining || 0;
+        normalized.tokenTaxFrom = normalized.tokenTaxFrom =
+          editingData.tokenTaxFrom || "";
+        normalized.tokenTaxTo = editingData.tokenTaxTo || "";
       } else {
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
           ...emptyVehicle,
@@ -739,6 +761,25 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                   />
                 </div>
               </div>
+            </div>
+
+            {/*  Remarks field */}
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-500 uppercase">
+                Remarks
+              </label>
+
+              <textarea
+                className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
+                placeholder="Customer remarks..."
+                value={formData.remarks || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    remarks: e.target.value,
+                  }))
+                }
+              />
             </div>
           </div>
         )}

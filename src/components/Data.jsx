@@ -12,9 +12,13 @@ const AttachmentDisplay = ({ attachment }) => {
 
   if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
 
-  const isImage =
-    attachment.preview && attachment.file?.type?.startsWith("image/");
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
 
+  const fileName = attachment?.name || attachment?.preview || "";
+
+  const isImage =
+    attachment?.file?.type?.startsWith("image/") ||
+    imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
   return (
     <>
       <div
@@ -536,6 +540,38 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v.attachment} />
+
+                    {(() => {
+                      const remarks = Array.isArray(v.remarks)
+                        ? v.remarks
+                        : v.remarks
+                          ? [
+                              typeof v.remarks === "object"
+                                ? v.remarks
+                                : {
+                                    text: v.remarks,
+                                    createdAt: Date.now(),
+                                  },
+                            ]
+                          : [];
+
+                      const latest = remarks[remarks.length - 1];
+
+                      return latest ? (
+                        <div className="mt-1 space-y-1">
+                          <div className="text-[10px] text-gray-500 italic break-words">
+                            <span className="font-bold">Remarks:</span>{" "}
+                            {latest.text}
+                          </div>
+
+                          <div className="text-[9px] text-gray-400">
+                            {new Date(
+                              latest.createdAt || Date.now(),
+                            ).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-700">
                     {Number(v.vehicleTotal || 0).toLocaleString()}
@@ -606,21 +642,58 @@ const Data = ({
 }) => {
   const [activeTab, setActiveTab] = useState("individual");
 
+  const normalizeRemarks = (remarks) => {
+    // Agar already array hai
+    if (Array.isArray(remarks)) {
+      return remarks;
+    }
+
+    // Old data support (string remarks)
+    if (typeof remarks === "string" && remarks.trim()) {
+      return [
+        {
+          text: remarks,
+          createdAt: Date.now(),
+        },
+      ];
+    }
+
+    // Undefined / null / empty
+    return [];
+  };
+
+  // const calculateTotalRemaining = () => {
+  //   let total = 0;
+  //   customerData.forEach((item) => {
+  //     if (item.type === "party") {
+  //       const vehicles = item.vehicles ?? [];
+  //       const partyRemaining = vehicles.reduce(
+  //         (sum, v) => sum + (v.vehicleRemaining || 0),
+  //         0,
+  //       );
+  //       total += partyRemaining;
+  //     } else {
+  //       total += item.remainingBalance || 0;
+  //     }
+  //   });
+  //   return total;
+  // };
+
+  // const totalRemainingAll = calculateTotalRemaining();
+
   const calculateTotalRemaining = () => {
-    let total = 0;
-    customerData.forEach((item) => {
+    return customerData.reduce((total, item) => {
       if (item.type === "party") {
         const vehicles = item.vehicles ?? [];
         const partyRemaining = vehicles.reduce(
           (sum, v) => sum + (v.vehicleRemaining || 0),
           0,
         );
-        total += partyRemaining;
-      } else {
-        total += item.remainingBalance || 0;
+        return total + partyRemaining;
       }
-    });
-    return total;
+
+      return total + (item.remainingBalance || 0);
+    }, 0);
   };
 
   const totalRemainingAll = calculateTotalRemaining();
@@ -792,6 +865,26 @@ const Data = ({
                         <div className="text-[10px] text-gray-400 italic">
                           {item.model || "---"}
                         </div>
+                        {(() => {
+                          const remarks = normalizeRemarks(item.remarks);
+
+                          const latestRemark = remarks[remarks.length - 1];
+
+                          return latestRemark ? (
+                            <div className="mt-1 space-y-1">
+                              <div className="text-[10px] text-gray-500 italic break-words">
+                                <span className="font-bold">Remarks:</span>{" "}
+                                {latestRemark.text}
+                              </div>
+
+                              <div className="text-[9px] text-gray-400">
+                                {new Date(
+                                  latestRemark.createdAt,
+                                ).toLocaleDateString()}
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="text-[10px] text-gray-700">
@@ -805,24 +898,47 @@ const Data = ({
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between md:justify-start gap-2">
+                          {/* Status + Bank */}
+                          <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
                             <span
-                              className={`text-[8px] font-black uppercase ${(item.remainingBalance || 0) > 0 ? "text-red-600" : "text-green-600"}`}
+                              className={`text-[8px] font-black uppercase ${
+                                (item.remainingBalance || 0) > 0
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
                             >
                               {(item.remainingBalance || 0) > 0
                                 ? "● Pending"
                                 : "● Cleared"}
                             </span>
+
                             <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md font-bold border border-gray-200">
                               {item.bankName || "Cash"}
                             </span>
+
+                            {/* 🔥 TOKEN TAX ADDED HERE */}
+                            {item.tokenTaxFrom && (
+                              <span className="text-[9px] text-indigo-600 font-bold">
+                                Tax From: {item.tokenTaxFrom}
+                              </span>
+                            )}
+
+                            {item.tokenTaxTo && (
+                              <span className="text-[9px] text-pink-600 font-bold">
+                                Tax To: {item.tokenTaxTo}
+                              </span>
+                            )}
                           </div>
+
+                          {/* Amounts */}
                           <div className="text-[10px] text-gray-600">
                             Total: {(item.totalAmount || 0).toLocaleString()}
                           </div>
+
                           <div className="text-[10px] text-green-600 font-medium">
                             Advance: {(item.advancePaid || 0).toLocaleString()}
                           </div>
+
                           <div className="text-[11px] font-bold text-red-600">
                             Bal: {(item.remainingBalance || 0).toLocaleString()}
                           </div>
