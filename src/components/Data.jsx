@@ -662,25 +662,6 @@ const Data = ({
     return [];
   };
 
-  // const calculateTotalRemaining = () => {
-  //   let total = 0;
-  //   customerData.forEach((item) => {
-  //     if (item.type === "party") {
-  //       const vehicles = item.vehicles ?? [];
-  //       const partyRemaining = vehicles.reduce(
-  //         (sum, v) => sum + (v.vehicleRemaining || 0),
-  //         0,
-  //       );
-  //       total += partyRemaining;
-  //     } else {
-  //       total += item.remainingBalance || 0;
-  //     }
-  //   });
-  //   return total;
-  // };
-
-  // const totalRemainingAll = calculateTotalRemaining();
-
   const calculateTotalRemaining = () => {
     return customerData.reduce((total, item) => {
       if (item.type === "party") {
@@ -865,6 +846,65 @@ const Data = ({
                         <div className="text-[10px] text-gray-400 italic">
                           {item.model || "---"}
                         </div>
+                      </td>
+                      <td className="p-2 md:p-4 block md:table-cell">
+                        <div className="text-[10px] text-gray-700">
+                          <span className="text-gray-400 font-bold">FROM:</span>{" "}
+                          {item.receivedBy || "---"}
+                        </div>
+                        <div className="text-[10px] text-orange-600 font-bold">
+                          <span className="text-gray-400">TO:</span>{" "}
+                          {item.handoverTo || "---"}
+                        </div>
+                        {/* 🔥 TOKEN TAX ADDED HERE */}
+                        {item.tokenTaxFrom && (
+                          <span className="text-[9px] text-indigo-600 font-bold">
+                            Token Tax From: {item.tokenTaxFrom}
+                          </span>
+                        )}
+                        <br />
+                        {item.tokenTaxTo && (
+                          <span className="text-[9px] text-pink-600 font-bold">
+                            Token Tax To: {item.tokenTaxTo}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-2 md:p-4 block md:table-cell">
+                        <div className="flex flex-col gap-1">
+                          {/* Status + Bank */}
+                          <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
+                            <span
+                              className={`text-[8px] font-black uppercase ${
+                                (item.remainingBalance || 0) > 0
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
+                            >
+                              {(item.remainingBalance || 0) > 0
+                                ? "● Pending"
+                                : "● Cleared"}
+                            </span>
+                            <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md font-bold border border-gray-200">
+                              {item.bankName || "Cash"}
+                            </span>
+                          </div>
+
+                          {/* Amounts */}
+                          <div className="text-[10px] text-gray-600">
+                            Total: {(item.totalAmount || 0).toLocaleString()}
+                          </div>
+
+                          <div className="text-[10px] text-green-600 font-medium">
+                            Advance: {(item.advancePaid || 0).toLocaleString()}
+                          </div>
+
+                          <div className="text-[11px] font-bold text-red-600">
+                            Bal: {(item.remainingBalance || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2 md:p-4 block md:table-cell">
+                        <AttachmentDisplay attachment={item.attachment} />
                         {(() => {
                           const remarks = normalizeRemarks(item.remarks);
 
@@ -885,67 +925,6 @@ const Data = ({
                             </div>
                           ) : null;
                         })()}
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="text-[10px] text-gray-700">
-                          <span className="text-gray-400 font-bold">FROM:</span>{" "}
-                          {item.receivedBy || "---"}
-                        </div>
-                        <div className="text-[10px] text-orange-600 font-bold">
-                          <span className="text-gray-400">TO:</span>{" "}
-                          {item.handoverTo || "---"}
-                        </div>
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="flex flex-col gap-1">
-                          {/* Status + Bank */}
-                          <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
-                            <span
-                              className={`text-[8px] font-black uppercase ${
-                                (item.remainingBalance || 0) > 0
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }`}
-                            >
-                              {(item.remainingBalance || 0) > 0
-                                ? "● Pending"
-                                : "● Cleared"}
-                            </span>
-
-                            <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md font-bold border border-gray-200">
-                              {item.bankName || "Cash"}
-                            </span>
-
-                            {/* 🔥 TOKEN TAX ADDED HERE */}
-                            {item.tokenTaxFrom && (
-                              <span className="text-[9px] text-indigo-600 font-bold">
-                                Tax From: {item.tokenTaxFrom}
-                              </span>
-                            )}
-
-                            {item.tokenTaxTo && (
-                              <span className="text-[9px] text-pink-600 font-bold">
-                                Tax To: {item.tokenTaxTo}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Amounts */}
-                          <div className="text-[10px] text-gray-600">
-                            Total: {(item.totalAmount || 0).toLocaleString()}
-                          </div>
-
-                          <div className="text-[10px] text-green-600 font-medium">
-                            Advance: {(item.advancePaid || 0).toLocaleString()}
-                          </div>
-
-                          <div className="text-[11px] font-bold text-red-600">
-                            Bal: {(item.remainingBalance || 0).toLocaleString()}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <AttachmentDisplay attachment={item.attachment} />
                       </td>
                       <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
                         <div className="flex gap-2 justify-end md:justify-center">
