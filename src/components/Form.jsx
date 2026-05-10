@@ -732,7 +732,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                     From
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     value={formData.tokenTaxFrom}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -749,7 +749,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                     To
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     value={formData.tokenTaxTo}
                     onChange={(e) =>
                       setFormData((prev) => ({
