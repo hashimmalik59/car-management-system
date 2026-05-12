@@ -5,6 +5,7 @@ import Data from "./Data";
 
 const Main = ({ customer, setCustomer }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
 
   function handleCustomer(newCustomer) {
@@ -155,6 +156,8 @@ const Main = ({ customer, setCustomer }) => {
           customerData={filteredCustomers}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onDelete={handleDelete}
           onEdit={handleEdit}
         />

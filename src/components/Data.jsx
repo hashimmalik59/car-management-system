@@ -1,9 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const rowVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0 },
+};
+
+const sumVehicleField = (vehicles = [], field) => {
+  return (vehicles || []).reduce(
+    (sum, v) => sum + (Number(v?.[field]) || 0),
+    0,
+  );
+};
+
+const calculateTotalRemaining = (data) => {
+  return data.reduce((total, item) => {
+    if (item.type === "party") {
+      const vehicles = item.vehicles ?? [];
+      const partyRemaining = sumVehicleField(vehicles, "vehicleRemaining");
+      return total + partyRemaining;
+    }
+
+    return total + (item.remainingBalance || 0);
+  }, 0);
 };
 
 // ─── Attachment Display with click-to-view ───────────────────────────
@@ -105,10 +124,7 @@ const printRemainingBalanceReport = (allCustomerData) => {
     return data.reduce((sum, item) => {
       if (item.type === "party") {
         const vehicles = item.vehicles ?? [];
-        const partyTotal = vehicles.reduce(
-          (vSum, v) => vSum + (v.vehicleRemaining || 0),
-          0,
-        );
+        const partyTotal = sumVehicleField(vehicles, "vehicleTotal");
         return sum + partyTotal;
       } else {
         return sum + (item.remainingBalance || 0);
@@ -124,10 +140,7 @@ const printRemainingBalanceReport = (allCustomerData) => {
     return data.filter((item) => {
       if (type === "party") {
         const vehicles = item.vehicles ?? [];
-        const partyRemaining = vehicles.reduce(
-          (sum, v) => sum + (v.vehicleRemaining || 0),
-          0,
-        );
+        const partyRemaining = sumVehicleField(vehicles, "vehicleRemaining");
         return partyRemaining > 0;
       } else {
         return (item.remainingBalance || 0) > 0;
@@ -204,7 +217,16 @@ const printRemainingBalanceReport = (allCustomerData) => {
                   <td>${item.partyName || "N/A"}</td>
                   <td>${item.phone || "N/A"}</td>
                   <td>${item.plate || "N/A"}</td>
-                  <td>${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</td>
+                  <td>${
+                    Array.isArray(item.serviceType)
+                      ? item.serviceType
+                          .map((s) => {
+                            const price = item.servicePrices?.[s] || 0;
+                            return `${s} (Rs. ${Number(price).toLocaleString()})`;
+                          })
+                          .join(", ")
+                      : "N/A"
+                  }</td>
                   <td class="text-right">${(item.totalAmount || 0).toLocaleString()}</td>
                   <td class="text-right">${(item.advancePaid || 0).toLocaleString()}</td>
                   <td class="text-right" style="color: #dc2626; font-weight: bold;">${(item.remainingBalance || 0).toLocaleString()}</td>
@@ -242,8 +264,14 @@ const printRemainingBalanceReport = (allCustomerData) => {
                       <td>${idx + 1}</td>
                       <td>${v.plate || "---"}</td>
                       <td>${v.model || "---"}</td>
-                      <td>${(v.serviceType || []).join(", ") || "---"}</td>
-                      <td class="text-right">${(v.vehicleTotal || 0).toLocaleString()}</td>
+<td>${
+                        v.serviceType
+                          ?.map((s) => {
+                            const price = v.servicePrices?.[s] || 0;
+                            return `${s} (Rs. ${Number(price).toLocaleString()})`;
+                          })
+                          .join(", ") || "---"
+                      }</td>                      <td class="text-right">${(v.vehicleTotal || 0).toLocaleString()}</td>
                       <td class="text-right">${(v.vehicleAdvance || 0).toLocaleString()}</td>
                       <td class="text-right" style="color: #dc2626;">${(v.vehicleRemaining || 0).toLocaleString()}</td>
                     </tr>
@@ -307,7 +335,20 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
-        <div class="info-row"><span class="value">${Array.isArray(item.serviceType) ? item.serviceType.join(", ") : item.serviceType || "N/A"}</span></div>
+        <div class="info-row">
+  <span class="value">
+    ${
+      Array.isArray(item.serviceType)
+        ? item.serviceType
+            .map((serviceName) => {
+              const price = item.servicePrices?.[serviceName] || 0;
+              return `${serviceName} — Rs. ${Number(price).toLocaleString()}`;
+            })
+            .join("<br/>")
+        : "N/A"
+    }
+  </span>
+</div>
         <h3>Payment Summary:</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
@@ -324,18 +365,9 @@ const printIndividualReceipt = (item) => {
 // ─── Print Party Receipt ─────────────────────────────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
-  const totalAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleTotal || 0),
-    0,
-  );
-  const advanceAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleAdvance || 0),
-    0,
-  );
-  const remainingAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleRemaining || 0),
-    0,
-  );
+  const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
+  const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
+  const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -377,8 +409,14 @@ const printPartyReceipt = (item) => {
                 <td>${idx + 1}</td>
                 <td>${v.plate || "---"}</td>
                 <td>${v.model || "---"}</td>
-                <td>${(v.serviceType || []).join(", ") || "---"}</td>
-                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+<td>${
+                  v.serviceType
+                    ?.map((s) => {
+                      const price = v.servicePrices?.[s] || 0;
+                      return `${s} (Rs. ${Number(price).toLocaleString()})`;
+                    })
+                    .join(", ") || "---"
+                }</td>                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
               </tr>
@@ -404,18 +442,9 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = item.vehicles ?? [];
   const hasVehicles = vehicles.length > 0;
 
-  const totalAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleTotal || 0),
-    0,
-  );
-  const advanceAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleAdvance || 0),
-    0,
-  );
-  const remainingAllVehicles = vehicles.reduce(
-    (sum, v) => sum + (v.vehicleRemaining || 0),
-    0,
-  );
+  const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
+  const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
+  const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
 
   return (
     <motion.div
@@ -528,14 +557,20 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
 
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {v.serviceType?.map((s, si) => (
-                        <span
-                          key={si}
-                          className="bg-orange-100 text-orange-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
-                        >
-                          {s}
-                        </span>
-                      ))}
+                      {v.serviceType?.map((serviceName, si) => {
+                        const price = v.servicePrices?.[serviceName] || 0;
+                        return (
+                          <div
+                            key={si}
+                            className="bg-orange-100 text-orange-700 text-[9px] px-2 py-1 rounded font-bold"
+                          >
+                            <div className="uppercase">{serviceName}</div>
+                            <div className="text-[8px] text-gray-700 mt-1">
+                              Rs. {Number(price).toLocaleString()}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -637,75 +672,46 @@ const Data = ({
   customerData,
   searchTerm,
   setSearchTerm,
-  onDelete,
+  activeTab,
+  setActiveTab,
   onEdit,
+  onDelete,
 }) => {
-  const [activeTab, setActiveTab] = useState("individual");
+  const filteredData = useMemo(() => {
+    const search = searchTerm.toLowerCase();
 
-  const normalizeRemarks = (remarks) => {
-    // Agar already array hai
-    if (Array.isArray(remarks)) {
-      return remarks;
-    }
+    return customerData.filter((item) => {
+      const matchesTab = item.type === activeTab;
 
-    // Old data support (string remarks)
-    if (typeof remarks === "string" && remarks.trim()) {
-      return [
-        {
-          text: remarks,
-          createdAt: Date.now(),
-        },
-      ];
-    }
+      let matchesSearch = false;
 
-    // Undefined / null / empty
-    return [];
-  };
-
-  const calculateTotalRemaining = () => {
-    return customerData.reduce((total, item) => {
       if (item.type === "party") {
-        const vehicles = item.vehicles ?? [];
-        const partyRemaining = vehicles.reduce(
-          (sum, v) => sum + (v.vehicleRemaining || 0),
-          0,
+        const vehicleSearch = (item.vehicles ?? []).some(
+          (v) =>
+            v.plate?.toLowerCase().includes(search) ||
+            v.model?.toLowerCase().includes(search) ||
+            (v.serviceType || [])
+              .join(" ") // ✅ serviceType already string array hai
+              .toLowerCase()
+              .includes(search),
         );
-        return total + partyRemaining;
+
+        matchesSearch =
+          item.partyName?.toLowerCase().includes(search) || vehicleSearch;
+      } else {
+        const serviceString = Array.isArray(item.serviceType)
+          ? item.serviceType.join(" ").toLowerCase() // ✅ already string array
+          : (item.serviceType || "").toLowerCase();
+
+        matchesSearch =
+          item.partyName?.toLowerCase().includes(search) ||
+          item.plate?.toLowerCase().includes(search) ||
+          serviceString.includes(search);
       }
 
-      return total + (item.remainingBalance || 0);
-    }, 0);
-  };
-
-  const totalRemainingAll = calculateTotalRemaining();
-
-  const filteredData = customerData.filter((item) => {
-    const matchesTab = item.type === activeTab;
-    let matchesSearch = false;
-    if (item.type === "party") {
-      const vehicleSearch = (item.vehicles ?? []).some(
-        (v) =>
-          v.plate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.serviceType
-            ?.join(" ")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()),
-      );
-      matchesSearch =
-        item.partyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vehicleSearch;
-    } else {
-      const serviceString = Array.isArray(item.serviceType)
-        ? item.serviceType.join(" ").toLowerCase()
-        : (item.serviceType || "").toLowerCase();
-      matchesSearch =
-        item.partyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.plate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        serviceString.includes(searchTerm.toLowerCase());
-    }
-    return matchesTab && matchesSearch;
-  });
+      return matchesTab && matchesSearch;
+    });
+  }, [customerData, searchTerm, activeTab]);
 
   return (
     <motion.section
@@ -738,7 +744,7 @@ const Data = ({
                   Total Remaining
                 </p>
                 <p className="text-xl md:text-2xl font-black text-red-600 font-mono">
-                  Rs. {totalRemainingAll.toLocaleString()}
+                  Rs. {calculateTotalRemaining(customerData).toLocaleString()}
                 </p>
               </div>
               <button
@@ -824,22 +830,33 @@ const Data = ({
                         </div>
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {Array.isArray(item.serviceType) ? (
-                            item.serviceType.map((s, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
-                              >
-                                {s}
-                              </span>
-                            ))
+                        {/* Services with prices */}
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {Array.isArray(item.serviceType) &&
+                          item.serviceType.length > 0 ? (
+                            item.serviceType.map((serviceName, idx) => {
+                              const price =
+                                item.servicePrices?.[serviceName] || 0;
+                              return (
+                                <div
+                                  key={idx}
+                                  className="bg-blue-100 text-blue-700 text-[9px] px-2 py-1 rounded font-bold"
+                                >
+                                  <div className="uppercase">{serviceName}</div>
+                                  <div className="text-[8px] text-gray-700 mt-1">
+                                    Rs. {Number(price).toLocaleString()}
+                                  </div>
+                                </div>
+                              );
+                            })
                           ) : (
-                            <span className="text-[11px] font-bold text-blue-700 uppercase">
-                              {item.serviceType}
+                            <span className="text-[11px] text-gray-400">
+                              No services
                             </span>
                           )}
                         </div>
+
+                        {/* Vehicle info */}
                         <div className="text-sm font-semibold text-gray-700">
                           {item.plate}
                         </div>
@@ -905,26 +922,16 @@ const Data = ({
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
                         <AttachmentDisplay attachment={item.attachment} />
-                        {(() => {
-                          const remarks = normalizeRemarks(item.remarks);
-
-                          const latestRemark = remarks[remarks.length - 1];
-
-                          return latestRemark ? (
-                            <div className="mt-1 space-y-1">
-                              <div className="text-[10px] text-gray-500 italic break-words">
-                                <span className="font-bold">Remarks:</span>{" "}
-                                {latestRemark.text}
-                              </div>
-
-                              <div className="text-[9px] text-gray-400">
-                                {new Date(
-                                  latestRemark.createdAt,
-                                ).toLocaleDateString()}
-                              </div>
+                        {item.remarks && (
+                          <div className="mt-1 space-y-1">
+                            <div className="text-[10px] text-gray-500 italic break-words">
+                              <span className="font-bold">Remarks:</span>{" "}
+                              {typeof item.remarks === "string"
+                                ? item.remarks
+                                : item.remarks.text || item.remarks}
                             </div>
-                          ) : null;
-                        })()}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
                         <div className="flex gap-2 justify-end md:justify-center">

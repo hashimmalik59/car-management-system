@@ -5,8 +5,8 @@ const serviceOptions = [
   "Name Transfer",
   "Permit Transfer",
   "Conversion",
-  "Permit Renewel",
-  "Fitness Renewel",
+  "Permit Renewal",
+  "Fitness Renewal",
   "Fresh Fitness",
 ];
 
@@ -28,13 +28,11 @@ const bankOptions = [
 
 // Vehicle Card for Party
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
-  const handleServiceToggle = (service) => {
-    const updated = vehicle.serviceType.includes(service)
-      ? vehicle.serviceType.filter((s) => s !== service)
-      : [...vehicle.serviceType, service];
-    onChange(index, "serviceType", updated);
-  };
-
+  const getTotal = (prices) =>
+    Object.values(prices || {}).reduce(
+      (sum, val) => sum + (Number(val) || 0),
+      0,
+    );
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -54,21 +52,43 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const handleAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
-    onChange(index, field, numValue);
 
-    if (field === "vehicleTotal") {
-      onChange(
-        index,
-        "vehicleRemaining",
-        numValue - (vehicle.vehicleAdvance || 0),
-      );
-    } else if (field === "vehicleAdvance") {
-      onChange(
-        index,
-        "vehicleRemaining",
-        (vehicle.vehicleTotal || 0) - numValue,
-      );
+    const total =
+      field === "vehicleTotal" ? numValue : vehicle.vehicleTotal || 0;
+
+    const advance =
+      field === "vehicleAdvance" ? numValue : vehicle.vehicleAdvance || 0;
+
+    const remaining = Math.max(total - advance, 0);
+
+    onChange(index, field, numValue);
+    onChange(index, "vehicleRemaining", remaining);
+  };
+
+  const handleServiceToggle = (service) => {
+    let updatedServices = [...vehicle.serviceType];
+    let updatedPrices = { ...vehicle.servicePrices };
+
+    if (updatedServices.includes(service)) {
+      updatedServices = updatedServices.filter((s) => s !== service);
+      delete updatedPrices[service];
+    } else {
+      updatedServices.push(service);
+      updatedPrices[service] = "";
     }
+
+    const total = Object.values(updatedPrices || {}).reduce(
+      (sum, val) => sum + (Number(val) || 0),
+      0,
+    );
+
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    const remaining = Math.max(total - advance, 0);
+
+    onChange(index, "serviceType", updatedServices);
+    onChange(index, "servicePrices", updatedPrices);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
   };
 
   return (
@@ -116,6 +136,59 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
+      {/* Services */}
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
+          Services
+        </label>
+
+        <div className="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-orange-100">
+          {serviceOptions.map((service) => (
+            <div
+              key={service}
+              className="flex flex-col bg-orange-50 rounded-md p-2"
+            >
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-orange-500"
+                  checked={vehicle.serviceType.includes(service)}
+                  onChange={() => handleServiceToggle(service)}
+                />
+
+                <span className="text-[11px]">{service}</span>
+              </label>
+
+              {vehicle.serviceType.includes(service) && (
+                <input
+                  type="number"
+                  placeholder="Custom Price"
+                  value={vehicle.servicePrices?.[service] || ""}
+                  onChange={(e) => {
+                    const updatedPrices = {
+                      ...vehicle.servicePrices,
+                      [service]: e.target.value,
+                    };
+
+                    const total = getTotal(updatedPrices);
+
+                    const remaining = Math.max(
+                      total - (vehicle.vehicleAdvance || 0),
+                      0,
+                    );
+
+                    onChange(index, "servicePrices", updatedPrices);
+                    onChange(index, "vehicleTotal", total);
+                    onChange(index, "vehicleRemaining", remaining);
+                  }}
+                  className="w-full mt-2 rounded p-1.5 border border-orange-300 text-[11px] outline-none focus:border-orange-500"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-500 uppercase">
@@ -123,8 +196,9 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="number"
+            readOnly
             className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
-            value={vehicle.vehicleTotal || 0}
+            value={vehicle.vehicleTotal ?? ""}
             onChange={(e) => handleAmountChange("vehicleTotal", e.target.value)}
           />
         </div>
@@ -136,9 +210,17 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             type="number"
             className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
             value={vehicle.vehicleAdvance || 0}
-            onChange={(e) =>
-              handleAmountChange("vehicleAdvance", e.target.value)
-            }
+            onChange={(e) => {
+              const advance = Number(e.target.value) || 0;
+
+              const total =
+                vehicle.vehicleTotal ?? getTotal(vehicle.servicePrices);
+
+              const remaining = Math.max(total - advance, 0);
+
+              onChange(index, "vehicleAdvance", advance);
+              onChange(index, "vehicleRemaining", remaining);
+            }}
           />
         </div>
       </div>
@@ -152,26 +234,31 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </span>
       </div>
 
-      {/* Services */}
-      <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Services
-        </label>
-        <div className="grid grid-cols-2 gap-1.5 bg-white p-2.5 rounded-lg border border-orange-100">
-          {serviceOptions.map((service) => (
-            <label
-              key={service}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-orange-500"
-                checked={vehicle.serviceType.includes(service)}
-                onChange={() => handleServiceToggle(service)}
-              />
-              <span className="text-[11px]">{service}</span>
-            </label>
-          ))}
+      {/* Token Tax */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-500 uppercase">
+            Token Tax From
+          </label>
+          <input
+            type="text"
+            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            placeholder=""
+            value={vehicle.tokenTaxFrom || ""}
+            onChange={(e) => onChange(index, "tokenTaxFrom", e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-500 uppercase">
+            Token Tax To
+          </label>
+          <input
+            type="text"
+            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            placeholder=""
+            value={vehicle.tokenTaxTo || ""}
+            onChange={(e) => onChange(index, "tokenTaxTo", e.target.value)}
+          />
         </div>
       </div>
 
@@ -217,33 +304,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         )}
       </div>
 
-      {/* Token Tax */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
-            Token Tax From
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
-            value={vehicle.tokenTaxFrom || ""}
-            onChange={(e) => onChange(index, "tokenTaxFrom", e.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
-            Token Tax To
-          </label>
-          <input
-            type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
-            value={vehicle.tokenTaxTo || ""}
-            onChange={(e) => onChange(index, "tokenTaxTo", e.target.value)}
-          />
-        </div>
-      </div>
-
       {/* Remarks */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold text-gray-500 uppercase">
@@ -262,25 +322,22 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
 // ==================== MAIN FORM ====================
 const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
-  const emptyVehicle = {
+  const createEmptyVehicle = () => ({
     plate: "",
     model: "",
     serviceType: [],
+    servicePrices: {},
     attachment: null,
     vehicleTotal: 0,
     vehicleAdvance: 0,
     vehicleRemaining: 0,
-
-    // ✅ NEW: Individual Token Tax
     tokenTaxFrom: "",
     tokenTaxTo: "",
-
-    // New remarks
     remarks: "",
-  };
+  });
 
-  const initialForm = {
-    id: Date.now(),
+  const createInitialForm = () => ({
+    id: crypto.randomUUID(),
     type: "individual",
     partyName: "",
     phone: "",
@@ -289,66 +346,76 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     plate: "",
     model: "",
     serviceType: [],
+    servicePrices: {},
     attachment: null,
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
-    vehicles: [{ ...emptyVehicle }],
+    vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     region: "",
     receivedBy: "",
     handoverTo: "",
     bankName: "Cash",
-    date: new Date().toISOString(),
-
-    // ✅ NEW: Individual Token Tax
     tokenTaxFrom: "",
     tokenTaxTo: "",
-
-    // New: remarks
     remarks: "",
-  };
+  });
 
-  const [formData, setFormData] = useState(initialForm);
+  const [formData, setFormData] = useState(createInitialForm());
 
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
 
-      if (editingData.type === "individual") {
-        normalized.totalAmount =
-          editingData.totalAmount || editingData.indTotal || 0;
-        normalized.advancePaid =
-          editingData.advancePaid || editingData.indAdvance || 0;
-        normalized.remainingBalance =
-          editingData.remainingBalance || editingData.indRemaining || 0;
-        normalized.tokenTaxFrom = normalized.tokenTaxFrom =
-          editingData.tokenTaxFrom || "";
-        normalized.tokenTaxTo = editingData.tokenTaxTo || "";
+      if (editingData?.type === "individual") {
+        const total = Number(editingData.totalAmount ?? 0);
+        const advance = Number(editingData.advancePaid ?? 0);
+
+        normalized = {
+          ...normalized,
+          totalAmount: total,
+          advancePaid: advance,
+          remainingBalance: Math.max(total - advance, 0),
+          tokenTaxFrom: editingData.tokenTaxFrom ?? "",
+          tokenTaxTo: editingData.tokenTaxTo ?? "",
+        };
       } else {
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
-          ...emptyVehicle,
+          ...createEmptyVehicle(),
           ...v,
-          vehicleRemaining: (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
+          id: v.id || crypto.randomUUID(),
+          vehicleRemaining: Math.max(
+            (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
+            0,
+          ),
         }));
       }
       setFormData(normalized);
     } else {
-      setFormData(initialForm);
+      setFormData(createInitialForm());
     }
   }, [editingData]);
 
   const isParty = formData.type === "party";
 
   // Individual Handlers
+  const calcRemaining = (total, advance) =>
+    Math.max((Number(total) || 0) - (Number(advance) || 0), 0);
+
   const handleIndividualAmountChange = (field, value) => {
     const num = Number(value) || 0;
+
     setFormData((prev) => {
-      let updated = { ...prev, [field]: num };
-      if (field === "totalAmount")
-        updated.remainingBalance = num - prev.advancePaid;
-      if (field === "advancePaid")
-        updated.remainingBalance = prev.totalAmount - num;
-      return updated;
+      const updated = { ...prev, [field]: num };
+
+      const total = field === "totalAmount" ? num : updated.totalAmount;
+
+      const advance = field === "advancePaid" ? num : updated.advancePaid;
+
+      return {
+        ...updated,
+        remainingBalance: calcRemaining(total, advance),
+      };
     });
   };
 
@@ -364,7 +431,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
   const addVehicle = () => {
     setFormData((prev) => ({
       ...prev,
-      vehicles: [...prev.vehicles, { ...emptyVehicle }],
+      vehicles: [
+        ...prev.vehicles,
+        { ...createEmptyVehicle(), id: crypto.randomUUID() },
+      ],
     }));
   };
 
@@ -396,7 +466,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     }
 
     onAddCustomer(formData);
-    setFormData(initialForm);
+    setFormData(createInitialForm());
     if (onCancelEdit) onCancelEdit();
   };
 
@@ -406,15 +476,32 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
       <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
         <button
           type="button"
-          onClick={() => setFormData({ ...initialForm, type: "individual" })}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs ${!isParty ? "bg-white shadow text-blue-600" : "text-gray-500"}`}
+          onClick={() =>
+            setFormData((prev) => ({
+              ...createInitialForm(),
+              type: "individual",
+              id: prev.id, // keep stable id (important for edit cases)
+            }))
+          }
+          className={`flex-1 py-2 rounded-lg font-bold text-xs ${
+            !isParty ? "bg-white shadow text-blue-600" : "text-gray-500"
+          }`}
         >
           INDIVIDUAL
         </button>
+
         <button
           type="button"
-          onClick={() => setFormData({ ...initialForm, type: "party" })}
-          className={`flex-1 py-2 rounded-lg font-bold text-xs ${isParty ? "bg-white shadow text-orange-600" : "text-gray-500"}`}
+          onClick={() =>
+            setFormData((prev) => ({
+              ...createInitialForm(),
+              type: "party",
+              id: prev.id,
+            }))
+          }
+          className={`flex-1 py-2 rounded-lg font-bold text-xs ${
+            isParty ? "bg-white shadow text-orange-600" : "text-gray-500"
+          }`}
         >
           PARTY / BUSINESS
         </button>
@@ -427,7 +514,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           {editingData ? "Update" : "New"} {isParty ? "Party" : "Individual"}{" "}
           Entry
         </h1>
-
         {/* Party / Customer Name */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -444,7 +530,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             }
           />
         </div>
-
         {/* Contact & ID */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
@@ -479,7 +564,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             />
           </div>
         </div>
-
         {/* Received & Handover */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
@@ -489,6 +573,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             <input
               type="text"
               className="rounded p-2 border border-gray-300 text-sm"
+              placeholder="Muhammad Ali"
               value={formData.receivedBy}
               onChange={(e) =>
                 setFormData({ ...formData, receivedBy: e.target.value })
@@ -502,6 +587,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             <input
               type="text"
               className="rounded p-2 border border-gray-300 text-sm"
+              placeholder="Ahmad Khan"
               value={formData.handoverTo}
               onChange={(e) =>
                 setFormData({ ...formData, handoverTo: e.target.value })
@@ -509,38 +595,42 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             />
           </div>
         </div>
-
         {/* Individual Vehicle Info */}
+        {/* Individual Vehicle Info + Token Tax */}
         {!isParty && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Vehicle No
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-300 text-sm"
-                required
-                value={formData.plate}
-                onChange={(e) =>
-                  setFormData({ ...formData, plate: e.target.value })
-                }
-              />
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Vehicle No
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-300 text-sm"
+                  placeholder="KHI-456"
+                  required
+                  value={formData.plate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, plate: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Model
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-300 text-sm"
+                  placeholder="Civic-2020"
+                  value={formData.model}
+                  onChange={(e) =>
+                    setFormData({ ...formData, model: e.target.value })
+                  }
+                />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Model
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-300 text-sm"
-                value={formData.model}
-                onChange={(e) =>
-                  setFormData({ ...formData, model: e.target.value })
-                }
-              />
-            </div>
-          </div>
+          </>
         )}
 
         {/* Region & Bank */}
@@ -584,7 +674,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </select>
           </div>
         </div>
-
         {/* Individual Services & Attachment */}
         {!isParty && (
           <>
@@ -594,26 +683,175 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               </label>
               <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
                 {serviceOptions.map((s) => (
-                  <label
+                  <div
                     key={s}
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex flex-col bg-blue-50 rounded-md p-2"
                   >
-                    <input
-                      type="checkbox"
-                      checked={formData.serviceType.includes(s)}
-                      onChange={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          serviceType: prev.serviceType.includes(s)
-                            ? prev.serviceType.filter((x) => x !== s)
-                            : [...prev.serviceType, s],
-                        }));
-                      }}
-                      className="w-4 h-4 accent-blue-600"
-                    />
-                    <span className="text-[11px]">{s}</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.serviceType.includes(s)}
+                        onChange={() => {
+                          setFormData((prev) => {
+                            let updatedServices = [...prev.serviceType];
+
+                            let updatedPrices = {
+                              ...prev.servicePrices,
+                            };
+
+                            if (updatedServices.includes(s)) {
+                              updatedServices = updatedServices.filter(
+                                (x) => x !== s,
+                              );
+
+                              delete updatedPrices[s];
+                            } else {
+                              updatedServices.push(s);
+
+                              updatedPrices[s] = "";
+                            }
+
+                            const total = Object.values(updatedPrices).reduce(
+                              (sum, val) => sum + (Number(val) || 0),
+                              0,
+                            );
+
+                            const remaining = Math.max(
+                              total - (prev.advancePaid || 0),
+                              0,
+                            );
+
+                            return {
+                              ...prev,
+                              serviceType: updatedServices,
+                              servicePrices: updatedPrices,
+                              totalAmount: total,
+                              remainingBalance: remaining,
+                            };
+                          });
+                        }}
+                        className="w-4 h-4 accent-blue-600"
+                      />
+
+                      <span className="text-[11px]">{s}</span>
+                    </label>
+
+                    {formData.serviceType.includes(s) && (
+                      <input
+                        type="number"
+                        placeholder="Custom Price"
+                        value={formData.servicePrices?.[s] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setFormData((prev) => {
+                            const updatedPrices = {
+                              ...prev.servicePrices,
+                              [s]: value,
+                            };
+
+                            const total = Object.values(updatedPrices).reduce(
+                              (sum, val) => sum + (Number(val) || 0),
+                              0,
+                            );
+
+                            return {
+                              ...prev,
+                              servicePrices: updatedPrices,
+                              totalAmount: total,
+                              remainingBalance: Math.max(
+                                total - (prev.advancePaid || 0),
+                                0,
+                              ),
+                            };
+                          });
+                        }}
+                        className="w-full mt-2 rounded p-1.5 border border-blue-300 text-[11px] outline-none focus:border-blue-500"
+                      />
+                    )}
+                  </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 space-y-2">
+              <div className="text-[10px] font-bold text-gray-500 uppercase">
+                Payment Details
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-600">
+                    Total Amount (Rs.)
+                  </label>
+
+                  <input
+                    type="number"
+                    readOnly
+                    value={formData.totalAmount ?? ""}
+                    className="rounded p-2 border border-gray-200 text-sm w-full bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-600">
+                    Advance Paid (Rs.)
+                  </label>
+
+                  <input
+                    type="number"
+                    value={formData.advancePaid ?? ""}
+                    onChange={(e) =>
+                      handleIndividualAmountChange(
+                        "advancePaid",
+                        e.target.value,
+                      )
+                    }
+                    className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between bg-white px-3 py-2 rounded-md">
+                <span className="text-[10px] font-bold text-gray-600">
+                  Remaining Balance
+                </span>
+
+                <span className="text-base font-bold text-blue-600">
+                  Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Individual Token Tax */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">
+                  Token Tax From
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
+                  placeholder=""
+                  value={formData.tokenTaxFrom || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tokenTaxFrom: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">
+                  Token Tax To
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
+                  placeholder=""
+                  value={formData.tokenTaxTo || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tokenTaxTo: e.target.value })
+                  }
+                />
               </div>
             </div>
 
@@ -678,112 +916,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           </>
         )}
 
-        {/* Individual Payment Section */}
-        {!isParty && (
-          <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 space-y-2">
-            <div className="text-[10px] font-bold text-gray-500 uppercase">
-              Payment Details
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-semibold text-gray-600">
-                  Total Amount (Rs.)
-                </label>
-                <input
-                  type="number"
-                  value={formData.totalAmount}
-                  onChange={(e) =>
-                    handleIndividualAmountChange("totalAmount", e.target.value)
-                  }
-                  className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-semibold text-gray-600">
-                  Advance Paid (Rs.)
-                </label>
-                <input
-                  type="number"
-                  value={formData.advancePaid}
-                  onChange={(e) =>
-                    handleIndividualAmountChange("advancePaid", e.target.value)
-                  }
-                  className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
-                />
-              </div>
-            </div>
-            <div className="flex justify-between bg-white px-3 py-2 rounded-md">
-              <span className="text-[10px] font-bold text-gray-600">
-                Remaining Balance
-              </span>
-              <span className="text-base font-bold text-blue-600">
-                Rs. {(formData.remainingBalance || 0).toLocaleString()}
-              </span>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-100 rounded-md p-3 space-y-2">
-              <div className="text-[10px] font-bold text-gray-500 uppercase">
-                Token Tax Details
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-semibold text-gray-600">
-                    From
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.tokenTaxFrom}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        tokenTaxFrom: e.target.value,
-                      }))
-                    }
-                    className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-semibold text-gray-600">
-                    To
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.tokenTaxTo}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        tokenTaxTo: e.target.value,
-                      }))
-                    }
-                    className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/*  Remarks field */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">
-                Remarks
-              </label>
-
-              <textarea
-                className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
-                placeholder="Customer remarks..."
-                value={formData.remarks || ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    remarks: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-        )}
-
         {/* Party Vehicles */}
         {isParty && (
           <div className="flex flex-col gap-3">
@@ -801,7 +933,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             </div>
             {formData.vehicles.map((vehicle, idx) => (
               <VehicleCard
-                key={idx}
+                key={vehicle.id || idx}
                 index={idx}
                 vehicle={vehicle}
                 onChange={handleVehicleChange}
@@ -811,14 +943,29 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             ))}
           </div>
         )}
-
+        {/* Individual Remarks - END MEIN */}
+        {!isParty && (
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Remarks
+            </label>
+            <textarea
+              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              placeholder="Enter remarks..."
+              rows={3}
+              value={formData.remarks || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, remarks: e.target.value })
+              }
+            />
+          </div>
+        )}
         <button
           type="submit"
           className={`font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}`}
         >
           {editingData ? "Update Record" : "Save to Khata"}
         </button>
-
         {editingData && (
           <button
             type="button"
