@@ -8,6 +8,7 @@ const serviceOptions = [
   "Permit Renewal",
   "Fitness Renewal",
   "Fresh Fitness",
+  "Token Tax",
 ];
 
 const bankOptions = [
