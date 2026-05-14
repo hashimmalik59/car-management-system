@@ -8,14 +8,11 @@ const Main = ({ customer, setCustomer }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
-
-  // ─── NEW: Main navigation tabs ─────────────────────────────────────
-  const [mainTab, setMainTab] = useState("form"); // "form" | "ledger" | "reports"
+  const [mainTab, setMainTab] = useState("form");
 
   function handleCustomer(newCustomer) {
     let sanitizedCustomer = { ...newCustomer };
 
-    // INDIVIDUAL
     if (newCustomer.type === "individual") {
       sanitizedCustomer = {
         ...newCustomer,
@@ -27,7 +24,6 @@ const Main = ({ customer, setCustomer }) => {
       };
     }
 
-    // PARTY
     if (newCustomer.type === "party") {
       sanitizedCustomer = {
         ...newCustomer,
@@ -41,7 +37,6 @@ const Main = ({ customer, setCustomer }) => {
       };
     }
 
-    // UPDATE
     if (editingCustomer) {
       setCustomer(
         customer.map((c) =>
@@ -51,20 +46,17 @@ const Main = ({ customer, setCustomer }) => {
         ),
       );
       setEditingCustomer(null);
-    }
-    // NEW
-    else {
+    } else {
       setCustomer([
         ...customer,
         {
           ...sanitizedCustomer,
           id: Date.now(),
-          createdAt: new Date().toISOString(), // Ensure createdAt exists
+          createdAt: new Date().toISOString(),
         },
       ]);
     }
 
-    // ─── NEW: Save ke baad Ledger tab pe le jao ─────────────────────
     setMainTab("ledger");
   }
 
@@ -81,15 +73,14 @@ const Main = ({ customer, setCustomer }) => {
       return;
     }
     setEditingCustomer({ ...target });
-    setMainTab("form"); // ─── NEW: Edit pe Form tab pe le jao ──────
+    setMainTab("form");
   };
 
   const handleCancelEdit = () => {
     setEditingCustomer(null);
-    setMainTab("ledger"); // Cancel pe wapas Ledger
+    setMainTab("ledger");
   };
 
-  // ─── Filter (same as before) ──────────────────────────────────────
   const filteredCustomers = customer.filter((item) => {
     const s = searchTerm.toLowerCase();
     const service = Array.isArray(item.serviceType)
@@ -130,61 +121,119 @@ const Main = ({ customer, setCustomer }) => {
     );
   });
 
-  // ─── Tab Config ───────────────────────────────────────────────────
   const tabs = [
-    { key: "form", label: "New Entry", icon: "➕", color: "blue" },
-    { key: "ledger", label: "Ledger", icon: "📋", color: "gray" },
-    { key: "reports", label: "Reports", icon: "📊", color: "emerald" },
+    {
+      key: "form",
+      label: "New Entry",
+      icon: "➕",
+      color: "blue",
+      desc: "Add customer",
+    },
+    {
+      key: "ledger",
+      label: "Ledger",
+      icon: "📋",
+      color: "violet",
+      desc: "View records",
+    },
+    {
+      key: "reports",
+      label: "Reports",
+      icon: "📊",
+      color: "emerald",
+      desc: "Analytics",
+    },
   ];
 
-  const getTabStyle = (key, isActive) => {
-    if (!isActive)
-      return "bg-white/60 text-gray-500 hover:text-gray-700 hover:bg-white";
-    switch (key) {
-      case "form":
-        return "bg-blue-600 text-white shadow-lg shadow-blue-200";
-      case "ledger":
-        return "bg-gray-800 text-white shadow-lg shadow-gray-300";
-      case "reports":
-        return "bg-emerald-600 text-white shadow-lg shadow-emerald-200";
-      default:
-        return "";
-    }
+  const getTabColors = (key, isActive) => {
+    const colors = {
+      blue: {
+        active:
+          "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30",
+        inactive:
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400",
+      },
+      violet: {
+        active:
+          "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/30",
+        inactive:
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400",
+      },
+      emerald: {
+        active:
+          "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30",
+        inactive:
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400",
+      },
+    };
+    return isActive ? colors[key].active : colors[key].inactive;
+  };
+
+  const pageVariants = {
+    initial: { opacity: 0, y: 20, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -20, scale: 0.98 },
   };
 
   return (
-    <main className="flex flex-col p-4 md:p-8 gap-6 bg-gray-50 min-h-screen">
-      {/* ═══ NAVIGATION TABS ═══════════════════════════════════════ */}
+    <main className="flex flex-col p-4 md:p-8 gap-6 min-h-screen">
+      {/* Animated Navigation */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-7xl mx-auto"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3, type: "spring" }}
+        className="w-full max-w-4xl mx-auto"
       >
-        <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 shadow-sm">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setMainTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${getTabStyle(tab.key, mainTab === tab.key)}`}
-            >
-              <span className="text-lg">{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+        <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-2xl p-2 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
+          <div className="flex gap-2">
+            {tabs.map((tab, index) => (
+              <motion.button
+                key={tab.key}
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.4 + index * 0.1 }}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setMainTab(tab.key)}
+                className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 ${getTabColors(tab.color, mainTab === tab.key)}`}
+              >
+                <motion.span
+                  animate={mainTab === tab.key ? { scale: [1, 1.2, 1] } : {}}
+                  transition={{ duration: 0.5 }}
+                  className="text-xl"
+                >
+                  {tab.icon}
+                </motion.span>
+                <div className="flex flex-col items-start">
+                  <span className="leading-none">{tab.label}</span>
+                  <span
+                    className={`text-[8px] font-medium leading-none mt-0.5 ${
+                      mainTab === tab.key
+                        ? "text-white/70"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    {tab.desc}
+                  </span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
         </div>
       </motion.div>
 
-      {/* ═══ TAB CONTENT ═══════════════════════════════════════════ */}
+      {/* Content Area */}
       <div className="w-full max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {mainTab === "form" && (
             <motion.div
               key="form"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.25 }}
-              className="w-full lg:w-1/2 mx-auto"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+              className="w-full lg:w-2/3 xl:w-1/2 mx-auto"
             >
               <Form
                 onAddCustomer={handleCustomer}
@@ -197,10 +246,11 @@ const Main = ({ customer, setCustomer }) => {
           {mainTab === "ledger" && (
             <motion.div
               key="ledger"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.3 }}
             >
               <Data
                 customerData={filteredCustomers}
@@ -217,10 +267,11 @@ const Main = ({ customer, setCustomer }) => {
           {mainTab === "reports" && (
             <motion.div
               key="reports"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.25 }}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.3 }}
             >
               <Reports customerData={customer} />
             </motion.div>

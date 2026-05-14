@@ -2,23 +2,6 @@ import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Helper Functions ─────────────────────────────────────────────────
-const formatDate = (date) => new Date(date).toLocaleDateString("en-GB");
-
-const formatDateTime = (iso) => {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
-};
-
 const formatShortDate = (iso) => {
   if (!iso) return "—";
   try {
@@ -94,7 +77,7 @@ const getEndOfYear = (date) => {
   return d;
 };
 
-// ─── Get remaining for any item (handles all data formats) ──────────────
+// ─── Get remaining/total/advance for any item ─────────────────────────
 const getItemRemaining = (item) => {
   if (!item) return 0;
   if (item.type === "individual") {
@@ -391,39 +374,31 @@ const printReport = (reportType, dateRange, individualData, partyData, totals) =
   printWindow.document.close();
 };
 
-// ─── Summary Card Component ───────────────────────────────────────────
-const SummaryCard = ({ title, value, subtext, color, delay }) => {
-  const gradients = {
-    amber: "from-amber-50 to-orange-50 border-orange-200",
-    blue: "from-blue-50 to-indigo-50 border-blue-200",
-    emerald: "from-emerald-50 to-green-50 border-emerald-200",
-    red: "from-red-50 to-rose-50 border-red-200",
-  };
-  const textColors = {
-    amber: "text-orange-700",
-    blue: "text-blue-700",
-    emerald: "text-emerald-700",
-    red: "text-red-700",
-  };
-  const labelColors = {
-    amber: "text-orange-400",
-    blue: "text-blue-400",
-    emerald: "text-emerald-400",
-    red: "text-red-400",
-  };
-
+// ─── Animated Counter Component ──────────────────────────────────────
+const AnimatedCounter = ({ value, prefix = "" }) => {
   return (
-    <motion.div
+    <motion.span
+      key={value}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className={`bg-gradient-to-br ${gradients[color]} border ${gradients[color].split(" ").pop()} rounded-xl p-4`}
+      transition={{ duration: 0.3 }}
     >
-      <div className={`text-[10px] font-bold ${labelColors[color]} uppercase tracking-wider mb-1`}>
-        {title}
-      </div>
-      <div className={`text-2xl font-bold ${textColors[color]}`}>{value}</div>
-      {subtext && <div className={`text-[10px] ${labelColors[color]} mt-1`}>{subtext}</div>}
+      {prefix}{value.toLocaleString()}
+    </motion.span>
+  );
+};
+
+// ─── Glassmorphism Card Component ────────────────────────────────────
+const GlassCard = ({ children, className = "", delay = 0 }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay, duration: 0.4, type: "spring" }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      className={`bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-gray-700/50 shadow-xl shadow-gray-200/50 dark:shadow-black/30 ${className}`}
+    >
+      {children}
     </motion.div>
   );
 };
@@ -543,30 +518,11 @@ const Reports = ({ customerData = [] }) => {
   };
 
   const reportTypes = [
-    { key: "daily", label: "Daily", icon: "📅", color: "blue" },
-    { key: "weekly", label: "Weekly", icon: "📆", color: "indigo" },
-    { key: "monthly", label: "Monthly", icon: "📊", color: "purple" },
-    { key: "annual", label: "Annual", icon: "📈", color: "emerald" },
+    { key: "daily", label: "Daily", icon: "📅", color: "from-blue-500 to-blue-600", shadow: "shadow-blue-500/30" },
+    { key: "weekly", label: "Weekly", icon: "📆", color: "from-violet-500 to-violet-600", shadow: "shadow-violet-500/30" },
+    { key: "monthly", label: "Monthly", icon: "📊", color: "from-purple-500 to-purple-600", shadow: "shadow-purple-500/30" },
+    { key: "annual", label: "Annual", icon: "📈", color: "from-emerald-500 to-emerald-600", shadow: "shadow-emerald-500/30" },
   ];
-
-  const colorClasses = {
-    blue: {
-      active: "bg-blue-600 text-white shadow-lg shadow-blue-200",
-      inactive: "bg-white text-gray-500 hover:bg-blue-50 hover:text-blue-600",
-    },
-    indigo: {
-      active: "bg-indigo-600 text-white shadow-lg shadow-indigo-200",
-      inactive: "bg-white text-gray-500 hover:bg-indigo-50 hover:text-indigo-600",
-    },
-    purple: {
-      active: "bg-purple-600 text-white shadow-lg shadow-purple-200",
-      inactive: "bg-white text-gray-500 hover:bg-purple-50 hover:text-purple-600",
-    },
-    emerald: {
-      active: "bg-emerald-600 text-white shadow-lg shadow-emerald-200",
-      inactive: "bg-white text-gray-500 hover:bg-emerald-50 hover:text-emerald-600",
-    },
-  };
 
   const displayData =
     activeView === "all"
@@ -578,293 +534,394 @@ const Reports = ({ customerData = [] }) => {
   // ─── RENDER ───────────────────────────────────────────────────────
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="w-full flex flex-col gap-5 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="w-full flex flex-col gap-6"
     >
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Reports & Analytics</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-            Generate Daily, Weekly, Monthly & Annual Reports
-          </p>
+      <GlassCard delay={0}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6">
+          <div>
+            <motion.h1
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white"
+            >
+              Reports & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-violet-500">Analytics</span>
+            </motion.h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1">
+              Generate Daily, Weekly, Monthly & Annual Reports
+            </p>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() =>
+              printReport(reportType, dateRange, individualData, partyData, totals)
+            }
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 text-white rounded-xl font-bold text-sm shadow-lg shadow-gray-500/30 hover:shadow-xl transition-all"
+          >
+            <motion.span
+              animate={{ rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.5 }}
+            >
+              🖨️
+            </motion.span>
+            Print {reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report
+          </motion.button>
         </div>
-        <button
-          onClick={() =>
-            printReport(reportType, dateRange, individualData, partyData, totals)
-          }
-          className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl"
-        >
-          <span>🖨️</span> Print {reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report
-        </button>
-      </div>
+      </GlassCard>
 
       {/* Report Type Selector */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {reportTypes.map((type) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {reportTypes.map((type, index) => (
           <motion.button
             key={type.key}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.1 + index * 0.1 }}
+            whileHover={{ scale: 1.05, y: -4 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               setReportType(type.key);
               setSelectedDate(new Date().toISOString().split("T")[0]);
             }}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all border ${
+            className={`relative overflow-hidden py-4 rounded-2xl font-bold text-sm transition-all duration-300 ${
               reportType === type.key
-                ? colorClasses[type.color].active
-                : colorClasses[type.color].inactive + " border-gray-200"
+                ? `bg-gradient-to-r ${type.color} text-white shadow-lg ${type.shadow} transform scale-105`
+                : "bg-white/60 dark:bg-gray-800/60 backdrop-blur text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50"
             }`}
           >
-            <span className="text-lg">{type.icon}</span>
-            {type.label}
+            <motion.span
+              animate={reportType === type.key ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.5 }}
+              className="text-2xl block mb-1"
+            >
+              {type.icon}
+            </motion.span>
+            <span className="text-sm">{type.label}</span>
+            {reportType === type.key && (
+              <motion.div
+                layoutId="reportIndicator"
+                className="absolute bottom-0 left-0 right-0 h-1 bg-white/50 rounded-full mx-4"
+              />
+            )}
           </motion.button>
         ))}
       </div>
 
       {/* Date Navigation */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
-        <button
-          onClick={() => navigateDate(-1)}
-          className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-        >
-          ← Prev {reportType === "daily" ? "Day" : reportType === "weekly" ? "Week" : reportType === "monthly" ? "Month" : "Year"}
-        </button>
+      <GlassCard delay={0.2}>
+        <div className="flex flex-col sm:flex-row items-center gap-4 p-5">
+          <motion.button
+            whileHover={{ scale: 1.1, x: -2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigateDate(-1)}
+            className="px-5 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 transition-all shadow-md"
+          >
+            ← Prev
+          </motion.button>
 
-        <div className="flex-1 text-center">
-          <div className="text-lg font-bold text-gray-800">{dateRange.label}</div>
-          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-            {reportType} Report Period
+          <div className="flex-1 text-center">
+            <motion.div
+              key={dateRange.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl font-black text-gray-800 dark:text-white"
+            >
+              {dateRange.label}
+            </motion.div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-1">
+              {reportType} Report Period
+            </p>
           </div>
-        </div>
 
-        <button
-          onClick={() => navigateDate(1)}
-          className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-        >
-          Next {reportType === "daily" ? "Day" : reportType === "weekly" ? "Week" : reportType === "monthly" ? "Month" : "Year"} →
-        </button>
-      </div>
+          <motion.button
+            whileHover={{ scale: 1.1, x: 2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigateDate(1)}
+            className="px-5 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 transition-all shadow-md"
+          >
+            Next →
+          </motion.button>
+        </div>
+      </GlassCard>
 
       {/* Date Picker */}
-      <div className="flex items-center gap-3">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Jump to Date:</label>
+      <div className="flex items-center gap-3 px-2">
+        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jump to:</label>
         <input
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          className="px-4 py-2.5 bg-white/60 dark:bg-gray-800/60 backdrop-blur border border-gray-200/50 dark:border-gray-700/50 rounded-xl text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-sm"
         />
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
-          className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+          className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30"
         >
           Today
-        </button>
+        </motion.button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <SummaryCard
-          title="Total Customers"
-          value={totals.totalCustomers}
-          subtext={`${individualData.length} Individual · ${partyData.length} Party`}
-          color="amber"
-          delay={0.1}
-        />
-        <SummaryCard
-          title="Total Amount"
-          value={`Rs. ${totals.grandTotalAmount.toLocaleString()}`}
-          subtext="All services combined"
-          color="blue"
-          delay={0.2}
-        />
-        <SummaryCard
-          title="Total Advance"
-          value={`Rs. ${totals.grandTotalAdvance.toLocaleString()}`}
-          subtext="Received payments"
-          color="emerald"
-          delay={0.3}
-        />
-        <SummaryCard
-          title="Total Remaining"
-          value={`Rs. ${totals.grandTotalRemaining.toLocaleString()}`}
-          subtext="Pending balance"
-          color="red"
-          delay={0.4}
-        />
-      </div>
-
-      {/* View Toggle */}
-      <div className="flex bg-gray-100 p-1 rounded-xl w-fit border border-gray-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { key: "all", label: "All Records" },
-          { key: "individual", label: "Individual" },
-          { key: "party", label: "Party" },
-        ].map((view) => (
-          <button
-            key={view.key}
-            onClick={() => setActiveView(view.key)}
-            className={`px-5 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-              activeView === view.key
-                ? view.key === "all"
-                  ? "bg-white shadow text-gray-700"
-                  : view.key === "individual"
-                  ? "bg-white shadow text-blue-600"
-                  : "bg-white shadow text-orange-600"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+          {
+            title: "Total Customers",
+            value: totals.totalCustomers,
+            subtext: `${individualData.length} Individual · ${partyData.length} Party`,
+            color: "from-amber-400 to-orange-500",
+            icon: "👥",
+            delay: 0.3,
+          },
+          {
+            title: "Total Amount",
+            value: `Rs. ${totals.grandTotalAmount.toLocaleString()}`,
+            subtext: "All services combined",
+            color: "from-blue-400 to-blue-600",
+            icon: "💰",
+            delay: 0.4,
+          },
+          {
+            title: "Total Advance",
+            value: `Rs. ${totals.grandTotalAdvance.toLocaleString()}`,
+            subtext: "Received payments",
+            color: "from-emerald-400 to-emerald-600",
+            icon: "💵",
+            delay: 0.5,
+          },
+          {
+            title: "Total Remaining",
+            value: `Rs. ${totals.grandTotalRemaining.toLocaleString()}`,
+            subtext: "Pending balance",
+            color: "from-red-400 to-rose-600",
+            icon: "📊",
+            delay: 0.6,
+          },
+        ].map((card) => (
+          <motion.div
+            key={card.title}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: card.delay, type: "spring" }}
+            whileHover={{ y: -6, scale: 1.03 }}
+            className={`relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br ${card.color} text-white shadow-lg cursor-pointer`}
           >
-            {view.label}
-          </button>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-8 -mt-8 blur-xl" />
+            <div className="relative z-10">
+              <div className="text-2xl mb-2">{card.icon}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                {card.title}
+              </div>
+              <div className="text-lg font-black mt-1">{card.value}</div>
+              <div className="text-[9px] opacity-70 mt-1">{card.subtext}</div>
+            </div>
+          </motion.div>
         ))}
       </div>
 
+      {/* View Toggle */}
+      <GlassCard delay={0.7}>
+        <div className="flex p-2">
+          {[
+            { key: "all", label: "All Records", icon: "📋" },
+            { key: "individual", label: "Individual", icon: "👤" },
+            { key: "party", label: "Party", icon: "🏢" },
+          ].map((view) => (
+            <motion.button
+              key={view.key}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveView(view.key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs uppercase transition-all ${
+                activeView === view.key
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              <span>{view.icon}</span>
+              {view.label}
+            </motion.button>
+          ))}
+        </div>
+      </GlassCard>
+
       {/* Records Display */}
-      <div className="flex flex-col gap-4">
+      <AnimatePresence mode="wait">
         {displayData.length === 0 ? (
-          <div className="p-12 text-center bg-gray-50 rounded-xl border border-gray-200">
-            <div className="text-4xl mb-3">📭</div>
-            <div className="text-gray-500 font-bold text-sm">No records found for this period</div>
-            <div className="text-gray-400 text-xs mt-1">Try selecting a different date or report type</div>
-          </div>
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="p-16 text-center"
+          >
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-6xl mb-4"
+            >
+              📭
+            </motion.div>
+            <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400">No records found</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Try selecting a different date or report type</p>
+          </motion.div>
         ) : (
-          <>
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col gap-5"
+          >
             {/* Individual Records */}
             {(activeView === "all" || activeView === "individual") && individualData.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Individual Records ({individualData.length})
-                  </h3>
-                  <div className="text-[10px] font-bold text-gray-400">
-                    Total: Rs. {totals.individualTotal.toLocaleString()} | Advance: Rs.{" "}
-                    {totals.individualAdvance.toLocaleString()} | Remaining: Rs.{" "}
-                    {totals.individualRemaining.toLocaleString()}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg shadow-lg shadow-blue-500/30">
+                      👤
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-gray-800 dark:text-white">Individual Records</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{individualData.length} customers found</p>
+                    </div>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
+                    Total: Rs. {totals.individualTotal.toLocaleString()}
                   </div>
                 </div>
-                <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="min-w-full text-left">
-                    <thead className="bg-gray-50">
-                      <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                        <th className="px-4 py-3">#</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Customer</th>
-                        <th className="px-4 py-3">Vehicle</th>
-                        <th className="px-4 py-3">Services</th>
-                        <th className="px-4 py-3 text-right">Total</th>
-                        <th className="px-4 py-3 text-right">Advance</th>
-                        <th className="px-4 py-3 text-right">Remaining</th>
-                        <th className="px-4 py-3 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {individualData.map((item, idx) => {
-                        const remaining = getItemRemaining(item);
-                        const total = getItemTotal(item);
-                        const advance = getItemAdvance(item);
-                        return (
-                          <motion.tr
-                            key={item.id || idx}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: idx * 0.03 }}
-                            className="text-sm hover:bg-blue-50/30 transition-colors"
-                          >
-                            <td className="px-4 py-3 text-gray-400 font-mono text-xs">{idx + 1}</td>
-                            <td className="px-4 py-3 text-[11px] text-gray-600">
-                              {formatShortDate(item.createdAt)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-gray-800 text-xs">{item.partyName || "N/A"}</div>
-                              <div className="text-[10px] text-gray-400">{item.phone || "—"}</div>
-                              <div className="text-[9px] text-gray-400 font-mono">{item.cnic || "—"}</div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-gray-700 text-xs">{item.plate || "—"}</div>
-                              <div className="text-[10px] text-gray-400">{item.model || "—"}</div>
-                              <div className="text-[9px] text-blue-600">{item.region || "—"}</div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1">
-                                {(Array.isArray(item.serviceType) ? item.serviceType : []).map((serviceName, si) => {
-                                  const price = item.servicePrices?.[serviceName] || 0;
-                                  return (
-                                    <div
-                                      key={si}
-                                      className="bg-blue-100 text-blue-700 text-[9px] px-2 py-1 rounded font-bold"
-                                    >
-                                      <div className="uppercase">{serviceName}</div>
-                                      <div className="text-[8px] text-gray-600">Rs. {Number(price).toLocaleString()}</div>
-                                    </div>
-                                  );
-                                })}
+
+                <div className="space-y-3">
+                  {individualData.map((item, idx) => {
+                    const remaining = getItemRemaining(item);
+                    const total = getItemTotal(item);
+                    const advance = getItemAdvance(item);
+                    return (
+                      <motion.div
+                        key={item.id || idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        whileHover={{ scale: 1.01, x: 4 }}
+                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 p-5 transition-all"
+                      >
+                        <div className="flex flex-col md:flex-row gap-4">
+                          {/* Customer Info */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 flex items-center justify-center text-xl">
+                                🚗
                               </div>
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-gray-800 text-xs">
-                              {total.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-green-600 text-xs">
-                              {advance.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-red-600 text-xs">
-                              {remaining.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span
-                                className={`text-[9px] font-black uppercase px-2 py-1 rounded ${
-                                  remaining > 0
-                                    ? "bg-red-100 text-red-600"
-                                    : "bg-green-100 text-green-600"
-                                }`}
-                              >
-                                {remaining > 0 ? "● Pending" : "● Cleared"}
-                              </span>
-                            </td>
-                          </motion.tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="bg-blue-50 border-t-2 border-blue-200">
-                      <tr className="text-xs font-bold">
-                        <td colSpan={5} className="px-4 py-3 text-right text-gray-700 uppercase">
-                          Individual Totals
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-gray-800">
-                          {totals.individualTotal.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-green-700">
-                          {totals.individualAdvance.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-red-700">
-                          {totals.individualRemaining.toLocaleString()}
-                        </td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                              <div>
+                                <h4 className="font-bold text-gray-800 dark:text-white">{item.partyName || "N/A"}</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{item.phone || "—"} · {item.cnic || "—"}</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(Array.isArray(item.serviceType) ? item.serviceType : []).map((serviceName, si) => {
+                                const price = item.servicePrices?.[serviceName] || 0;
+                                return (
+                                  <motion.div
+                                    key={si}
+                                    whileHover={{ scale: 1.1 }}
+                                    className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 text-[10px] px-3 py-1.5 rounded-lg font-bold border border-blue-200/50 dark:border-blue-700/30"
+                                  >
+                                    {serviceName} · Rs. {Number(price).toLocaleString()}
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Vehicle & Amount */}
+                          <div className="flex gap-6 items-center">
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Vehicle</div>
+                              <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{item.plate || "—"}</div>
+                              <div className="text-[10px] text-gray-400">{item.model || "—"}</div>
+                            </div>
+                            <div className="w-px h-12 bg-gray-200 dark:bg-gray-700" />
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Total</div>
+                              <div className="text-lg font-black text-gray-800 dark:text-white">{total.toLocaleString()}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Advance</div>
+                              <div className="text-lg font-black text-green-600 dark:text-green-400">{advance.toLocaleString()}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Remaining</div>
+                              <div className={`text-lg font-black ${remaining > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                                {remaining.toLocaleString()}
+                              </div>
+                            </div>
+                            <motion.span
+                              whileHover={{ scale: 1.2 }}
+                              className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                                remaining > 0
+                                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                                  : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                              }`}
+                            >
+                              {remaining > 0 ? "● Pending" : "✓ Cleared"}
+                            </motion.span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* Individual Total Bar */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-4 bg-gradient-to-r from-blue-500/10 to-violet-500/10 dark:from-blue-900/20 dark:to-violet-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
+                >
+                  <div className="flex justify-between items-center text-sm font-bold">
+                    <span className="text-gray-700 dark:text-gray-300">Individual Totals</span>
+                    <div className="flex gap-6">
+                      <span className="text-gray-800 dark:text-white">{totals.individualTotal.toLocaleString()}</span>
+                      <span className="text-green-600 dark:text-green-400">{totals.individualAdvance.toLocaleString()}</span>
+                      <span className="text-red-600 dark:text-red-400">{totals.individualRemaining.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Party Records */}
             {(activeView === "all" || activeView === "party") && partyData.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="text-sm font-bold text-orange-700 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                    Party / Business Records ({partyData.length})
-                  </h3>
-                  <div className="text-[10px] font-bold text-gray-400">
-                    Total: Rs. {totals.partyTotal.toLocaleString()} | Advance: Rs.{" "}
-                    {totals.partyAdvance.toLocaleString()} | Remaining: Rs.{" "}
-                    {totals.partyRemaining.toLocaleString()}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg shadow-lg shadow-orange-500/30">
+                      🏢
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-gray-800 dark:text-white">Party / Business Records</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{partyData.length} parties found</p>
+                    </div>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
+                    Total: Rs. {totals.partyTotal.toLocaleString()}
                   </div>
                 </div>
-                <div className="flex flex-col gap-4">
+
+                <div className="space-y-4">
                   {partyData.map((item, idx) => {
                     const vehicles = item.vehicles || [];
                     const vTotal = getItemTotal(item);
@@ -874,131 +931,127 @@ const Reports = ({ customerData = [] }) => {
                     return (
                       <motion.div
                         key={item.id || idx}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.08 }}
-                        className="rounded-xl border border-gray-200 overflow-hidden shadow-sm"
+                        whileHover={{ scale: 1.01 }}
+                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 overflow-hidden"
                       >
-                        <div className="bg-orange-600 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
-                          <div className="text-white font-bold text-sm">
-                            {item.partyName || "N/A"}
-                            <span className="text-orange-200 font-normal text-xs ml-2">
-                              ({item.ntn || item.phone || "No Contact"})
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-orange-200">
-                            {formatShortDate(item.createdAt)}
+                        {/* Party Header */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-xl">
+                                🏢
+                              </div>
+                              <div>
+                                <h4 className="font-black text-white text-lg">{item.partyName || "N/A"}</h4>
+                                <p className="text-xs text-orange-100">{item.ntn || item.phone || "No Contact"}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-orange-100 uppercase font-bold">{formatShortDate(item.createdAt)}</p>
+                              <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-1 ${
+                                vRemaining > 0
+                                  ? "bg-red-500/30 text-white"
+                                  : "bg-green-500/30 text-white"
+                              }`}>
+                                {vRemaining > 0 ? "● PENDING" : "✓ CLEARED"}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full text-left">
-                            <thead className="bg-gray-50">
-                              <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                <th className="px-4 py-2.5">#</th>
-                                <th className="px-4 py-2.5">Vehicle</th>
-                                <th className="px-4 py-2.5">Services</th>
-                                <th className="px-4 py-2.5 text-right">Total</th>
-                                <th className="px-4 py-2.5 text-right">Advance</th>
-                                <th className="px-4 py-2.5 text-right">Remaining</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {vehicles.map((v, vidx) => (
-                                <tr
-                                  key={vidx}
-                                  className="text-sm hover:bg-orange-50/30 transition-colors"
-                                >
-                                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">
-                                    {vidx + 1}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <div className="font-bold text-gray-800 text-xs">{v.plate || "—"}</div>
-                                    <div className="text-[10px] text-gray-400">{v.model || "—"}</div>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex flex-wrap gap-1">
-                                      {(Array.isArray(v.serviceType) ? v.serviceType : []).map(
-                                        (serviceName, si) => {
-                                          const price = v.servicePrices?.[serviceName] || 0;
-                                          return (
-                                            <div
-                                              key={si}
-                                              className="bg-orange-100 text-orange-700 text-[9px] px-2 py-1 rounded font-bold"
-                                            >
-                                              <div className="uppercase">{serviceName}</div>
-                                              <div className="text-[8px] text-gray-700 mt-1">
-                                                Rs. {Number(price).toLocaleString()}
-                                              </div>
-                                            </div>
-                                          );
-                                        }
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-gray-700 text-xs">
-                                    {Number(v.vehicleTotal || 0).toLocaleString()}
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-green-600 text-xs">
-                                    {Number(v.vehicleAdvance || 0).toLocaleString()}
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-orange-600 text-xs">
-                                    {Number(v.vehicleRemaining || 0).toLocaleString()}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot className="bg-orange-50 border-t-2 border-orange-200">
-                              <tr className="text-xs font-bold">
-                                <td colSpan={3} className="px-4 py-3 text-right text-gray-700 uppercase">
-                                  Party Total
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-gray-800">
-                                  {vTotal.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-green-700">
-                                  {vAdvance.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-red-700">
-                                  {vRemaining.toLocaleString()}
-                                </td>
-                              </tr>
-                            </tfoot>
-                          </table>
+
+                        {/* Vehicles */}
+                        <div className="p-4 space-y-3">
+                          {vehicles.map((v, vidx) => (
+                            <motion.div
+                              key={vidx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: vidx * 0.05 }}
+                              whileHover={{ x: 4 }}
+                              className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
+                            >
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 flex items-center justify-center text-lg">
+                                🚙
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-bold text-gray-800 dark:text-white text-sm">{v.plate || "—"}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{v.model || "—"}</div>
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                  {(Array.isArray(v.serviceType) ? v.serviceType : []).map((serviceName, si) => {
+                                    const price = v.servicePrices?.[serviceName] || 0;
+                                    return (
+                                      <span
+                                        key={si}
+                                        className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-[9px] px-2 py-0.5 rounded-md font-bold"
+                                      >
+                                        {serviceName} · Rs. {Number(price).toLocaleString()}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="flex gap-4 text-right">
+                                <div>
+                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Total</div>
+                                  <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{Number(v.vehicleTotal || 0).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Advance</div>
+                                  <div className="text-sm font-bold text-green-600 dark:text-green-400">{Number(v.vehicleAdvance || 0).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Remaining</div>
+                                  <div className="text-sm font-bold text-orange-600 dark:text-orange-400">{Number(v.vehicleRemaining || 0).toLocaleString()}</div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
                         </div>
-                        <div className="bg-gray-50 px-4 py-2 flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex gap-3 text-[10px] text-gray-500">
+
+                        {/* Party Footer */}
+                        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                          <div className="flex gap-4 text-[10px] text-gray-500 dark:text-gray-400">
                             <span>📞 {item.phone || "—"}</span>
                             <span>📍 {item.region || "—"}</span>
                             <span>💳 {item.bankName || "Cash"}</span>
                           </div>
-                          <span
-                            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${
-                              vRemaining > 0
-                                ? "bg-red-100 text-red-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            {vRemaining > 0 ? "● PENDING" : "● CLEARED"}
-                          </span>
+                          <div className="flex gap-4 text-xs font-mono font-bold">
+                            <span className="text-gray-700 dark:text-gray-300">{vTotal.toLocaleString()}</span>
+                            <span className="text-green-600 dark:text-green-400">{vAdvance.toLocaleString()}</span>
+                            <span className="text-red-600 dark:text-red-400">{vRemaining.toLocaleString()}</span>
+                          </div>
                         </div>
                       </motion.div>
                     );
                   })}
                 </div>
+
                 {/* Party Grand Total */}
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
-                  <div className="text-sm font-bold text-orange-800 uppercase">Party Grand Total</div>
-                  <div className="flex gap-6 text-xs font-mono font-bold flex-wrap">
-                    <span className="text-gray-700">Total: {totals.partyTotal.toLocaleString()}</span>
-                    <span className="text-green-600">Advance: {totals.partyAdvance.toLocaleString()}</span>
-                    <span className="text-red-600">Remaining: {totals.partyRemaining.toLocaleString()}</span>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl text-white shadow-lg shadow-orange-500/30"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🏆</span>
+                      <span className="font-black text-lg">Party Grand Total</span>
+                    </div>
+                    <div className="flex gap-6 text-sm font-mono font-bold">
+                      <span>{totals.partyTotal.toLocaleString()}</span>
+                      <span className="opacity-80">{totals.partyAdvance.toLocaleString()}</span>
+                      <span className="opacity-80">{totals.partyRemaining.toLocaleString()}</span>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             )}
-          </>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </motion.div>
   );
 };

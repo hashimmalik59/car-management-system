@@ -1,82 +1,104 @@
 import React from "react";
+import { motion } from "framer-motion";
+import { useDarkMode } from "./DarkModeContext";
 
-const Header = ({ totalReceivable = 0 }) => {
+const Header = ({ totalReceivable, customerCount, pendingCount }) => {
+  const { darkMode, toggleDarkMode } = useDarkMode();
+
+  const stats = [
+    {
+      label: "Customers",
+      value: customerCount,
+      icon: "👥",
+      gradient: "from-blue-500 to-indigo-600",
+    },
+    {
+      label: "Pending",
+      value: pendingCount,
+      icon: "⏳",
+      gradient: "from-orange-500 to-red-500",
+    },
+    {
+      label: "Receivable",
+      value: `Rs. ${(totalReceivable || 0).toLocaleString()}`,
+      icon: "💰",
+      gradient: "from-emerald-500 to-teal-600",
+    },
+  ];
+
   return (
-    <header className="bg-white shadow-md flex flex-col md:flex-row justify-between items-center px-4 md:px-10 py-4 border-b border-gray-100 gap-4 md:gap-0">
-      {/* Logo Section */}
-      <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
-        <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-1.5 md:p-2 rounded-lg">
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <motion.header
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      className="w-full sticky top-0 z-50 backdrop-blur-2xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg shadow-gray-200/20 dark:shadow-black/30 transition-all duration-500"
+    >
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          {/* Logo */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="flex items-center gap-3"
+          >
+            <motion.div
+              animate={{ rotate: [0, -10, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-500/30"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+              🚗
+            </motion.div>
+            <div>
+              <h1 className="text-xl font-black text-gray-800 dark:text-white tracking-tight">
+                IQRA{" "}
+                <span className="text-blue-600 dark:text-blue-400">
+                  MOTOR INSURANCE
+                </span>
+              </h1>
+            </div>
+          </motion.div>
+
+          {/* Stats + Dark Mode */}
+          <div className="flex items-center gap-2 md:gap-3">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2 + index * 0.1, type: "spring" }}
+                whileHover={{ y: -3, scale: 1.05 }}
+                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r ${stat.gradient} text-white shadow-lg cursor-pointer`}
+              >
+                <span className="text-lg">{stat.icon}</span>
+                <div className="hidden sm:block">
+                  <div className="text-[8px] font-bold uppercase tracking-wider opacity-80">
+                    {stat.label}
+                  </div>
+                  <div className="text-xs font-black">{stat.value}</div>
+                </div>
+                <div className="sm:hidden text-xs font-black">{stat.value}</div>
+              </motion.div>
+            ))}
+
+            {/* Dark Mode Toggle */}
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: darkMode ? -15 : 15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleDarkMode}
+              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-all duration-300 shadow-md"
+              title={darkMode ? "Light Mode" : "Dark Mode"}
+            >
+              <motion.span
+                animate={{ rotate: darkMode ? 180 : 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-lg"
+              >
+                {darkMode ? "☀️" : "🌙"}
+              </motion.span>
+            </motion.button>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">
-            Iqra <span className="text-blue-600">Motor Insurance</span>
-          </h1>
         </div>
-
-        {/* Mobile Logout (Only visible on small screens next to logo) */}
-        <button className="md:hidden p-2 text-gray-600 hover:text-red-600">
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
-        </button>
       </div>
-
-      {/* Stats & Actions */}
-      <div className="flex w-full md:w-auto justify-between md:justify-start gap-4 md:gap-12 items-center border-t md:border-none pt-3 md:pt-0">
-        <div className="flex flex-col items-start md:items-end">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            Total Outstanding
-          </span>
-          <span className="text-xl md:text-2xl text-red-600 font-black font-mono">
-            Rs. {totalReceivable.toLocaleString()}
-          </span>
-        </div>
-
-        {/* Separator - Hidden on Mobile */}
-        <div className="hidden md:block h-10 w-[1px] bg-gray-200"></div>
-
-        {/* Desktop Logout Button */}
-        <button className="hidden md:flex items-center gap-2 bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 px-4 py-2 rounded-xl font-bold text-sm transition-all border border-gray-200 hover:border-red-200">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
-          Logout
-        </button>
-      </div>
-    </header>
+    </motion.header>
   );
 };
 
