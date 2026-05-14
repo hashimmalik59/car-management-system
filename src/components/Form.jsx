@@ -339,6 +339,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
 
   const createInitialForm = () => ({
     id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
     type: "individual",
     partyName: "",
     phone: "",
@@ -467,6 +468,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     }
 
     onAddCustomer(formData);
+    console.log(formData);
     setFormData(createInitialForm());
     if (onCancelEdit) onCancelEdit();
   };
