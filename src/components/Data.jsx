@@ -547,7 +547,9 @@ const Data = ({
         );
 
         matchesSearch =
-          item.partyName?.toLowerCase().includes(search) || vehicleSearch;
+          item.partyName?.toLowerCase().includes(search) ||
+          item.phone?.toLowerCase().includes(search) ||
+          vehicleSearch;
       } else {
         const serviceString = Array.isArray(item.serviceType)
           ? item.serviceType.join(" ").toLowerCase() // ✅ already string array
@@ -556,7 +558,8 @@ const Data = ({
         matchesSearch =
           item.partyName?.toLowerCase().includes(search) ||
           item.plate?.toLowerCase().includes(search) ||
-          serviceString.includes(search);
+          item.phone.includes(search);
+        serviceString.includes(search);
       }
 
       return matchesTab && matchesSearch;
@@ -594,7 +597,7 @@ const Data = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
           type="search"
-          placeholder="Search Name, Plate, Service..."
+          placeholder="Search Name, Phone, Plate, Service..."
           className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
