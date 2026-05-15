@@ -305,6 +305,24 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         )}
       </div>
 
+      {/* 🆕 VEHICLE BANK ACCOUNT - YEHAN ADD KAREIN */}
+      <div className="flex flex-col">
+        <label className="text-[10px] font-bold text-orange-600 uppercase">
+          Vehicle Bank Account
+        </label>
+        <select
+          className="rounded p-2 border border-orange-300 text-sm bg-white outline-none focus:border-orange-500"
+          value={vehicle.bankName || "Cash"}
+          onChange={(e) => onChange(index, "bankName", e.target.value)}
+        >
+          {bankOptions.map((b) => (
+            <option key={b} value={b}>
+              {b}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Remarks */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold text-gray-500 uppercase">
@@ -335,6 +353,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     tokenTaxFrom: "",
     tokenTaxTo: "",
     remarks: "",
+    bankName: "Cash",
   });
 
   const createInitialForm = () => ({
@@ -390,6 +409,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
             0,
           ),
+          bankName: v.bankName || "Cash",
         }));
       }
       setFormData(normalized);
@@ -637,7 +657,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
         )}
 
         {/* Region & Bank */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`${isParty ? "" : "grid grid-cols-2 gap-3"}`}>
+          {/* Region - Dono ke liye */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               Region
@@ -658,24 +679,28 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
               <option value="Quetta">Quetta</option>
             </select>
           </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Payment Method
-            </label>
-            <select
-              className="rounded p-2 border border-gray-300 text-sm bg-white"
-              value={formData.bankName}
-              onChange={(e) =>
-                setFormData({ ...formData, bankName: e.target.value })
-              }
-            >
-              {bankOptions.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
+
+          {/* 🆕 Payment Method - SIRF Individual ke liye */}
+          {!isParty && (
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Payment Method
+              </label>
+              <select
+                className="rounded p-2 border border-gray-300 text-sm bg-white"
+                value={formData.bankName}
+                onChange={(e) =>
+                  setFormData({ ...formData, bankName: e.target.value })
+                }
+              >
+                {bankOptions.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         {/* Individual Services & Attachment */}
         {!isParty && (

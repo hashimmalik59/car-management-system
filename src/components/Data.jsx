@@ -181,7 +181,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${item.plate || "N/A"}</span></div>
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">Payment Method:</span><span class="value">${item.bankName || "Cash"}</span></div>
+        {/* Party-level Payment Method removed - per vehicle now */}
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -247,10 +247,10 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">Payment Method:</span><span class="value">${item.bankName || "Cash"}</span></div>
+        {/* Party-level Payment Method removed - per vehicle now */}
         <h3>Vehicles Details:</h3>
         <table class="table">
-          <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
+          <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
           <tbody>
             ${vehicles
               .map(
@@ -266,7 +266,8 @@ const printPartyReceipt = (item) => {
                       return `${s} (Rs. ${Number(price).toLocaleString()})`;
                     })
                     .join(", ") || "---"
-                }</td>                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                }</td>                <td>${v.bankName || "Cash"}</td>
+                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
               </tr>
@@ -275,7 +276,7 @@ const printPartyReceipt = (item) => {
               .join("")}
           </tbody>
           <tfoot style="background: #f2f2f2;">
-            <tr><td colspan="4" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
+            <tr><td colspan="5" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
           </tfoot>
         </table>
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
@@ -342,9 +343,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         {item.handoverTo && (
           <span className="text-orange-600">TO: {item.handoverTo}</span>
         )}
-        {item.bankName && (
-          <span className="text-blue-600">💳 {item.bankName}</span>
-        )}
+        {/* Party-level bankName removed - now per vehicle */}
         {item.tokenTaxFrom && (
           <span className="text-indigo-600">TAX FROM: {item.tokenTaxFrom}</span>
         )}
@@ -361,6 +360,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5">Vehicle Details</th>
               <th className="px-4 py-2.5">Services</th>
               <th className="px-4 py-2.5">Attachment</th>
+              <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
               <th className="px-4 py-2.5 text-right">Advance</th>
               <th className="px-4 py-2.5 text-right">Remaining</th>
@@ -370,7 +370,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-4 text-center text-gray-400 text-xs"
                 >
                   No vehicles recorded.
@@ -458,6 +458,11 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                       ) : null;
                     })()}
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold border border-blue-200">
+                      {v.bankName || "Cash"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-700">
                     {Number(v.vehicleTotal || 0).toLocaleString()}
                   </td>
@@ -475,7 +480,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tfoot className="bg-orange-50 border-t-2 border-orange-200">
               <tr className="text-xs font-bold">
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-4 py-3 text-right text-gray-700 uppercase"
                 >
                   GRAND TOTAL
@@ -763,6 +768,20 @@ const Data = ({
                                 ? item.remarks
                                 : item.remarks.text || item.remarks}
                             </div>
+                            {/* 🆕 DATE ADDED BELOW REMARKS */}
+                            {item.createdAt && (
+                              <div className="text-[9px] text-gray-400 font-mono">
+                                📅{" "}
+                                {new Date(item.createdAt).toLocaleDateString(
+                                  "en-GB",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
