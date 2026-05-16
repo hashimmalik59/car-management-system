@@ -131,7 +131,9 @@ const App = () => {
               onClick={() => setIsLoginView(!isLoginView)}
               className="mt-6 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 cursor-pointer bg-transparent border-none outline-none"
             >
-              {isLoginView ? "Register your account" : "Already registered"}
+              <span className="text-gray-800 underline">
+                {isLoginView ? "Register your account" : "Already registered"}
+              </span>
             </button>
           </div>
         ) : (

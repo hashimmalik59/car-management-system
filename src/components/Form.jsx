@@ -27,6 +27,17 @@ const bankOptions = [
   "Others",
 ];
 
+// 🆕 Region options with city PRICE field (like services)
+const regionOptions = [
+  { value: "", label: "Select Region" },
+  { value: "KPK", label: "KPK" },
+  { value: "Punjab", label: "Punjab" },
+  { value: "Sindh", label: "Sindh" },
+  { value: "Gilgit Baltistan", label: "Gilgit Baltistan" },
+  { value: "Lasbela", label: "Lasbela" },
+  { value: "Quetta", label: "Quetta" },
+];
+
 // Vehicle Card for Party
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getTotal = (prices) =>
@@ -34,6 +45,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       (sum, val) => sum + (Number(val) || 0),
       0,
     );
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -78,10 +90,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       updatedPrices[service] = "";
     }
 
-    const total = Object.values(updatedPrices || {}).reduce(
+    // 🆕 Recalculate total including city price
+    const servicesTotal = Object.values(updatedPrices || {}).reduce(
       (sum, val) => sum + (Number(val) || 0),
       0,
     );
+    const cityPrice = Number(vehicle.cityPrice) || 0;
+    const total = servicesTotal + cityPrice;
 
     const advance = Number(vehicle.vehicleAdvance) || 0;
     const remaining = Math.max(total - advance, 0);
@@ -89,6 +104,36 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "serviceType", updatedServices);
     onChange(index, "servicePrices", updatedPrices);
     onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
+  };
+
+  // 🆕 Handle city price change - adds to total like services
+  const handleCityPriceChange = (value) => {
+    const cityPrice = Number(value) || 0;
+
+    const servicesTotal = getTotal(vehicle.servicePrices);
+    const total = servicesTotal + cityPrice;
+
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    const remaining = Math.max(total - advance, 0);
+
+    onChange(index, "cityPrice", value);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
+  };
+
+  // 🆕 Handle region change
+  const handleRegionChange = (value) => {
+    onChange(index, "region", value);
+    // Reset city price when region changes
+    onChange(index, "cityPrice", "");
+
+    // Recalculate total without city price
+    const servicesTotal = getTotal(vehicle.servicePrices);
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    const remaining = Math.max(servicesTotal - advance, 0);
+
+    onChange(index, "vehicleTotal", servicesTotal);
     onChange(index, "vehicleRemaining", remaining);
   };
 
@@ -137,6 +182,41 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
+      {/* 🆕 REGION & CITY PRICE (like services) */}
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
+          Region
+        </label>
+        <div className="bg-white p-2.5 rounded-lg border border-orange-100">
+          <div className="flex flex-col bg-orange-50 rounded-md p-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <select
+                className="w-full rounded p-2 border border-orange-300 text-sm bg-white outline-none focus:border-orange-500"
+                value={vehicle.region || ""}
+                onChange={(e) => handleRegionChange(e.target.value)}
+              >
+                {regionOptions.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {/* 🆕 City Price input - shows when region is selected */}
+            {vehicle.region && (
+              <input
+                type="number"
+                placeholder="City Price (Rs.)"
+                value={vehicle.cityPrice || ""}
+                onChange={(e) => handleCityPriceChange(e.target.value)}
+                className="w-full mt-2 rounded p-1.5 border border-orange-300 text-[11px] outline-none focus:border-orange-500"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Services */}
       <div className="flex flex-col gap-1">
         <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -171,7 +251,12 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                       [service]: e.target.value,
                     };
 
-                    const total = getTotal(updatedPrices);
+                    // 🆕 Recalculate total including city price
+                    const servicesTotal = Object.values(
+                      updatedPrices || {},
+                    ).reduce((sum, val) => sum + (Number(val) || 0), 0);
+                    const cityPrice = Number(vehicle.cityPrice) || 0;
+                    const total = servicesTotal + cityPrice;
 
                     const remaining = Math.max(
                       total - (vehicle.vehicleAdvance || 0),
@@ -214,8 +299,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             onChange={(e) => {
               const advance = Number(e.target.value) || 0;
 
-              const total =
-                vehicle.vehicleTotal ?? getTotal(vehicle.servicePrices);
+              const total = vehicle.vehicleTotal || 0;
 
               const remaining = Math.max(total - advance, 0);
 
@@ -305,7 +389,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         )}
       </div>
 
-      {/* 🆕 VEHICLE BANK ACCOUNT - YEHAN ADD KAREIN */}
+      {/* Vehicle Bank Account */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold text-orange-600 uppercase">
           Vehicle Bank Account
@@ -344,6 +428,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
   const createEmptyVehicle = () => ({
     plate: "",
     model: "",
+    region: "", // 🆕 ADDED
+    cityPrice: "", // 🆕 ADDED - price input like services
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -366,6 +452,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     ntn: "",
     plate: "",
     model: "",
+    region: "", // 🆕 ADDED
+    cityPrice: "", // 🆕 ADDED
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -373,7 +461,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
     advancePaid: 0,
     remainingBalance: 0,
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
-    region: "",
     receivedBy: "",
     handoverTo: "",
     bankName: "Cash",
@@ -399,6 +486,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
           remainingBalance: Math.max(total - advance, 0),
           tokenTaxFrom: editingData.tokenTaxFrom ?? "",
           tokenTaxTo: editingData.tokenTaxTo ?? "",
+          region: editingData.region ?? "",
+          cityPrice: editingData.cityPrice ?? "",
         };
       } else {
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
@@ -410,6 +499,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             0,
           ),
           bankName: v.bankName || "Cash",
+          region: v.region ?? "",
+          cityPrice: v.cityPrice ?? "",
         }));
       }
       setFormData(normalized);
@@ -437,6 +528,44 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
       return {
         ...updated,
         remainingBalance: calcRemaining(total, advance),
+      };
+    });
+  };
+
+  // 🆕 Handle individual city price change
+  const handleIndividualCityPriceChange = (value) => {
+    const cityPrice = Number(value) || 0;
+
+    setFormData((prev) => {
+      const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0,
+      );
+      const total = servicesTotal + cityPrice;
+
+      return {
+        ...prev,
+        cityPrice: value,
+        totalAmount: total,
+        remainingBalance: Math.max(total - (prev.advancePaid || 0), 0),
+      };
+    });
+  };
+
+  // 🆕 Handle individual region change
+  const handleIndividualRegionChange = (value) => {
+    setFormData((prev) => {
+      const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0,
+      );
+
+      return {
+        ...prev,
+        region: value,
+        cityPrice: "",
+        totalAmount: servicesTotal,
+        remainingBalance: Math.max(servicesTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -503,7 +632,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             setFormData((prev) => ({
               ...createInitialForm(),
               type: "individual",
-              id: prev.id, // keep stable id (important for edit cases)
+              id: prev.id,
             }))
           }
           className={`flex-1 py-2 rounded-lg font-bold text-xs ${
@@ -618,8 +747,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
             />
           </div>
         </div>
+
         {/* Individual Vehicle Info */}
-        {/* Individual Vehicle Info + Token Tax */}
         {!isParty && (
           <>
             <div className="grid grid-cols-2 gap-3">
@@ -653,55 +782,68 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                 />
               </div>
             </div>
+
+            {/* 🆕 INDIVIDUAL: Region & City Price (like services) */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Region
+              </label>
+              <div className="bg-white p-2.5 rounded-lg border border-blue-100">
+                <div className="flex flex-col bg-blue-50 rounded-md p-2">
+                  <select
+                    className="w-full rounded p-2 border border-blue-300 text-sm bg-white outline-none focus:border-blue-500"
+                    value={formData.region || ""}
+                    onChange={(e) =>
+                      handleIndividualRegionChange(e.target.value)
+                    }
+                  >
+                    {regionOptions.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* 🆕 City Price input - shows when region is selected */}
+                  {formData.region && (
+                    <input
+                      type="number"
+                      placeholder="City Price (Rs.)"
+                      value={formData.cityPrice || ""}
+                      onChange={(e) =>
+                        handleIndividualCityPriceChange(e.target.value)
+                      }
+                      className="w-full mt-2 rounded p-1.5 border border-blue-300 text-[11px] outline-none focus:border-blue-500"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </>
         )}
 
-        {/* Region & Bank */}
-        <div className={`${isParty ? "" : "grid grid-cols-2 gap-3"}`}>
-          {/* Region - Dono ke liye */}
+        {/* Payment Method - ONLY for Individual */}
+        {!isParty && (
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Region
+              Payment Method
             </label>
             <select
               className="rounded p-2 border border-gray-300 text-sm bg-white"
-              value={formData.region}
+              value={formData.bankName}
               onChange={(e) =>
-                setFormData({ ...formData, region: e.target.value })
+                setFormData({ ...formData, bankName: e.target.value })
               }
             >
-              <option value="">Select Region</option>
-              <option value="KPK">KPK</option>
-              <option value="Punjab">Punjab</option>
-              <option value="Sindh">Sindh</option>
-              <option value="Gilgit Baltistan">Gilgit Baltistan</option>
-              <option value="Lasbela">Lasbela</option>
-              <option value="Quetta">Quetta</option>
+              {bankOptions.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
           </div>
+        )}
 
-          {/* 🆕 Payment Method - SIRF Individual ke liye */}
-          {!isParty && (
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Payment Method
-              </label>
-              <select
-                className="rounded p-2 border border-gray-300 text-sm bg-white"
-                value={formData.bankName}
-                onChange={(e) =>
-                  setFormData({ ...formData, bankName: e.target.value })
-                }
-              >
-                {bankOptions.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
         {/* Individual Services & Attachment */}
         {!isParty && (
           <>
@@ -739,10 +881,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                               updatedPrices[s] = "";
                             }
 
-                            const total = Object.values(updatedPrices).reduce(
-                              (sum, val) => sum + (Number(val) || 0),
-                              0,
-                            );
+                            // 🆕 Recalculate total including city price
+                            const servicesTotal = Object.values(
+                              updatedPrices,
+                            ).reduce((sum, val) => sum + (Number(val) || 0), 0);
+                            const cityPrice = Number(prev.cityPrice) || 0;
+                            const total = servicesTotal + cityPrice;
 
                             const remaining = Math.max(
                               total - (prev.advancePaid || 0),
@@ -778,10 +922,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
                               [s]: value,
                             };
 
-                            const total = Object.values(updatedPrices).reduce(
-                              (sum, val) => sum + (Number(val) || 0),
-                              0,
-                            );
+                            // 🆕 Recalculate total including city price
+                            const servicesTotal = Object.values(
+                              updatedPrices,
+                            ).reduce((sum, val) => sum + (Number(val) || 0), 0);
+                            const cityPrice = Number(prev.cityPrice) || 0;
+                            const total = servicesTotal + cityPrice;
 
                             return {
                               ...prev,

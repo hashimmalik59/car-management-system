@@ -6,14 +6,17 @@ import { motion } from "framer-motion";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      alert("Welcome successgully logged in");
+      // alert("Logged in successfully");
     } catch {
       alert("Invalid email and password");
+      setIsSubmitting(false);
     }
   };
 
@@ -27,7 +30,7 @@ const Login = () => {
     >
       <div className="text-center mb-8">
         <h2 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">
-          Welcome Back
+          Log In
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
           IQRA MOTOR INSURANCE
@@ -64,12 +67,23 @@ const Login = () => {
         </div>
 
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+          whileTap={!isSubmitting ? { scale: 0.98 } : {}}
           type="submit"
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 dark:shadow-none transition duration-200 cursor-pointer"
+          disabled={isSubmitting} // Jab loading ho rahi ho toh button click nahi ho sakega
+          className={`w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 dark:shadow-none transition duration-200 flex items-center justify-center gap-2 ${
+            isSubmitting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+          }`}
         >
-          Log In
+          {isSubmitting ? (
+            <>
+              {/* Yeh chota sa Tailwind CSS div automatic ghoomta hai (Spinner) */}
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Logging in...</span>
+            </>
+          ) : (
+            "Log In"
+          )}
         </motion.button>
       </form>
     </motion.div>

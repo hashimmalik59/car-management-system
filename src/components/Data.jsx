@@ -181,6 +181,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${item.plate || "N/A"}</span></div>
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
+        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
         {/* Party-level Payment Method removed - per vehicle now */}
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
@@ -247,10 +248,11 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
+        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
         {/* Party-level Payment Method removed - per vehicle now */}
         <h3>Vehicles Details:</h3>
         <table class="table">
-          <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
+          <thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Region</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
           <tbody>
             ${vehicles
               .map(
@@ -259,6 +261,7 @@ const printPartyReceipt = (item) => {
                 <td>${idx + 1}</td>
                 <td>${v.plate || "---"}</td>
                 <td>${v.model || "---"}</td>
+                <td>${v.region || "---"}${v.cityPrice ? ` (Rs. ${Number(v.cityPrice).toLocaleString()})` : ""}</td>
 <td>${
                   v.serviceType
                     ?.map((s) => {
@@ -276,7 +279,7 @@ const printPartyReceipt = (item) => {
               .join("")}
           </tbody>
           <tfoot style="background: #f2f2f2;">
-            <tr><td colspan="5" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
+            <tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
           </tfoot>
         </table>
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
@@ -358,6 +361,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tr className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
               <th className="px-4 py-2.5">#</th>
               <th className="px-4 py-2.5">Vehicle Details</th>
+              <th className="px-4 py-2.5">Region & City Price</th>
               <th className="px-4 py-2.5">Services</th>
               <th className="px-4 py-2.5">Attachment</th>
               <th className="px-4 py-2.5 text-center">Bank</th>
@@ -370,7 +374,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-4 text-center text-gray-400 text-xs"
                 >
                   No vehicles recorded.
@@ -401,6 +405,22 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                     {v.tokenTaxTo && (
                       <div className="text-[9px] text-pink-600 font-bold">
                         TAX TO: {v.tokenTaxTo}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* 🆕 Region & City Price for each vehicle */}
+                  <td className="px-4 py-3">
+                    {v.region && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold w-fit">
+                          📍 {v.region}
+                        </span>
+                        {v.cityPrice > 0 && (
+                          <span className="text-[10px] text-gray-600 font-mono">
+                            City: Rs. {Number(v.cityPrice).toLocaleString()}
+                          </span>
+                        )}
                       </div>
                     )}
                   </td>
@@ -480,7 +500,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tfoot className="bg-orange-50 border-t-2 border-orange-200">
               <tr className="text-xs font-bold">
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-3 text-right text-gray-700 uppercase"
                 >
                   GRAND TOTAL
@@ -637,6 +657,7 @@ const Data = ({
                 <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                   <th className="p-4">Customer & ID</th>
                   <th className="p-4">Service & Vehicle</th>
+                  <th className="p-4">Region & City Price</th>
                   <th className="p-4">Tracking (From/To)</th>
                   <th className="p-4">Payment Details</th>
                   <th className="p-4">Attachment</th>
@@ -701,6 +722,22 @@ const Data = ({
                         <div className="text-[10px] text-gray-400 italic">
                           {item.model || "---"}
                         </div>
+                      </td>
+                      {/* 🆕 Region & City Price for Individual */}
+                      <td className="p-2 md:p-4 block md:table-cell">
+                        {item.region && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold w-fit">
+                              📍 {item.region}
+                            </span>
+                            {item.cityPrice > 0 && (
+                              <span className="text-[10px] text-gray-600 font-mono">
+                                City Price: Rs.{" "}
+                                {Number(item.cityPrice).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="text-[10px] text-gray-700">
