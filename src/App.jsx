@@ -4,6 +4,10 @@ import Header from "./components/Header";
 import Main from "./components/Main";
 import Footer from "./components/Footer";
 import { DarkModeProvider } from "./components/DarkModeContext";
+import Signup from "./components/Signup";
+import Login from "./components/Login.jsx";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const App = () => {
   const [customer, setCustomer] = useState(() => {
@@ -12,6 +16,9 @@ const App = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
+
+  const [isLoginView, setIsLoginView] = useState(true); // true matlab Login dikhao, false matlab Signup
 
   useEffect(() => {
     localStorage.setItem("autokhata_data", JSON.stringify(customer));
@@ -20,6 +27,15 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Firebase Auth Listener: User ka login status track karne ke liye
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser); // Agar login hoga toh object milega, warna null
+    });
+
+    return () => unsubscribe(); // Cleanup listener when component unmounts
   }, []);
 
   const calculateTotalOutstanding = () => {
@@ -62,6 +78,15 @@ const App = () => {
     return pending;
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      alert("Logout Ho Gaya!");
+    } catch (error) {
+      console.error("Error signing out:", error.message);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
@@ -100,13 +125,44 @@ const App = () => {
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-50 dark:from-gray-900 dark:via-gray-800/30 dark:to-gray-900 transition-colors duration-500">
-        <Header
-          totalReceivable={calculateTotalOutstanding()}
-          customerCount={customer.length}
-          pendingCount={calculatePendingCount()}
-        />
-        <Main customer={customer} setCustomer={setCustomer} />
-        <Footer />
+        {/* Agar user login NAHI hai (null hai), toh Auth Forms dikhao */}
+        {!user ? (
+          <div className="flex flex-col items-center justify-center pt-10">
+            {/* Yahan conditionally ek waqt mein aik hi form dikhega */}
+            {isLoginView ? <Login /> : <Signup />}
+
+            {/* Form badalne wala button */}
+            <button
+              onClick={() => setIsLoginView(!isLoginView)}
+              className="mt-4 text-blue-600 dark:text-blue-400 underline font-medium cursor-pointer"
+            >
+              <span style={{ color: "#212121", textDecoration: "underline" }}>
+                {isLoginView ? "Register your account" : "Already registered"}
+              </span>
+            </button>
+          </div>
+        ) : (
+          /* Agar user login HAI, toh asli Dashboard dikhao */
+          <>
+            {/* Temporary Logout Button UI */}
+            <div className="p-4 flex justify-end">
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200 z-50"
+              >
+                Log Out
+              </button>
+            </div>
+
+            <Header
+              totalReceivable={calculateTotalOutstanding()}
+              customerCount={customer.length}
+              pendingCount={calculatePendingCount()}
+            />
+            <Main customer={customer} setCustomer={setCustomer} />
+            <Footer />
+          </>
+        )}
       </div>
     </DarkModeProvider>
   );
