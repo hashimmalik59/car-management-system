@@ -86,7 +86,7 @@ const Signup = () => {
               <span>Registering...</span>
             </>
           ) : (
-            "Register Gari Account"
+            "Register"
           )}
         </motion.button>
       </form>
