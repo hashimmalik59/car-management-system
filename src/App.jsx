@@ -17,8 +17,7 @@ const App = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
-
-  const [isLoginView, setIsLoginView] = useState(true); // true matlab Login dikhao, false matlab Signup
+  const [isLoginView, setIsLoginView] = useState(true);
 
   useEffect(() => {
     localStorage.setItem("autokhata_data", JSON.stringify(customer));
@@ -32,10 +31,9 @@ const App = () => {
   // Firebase Auth Listener: User ka login status track karne ke liye
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser); // Agar login hoga toh object milega, warna null
+      setUser(currentUser);
     });
-
-    return () => unsubscribe(); // Cleanup listener when component unmounts
+    return () => unsubscribe();
   }, []);
 
   const calculateTotalOutstanding = () => {
@@ -125,39 +123,26 @@ const App = () => {
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-gray-50 dark:from-gray-900 dark:via-gray-800/30 dark:to-gray-900 transition-colors duration-500">
-        {/* Agar user login NAHI hai (null hai), toh Auth Forms dikhao */}
         {!user ? (
           <div className="flex flex-col items-center justify-center pt-10">
-            {/* Yahan conditionally ek waqt mein aik hi form dikhega */}
             {isLoginView ? <Login /> : <Signup />}
 
-            {/* Form badalne wala button */}
             <button
               onClick={() => setIsLoginView(!isLoginView)}
-              className="mt-4 text-blue-600 dark:text-blue-400 underline font-medium cursor-pointer"
+              className="mt-6 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 cursor-pointer bg-transparent border-none outline-none"
             >
-              <span style={{ color: "#212121", textDecoration: "underline" }}>
-                {isLoginView ? "Register your account" : "Already registered"}
-              </span>
+              {isLoginView ? "Register your account" : "Already registered"}
             </button>
           </div>
         ) : (
           /* Agar user login HAI, toh asli Dashboard dikhao */
           <>
-            {/* Temporary Logout Button UI */}
-            <div className="p-4 flex justify-end">
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200 z-50"
-              >
-                Log Out
-              </button>
-            </div>
-
+            {/* Temporary Logout Button yahan se saaf kar diya hai */}
             <Header
               totalReceivable={calculateTotalOutstanding()}
               customerCount={customer.length}
               pendingCount={calculatePendingCount()}
+              onLogout={handleLogout} // <--- Prop pass kar diya Header ko
             />
             <Main customer={customer} setCustomer={setCustomer} />
             <Footer />

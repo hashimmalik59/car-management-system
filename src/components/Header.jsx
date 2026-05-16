@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useDarkMode } from "./DarkModeContext";
 
-const Header = ({ totalReceivable, customerCount, pendingCount }) => {
+const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
   const { darkMode, toggleDarkMode } = useDarkMode();
 
   const stats = [
@@ -56,8 +56,7 @@ const Header = ({ totalReceivable, customerCount, pendingCount }) => {
               </h1>
             </div>
           </motion.div>
-
-          {/* Stats + Dark Mode */}
+          {/* Stats + Dark Mode + Logout Right Wrapper */}
           <div className="flex items-center gap-2 md:gap-3">
             {stats.map((stat, index) => (
               <motion.div
@@ -80,11 +79,11 @@ const Header = ({ totalReceivable, customerCount, pendingCount }) => {
             ))}
 
             {/* Dark Mode Toggle */}
-            <motion.button
+            {/* <motion.button
               whileHover={{ scale: 1.1, rotate: darkMode ? -15 : 15 }}
               whileTap={{ scale: 0.9 }}
               onClick={toggleDarkMode}
-              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-all duration-300 shadow-md"
+              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer"
               title={darkMode ? "Light Mode" : "Dark Mode"}
             >
               <motion.span
@@ -94,8 +93,22 @@ const Header = ({ totalReceivable, customerCount, pendingCount }) => {
               >
                 {darkMode ? "☀️" : "🌙"}
               </motion.span>
+            </motion.button> */}
+
+            {/* Sahi Jagah: Logout Button Dark Mode ke sath fit kiya */}
+            <motion.button
+              whileHover={{ scale: 1.1, x: 2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onLogout}
+              className="w-11 h-11 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 flex items-center justify-center transition-all duration-300 shadow-md border border-red-200/30 text-red-600 dark:text-red-400 cursor-pointer"
+              title="Log Out"
+            >
+              <span className="text-lg font-bold text-[10px] px-4">
+                Log out
+              </span>
             </motion.button>
-          </div>
+          </div>{" "}
+          {/* Right Wrapper Closing */}
         </div>
       </div>
     </motion.header>
