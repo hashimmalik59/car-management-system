@@ -424,7 +424,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 };
 
 // ==================== MAIN FORM ====================
-const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
+const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const createEmptyVehicle = () => ({
     plate: "",
     model: "",
@@ -616,8 +616,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit }) => {
       }
     }
 
-    onAddCustomer(formData);
-    console.log(formData);
+    // Purani line 'onAddCustomer(formData);' ko hatao aur yeh likho:
+    const finalData = {
+      ...formData,
+      userId: user ? user.uid : null, // <--- User ki ID yahan pack ho gayi!
+    };
+
+    onAddCustomer(finalData); // Ab hum updated data bhej rahe hain    console.log(formData);
     setFormData(createInitialForm());
     if (onCancelEdit) onCancelEdit();
   };

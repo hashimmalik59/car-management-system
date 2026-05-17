@@ -79,7 +79,7 @@ const App = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      alert("Logout Ho Gaya!");
+      // alert("Logout Ho Gaya!");
     } catch (error) {
       console.error("Error signing out:", error.message);
     }
@@ -146,7 +146,7 @@ const App = () => {
               pendingCount={calculatePendingCount()}
               onLogout={handleLogout} // <--- Prop pass kar diya Header ko
             />
-            <Main customer={customer} setCustomer={setCustomer} />
+            <Main customer={customer} setCustomer={setCustomer} user={user} />{" "}
             <Footer />
           </>
         )}

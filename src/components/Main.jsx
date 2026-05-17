@@ -3,12 +3,64 @@ import { motion, AnimatePresence } from "framer-motion";
 import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
+// Main.jsx ke bilkul top par yeh do lines add karo:
+import { db } from "../firebase"; // Tumhara firebase config file ka rasta
+// Purani line ko hatao aur ab isko lagao:
+// Top par jahan query, where, getDocs import kiya tha, wahan yeh do cheezein aur add karo:
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
 
-const Main = ({ customer, setCustomer }) => {
+const Main = ({ customer, setCustomer, user }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mainTab, setMainTab] = useState("form");
+
+  // Cloud se sirf is login user ka data fetch karne ke liye useEffect
+  React.useEffect(() => {
+    if (!user) {
+      setCustomer([]);
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const q = query(
+          collection(db, "customers"),
+          where("userId", "==", user.uid),
+        );
+
+        const querySnapshot = await getDocs(q);
+        const loadedCustomers = [];
+
+        querySnapshot.forEach((doc) => {
+          loadedCustomers.push({
+            id: doc.id,
+            ...doc.data(),
+          });
+        });
+
+        setCustomer(loadedCustomers);
+        console.log(
+          "Sirf is user ka data cloud se load hogaya:",
+          loadedCustomers.length,
+          "records",
+        );
+      } catch (error) {
+        console.error("Data fetch karne mein masla aya:", error.message);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   function handleCustomer(newCustomer) {
     let sanitizedCustomer = { ...newCustomer };
@@ -38,6 +90,7 @@ const Main = ({ customer, setCustomer }) => {
     }
 
     if (editingCustomer) {
+      // 1. Local state (UI) ko foran update karo taake app fast chalay
       setCustomer(
         customer.map((c) =>
           c.id === editingCustomer.id
@@ -45,24 +98,96 @@ const Main = ({ customer, setCustomer }) => {
             : c,
         ),
       );
+
+      // 2. Background mein Firestore cloud par update bhejo
+      (async () => {
+        try {
+          // Cloud ke liye data copy karo
+          const updatedCloudData = { ...sanitizedCustomer };
+
+          // File object ka kachra saaf karo agar mojood ho
+          if (updatedCloudData.attachment && updatedCloudData.attachment.file) {
+            updatedCloudData.attachment = {
+              ...updatedCloudData.attachment,
+              file: null,
+            };
+          }
+
+          // Cloud par us document ka reference banao asli ID use karte hue
+          const docRef = doc(db, "customers", editingCustomer.id);
+
+          // Cloud par data update kar do!
+          await updateDoc(docRef, updatedCloudData);
+          console.log(
+            "Data successfully cloud par UPDATE ho gaya! ID:",
+            editingCustomer.id,
+          );
+        } catch (error) {
+          console.error(
+            "Firebase cloud par update karne mein error aya:",
+            error.message,
+          );
+          alert("Update nahi ho saka, dobara koshish karein.");
+        }
+      })();
+
       setEditingCustomer(null);
     } else {
-      setCustomer([
-        ...customer,
-        {
-          ...sanitizedCustomer,
-          id: Date.now(),
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      // Naya customer object tayyar karo (Bina kisi local ID ke)
+      const customerWithTime = {
+        ...sanitizedCustomer,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Background mein Firestore cloud par bhejo
+      (async () => {
+        try {
+          const cloudData = { ...customerWithTime };
+
+          if (cloudData.attachment && cloudData.attachment.file) {
+            cloudData.attachment = {
+              ...cloudData.attachment,
+              file: null,
+            };
+          }
+
+          // 1. Cloud par save karo aur uski reference (docRef) pakro
+          const docRef = await addDoc(collection(db, "customers"), cloudData);
+          console.log(
+            "Data successfully cloud par save ho gaya! ID:",
+            docRef.id,
+          );
+
+          // 2. Ab asli Firebase ID ke sath local state ko update karo (UI bulletproof!)
+          setCustomer((prev) => [
+            ...prev,
+            { ...customerWithTime, id: docRef.id },
+          ]);
+        } catch (error) {
+          console.error(
+            "Firebase cloud par save karne mein error aya:",
+            error.message,
+          );
+        }
+      })();
     }
 
     setMainTab("ledger");
   }
 
-  const handleDelete = (idToDelete) => {
-    if (window.confirm("Delete record?")) {
-      setCustomer(customer.filter((c) => c.id !== idToDelete));
+  const handleDelete = async (idToDelete) => {
+    // 🚨 YEH LINE ADD KARO CHECK KARNE KE LIYE:
+    console.log("Delete karne ke liye yeh ID aayi hai:", idToDelete);
+
+    if (window.confirm("Kya aap waqai yeh record delete karna chahte hain?")) {
+      try {
+        const docRef = doc(db, "customers", idToDelete);
+        await deleteDoc(docRef);
+        console.log("Record cloud se successfully delete ho gaya!");
+        setCustomer(customer.filter((c) => c.id !== idToDelete));
+      } catch (error) {
+        console.error("Cloud se delete karne mein masla aya:", error.message);
+      }
     }
   };
 
@@ -239,6 +364,7 @@ const Main = ({ customer, setCustomer }) => {
                 onAddCustomer={handleCustomer}
                 editingData={editingCustomer}
                 onCancelEdit={handleCancelEdit}
+                user={user}
               />
             </motion.div>
           )}
