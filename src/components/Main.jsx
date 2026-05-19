@@ -48,7 +48,8 @@ const Main = ({ customer, setCustomer, user }) => {
           });
         });
 
-        setCustomer(loadedCustomers);
+        const recentFirst = [...loadedCustomers].reverse();
+        setCustomer(recentFirst);
         console.log(
           "Sirf is user ka data cloud se load hogaya:",
           loadedCustomers.length,
@@ -102,10 +103,8 @@ const Main = ({ customer, setCustomer, user }) => {
       // 2. Background mein Firestore cloud par update bhejo
       (async () => {
         try {
-          // Cloud ke liye data copy karo
           const updatedCloudData = { ...sanitizedCustomer };
 
-          // File object ka kachra saaf karo agar mojood ho
           if (updatedCloudData.attachment && updatedCloudData.attachment.file) {
             updatedCloudData.attachment = {
               ...updatedCloudData.attachment,
@@ -113,10 +112,7 @@ const Main = ({ customer, setCustomer, user }) => {
             };
           }
 
-          // Cloud par us document ka reference banao asli ID use karte hue
           const docRef = doc(db, "customers", editingCustomer.id);
-
-          // Cloud par data update kar do!
           await updateDoc(docRef, updatedCloudData);
           console.log(
             "Data successfully cloud par UPDATE ho gaya! ID:",
@@ -142,26 +138,41 @@ const Main = ({ customer, setCustomer, user }) => {
       // Background mein Firestore cloud par bhejo
       (async () => {
         try {
-          const cloudData = { ...customerWithTime };
+          // Cloud ke liye gehri copy (Deep Copy) banao taake local state kharab na ho
+          const cloudData = JSON.parse(JSON.stringify(customerWithTime));
 
+          // 1. Agar main object par attachment hai toh saaf karo
           if (cloudData.attachment && cloudData.attachment.file) {
-            cloudData.attachment = {
-              ...cloudData.attachment,
-              file: null,
-            };
+            cloudData.attachment.file = null;
           }
 
-          // 1. Cloud par save karo aur uski reference (docRef) pakro
+          // 2. 🚨 PARTY SPECIAL CLEANER: Agar vehicles hain, toh unki attachments se bhi file object hatao
+          if (cloudData.type === "party" && Array.isArray(cloudData.vehicles)) {
+            cloudData.vehicles = cloudData.vehicles.map((v) => {
+              if (v.attachment && v.attachment.file) {
+                return {
+                  ...v,
+                  attachment: {
+                    ...v.attachment,
+                    file: null, // Firebase ko crash karne wali file null kar di
+                  },
+                };
+              }
+              return v;
+            });
+          }
+
+          // 3. Cloud par save karo aur uski reference (docRef) pakro
           const docRef = await addDoc(collection(db, "customers"), cloudData);
           console.log(
             "Data successfully cloud par save ho gaya! ID:",
             docRef.id,
           );
 
-          // 2. Ab asli Firebase ID ke sath local state ko update karo (UI bulletproof!)
+          // 4. Local state ko update karo (UI mein asli file object rahega taake preview kharab na ho)
           setCustomer((prev) => [
-            ...prev,
             { ...customerWithTime, id: docRef.id },
+            ...prev,
           ]);
         } catch (error) {
           console.error(

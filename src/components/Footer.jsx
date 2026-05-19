@@ -41,8 +41,8 @@ const Footer = () => {
               </span>
             </div>
             <div className="flex gap-4 text-xs text-gray-400">
-              <span>📞 +92 300 1234567</span>
-              <span>✉️ info@iqramotors.com</span>
+              <span>📞 +92 345 9210585</span>
+              <span>✉️ zafar.afr786gmail.com</span>
               <span>🕐 Mon-Sat: 9AM - 7PM</span>
             </div>
           </div>
