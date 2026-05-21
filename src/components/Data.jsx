@@ -442,6 +442,16 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                         );
                       })}
                     </div>
+
+                    {/* 🆕 Conversion Service Details */}
+                    {v.conversionServiceType && (
+                      <div className="bg-orange-100 text-orange-700 text-[9px] px-2 py-1 border border-orange-300 my-1 rounded font-bold">
+                        Conversion:{" "}
+                        <span className="font-normal">
+                          {v.conversionServiceType}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v.attachment} />
@@ -714,6 +724,16 @@ const Data = ({
                             </span>
                           )}
                         </div>
+
+                        {/* 🆕 Individual Conversion Display */}
+                        {item.conversionServiceType && (
+                          <div className="bg-blue-50 border border-blue-200 p-1.5 mb-2 rounded text-[10px] text-blue-700 font-bold">
+                            Conversion:{" "}
+                            <span className="font-normal">
+                              {item.conversionServiceType}
+                            </span>
+                          </div>
+                        )}
 
                         {/* Vehicle info */}
                         <div className="text-sm font-semibold text-gray-700">

@@ -275,6 +275,25 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
+      {/* 🆕 PARTY VEHICLE CONVERSION INPUT */}
+      {vehicle.serviceType.includes("Conversion") && (
+        <div className="flex flex-col bg-orange-100 p-3 rounded-xl border border-orange-200 gap-1 mt-2">
+          <label className="text-[10px] font-bold text-orange-700 uppercase">
+            Conversion Details (Specify Type)
+          </label>
+          <input
+            type="text"
+            required
+            placeholder="e.g., 10 wheeler to 6 wheeler"
+            value={vehicle.conversionServiceType || ""}
+            onChange={(e) =>
+              onChange(index, "conversionServiceType", e.target.value)
+            }
+            className="rounded p-2 border border-orange-300 text-sm outline-none focus:border-orange-500 bg-white"
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-500 uppercase">
@@ -428,8 +447,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const createEmptyVehicle = () => ({
     plate: "",
     model: "",
-    region: "", // 🆕 ADDED
-    cityPrice: "", // 🆕 ADDED - price input like services
+    region: "",
+    cityPrice: "",
+    conversionServiceType: "", // 🆕 PARTY VEHICLE KE LIYE ADD KIYA
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -452,8 +472,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     ntn: "",
     plate: "",
     model: "",
-    region: "", // 🆕 ADDED
-    cityPrice: "", // 🆕 ADDED
+    region: "",
+    cityPrice: "",
+    conversionServiceType: "", // 🆕 INDIVIDUAL KE LIYE ADD KIYA
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -488,6 +509,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           tokenTaxTo: editingData.tokenTaxTo ?? "",
           region: editingData.region ?? "",
           cityPrice: editingData.cityPrice ?? "",
+          conversionServiceType: editingData.conversionServiceType ?? "", // 🆕 INDIVIDUAL EDIT
         };
       } else {
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
@@ -501,6 +523,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           bankName: v.bankName || "Cash",
           region: v.region ?? "",
           cityPrice: v.cityPrice ?? "",
+          conversionServiceType: v.conversionServiceType ?? "", // 🆕 PARTY VEHICLE EDIT
         }));
       }
       setFormData(normalized);
@@ -952,6 +975,28 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 ))}
               </div>
             </div>
+
+            {/* 🆕 Agar services mein "Conversion" selected hai toh yeh zinda hoga */}
+            {formData.serviceType.includes("Conversion") && (
+              <div className="flex flex-col bg-blue-50 p-3 rounded-xl border border-blue-200 gap-1 mb-3">
+                <label className="text-[10px] font-bold text-blue-600 uppercase">
+                  Conversion Details (Specify Type)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., 10 wheeler to 6 wheeler..."
+                  value={formData.conversionServiceType || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      conversionServiceType: e.target.value,
+                    })
+                  }
+                  className="rounded p-2 border border-blue-300 text-sm outline-none focus:border-blue-500 bg-white"
+                />
+              </div>
+            )}
 
             <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 space-y-2">
               <div className="text-[10px] font-bold text-gray-500 uppercase">
