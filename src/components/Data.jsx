@@ -488,6 +488,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                       ) : null;
                     })()}
                   </td>
+
                   <td className="px-4 py-3 text-center">
                     <span className="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold border border-blue-200">
                       {v.bankName || "Cash"}
@@ -515,6 +516,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                 >
                   GRAND TOTAL
                 </td>
+
                 <td className="px-4 py-3 text-right font-mono font-bold text-gray-800 bg-orange-100">
                   {Number(totalAllVehicles).toLocaleString()}
                 </td>
@@ -669,6 +671,7 @@ const Data = ({
                   <th className="p-4">Service & Vehicle</th>
                   <th className="p-4">Region & City Price</th>
                   <th className="p-4">Tracking (From/To)</th>
+                  <th className="p-4">Commission</th>
                   <th className="p-4">Payment Details</th>
                   <th className="p-4">Attachment</th>
                   <th className="p-4 text-center">Action</th>
@@ -781,6 +784,17 @@ const Data = ({
                           </span>
                         )}
                       </td>
+
+                      <td className="p-4 text-sm text-gray-700">
+                        {item.commissionAmount > 0 ? (
+                          <span className="font-bold text-red-600">
+                            Rs. {Number(item.commissionAmount).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="flex flex-col gap-1">
                           {/* Status + Bank */}
@@ -815,6 +829,7 @@ const Data = ({
                           </div>
                         </div>
                       </td>
+
                       <td className="p-2 md:p-4 block md:table-cell">
                         <AttachmentDisplay attachment={item.attachment} />
                         {item.remarks && (

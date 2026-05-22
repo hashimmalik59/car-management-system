@@ -491,12 +491,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   });
 
   const [formData, setFormData] = useState(createInitialForm());
+  const [commissionAmount, setCommissionAmount] = useState(0);
 
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
 
       if (editingData?.type === "individual") {
+        // ✅ Commission sirf Individual mein load hoga
+        setCommissionAmount(Number(editingData.commissionAmount || 0));
+
         const total = Number(editingData.totalAmount ?? 0);
         const advance = Number(editingData.advancePaid ?? 0);
 
@@ -509,9 +513,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           tokenTaxTo: editingData.tokenTaxTo ?? "",
           region: editingData.region ?? "",
           cityPrice: editingData.cityPrice ?? "",
-          conversionServiceType: editingData.conversionServiceType ?? "", // 🆕 INDIVIDUAL EDIT
+          conversionServiceType: editingData.conversionServiceType ?? "",
         };
       } else {
+        // ✅ Party mode mein commission ko 0 set karo
+        setCommissionAmount(0);
+
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
           ...createEmptyVehicle(),
           ...v,
@@ -523,16 +530,38 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           bankName: v.bankName || "Cash",
           region: v.region ?? "",
           cityPrice: v.cityPrice ?? "",
-          conversionServiceType: v.conversionServiceType ?? "", // 🆕 PARTY VEHICLE EDIT
+          conversionServiceType: v.conversionServiceType ?? "",
         }));
       }
       setFormData(normalized);
     } else {
+      // Reset logic
       setFormData(createInitialForm());
+      setCommissionAmount(0);
     }
   }, [editingData]);
 
   const isParty = formData.type === "party";
+
+  // 🆕 REAL-TIME TOTAL CALCULATION
+  useEffect(() => {
+    if (!isParty) {
+      const servicesTotal = Object.values(formData.servicePrices || {}).reduce(
+        (sum, val) => sum + (Number(val) || 0),
+        0,
+      );
+      const cityPrice = Number(formData.cityPrice) || 0;
+
+      // Total = Services + City Price + Commission
+      const total = servicesTotal + cityPrice + Number(commissionAmount);
+
+      setFormData((prev) => ({
+        ...prev,
+        totalAmount: total,
+        remainingBalance: Math.max(total - (Number(prev.advancePaid) || 0), 0),
+      }));
+    }
+  }, [formData.servicePrices, formData.cityPrice, commissionAmount, isParty]);
 
   // Individual Handlers
   const calcRemaining = (total, advance) =>
@@ -639,14 +668,18 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       }
     }
 
-    // Purani line 'onAddCustomer(formData);' ko hatao aur yeh likho:
+    // 🆕 Yahan commissionAmount ko pack karna zaroori hai
     const finalData = {
       ...formData,
-      userId: user ? user.uid : null, // <--- User ki ID yahan pack ho gayi!
+      commissionAmount: Number(commissionAmount) || 0,
+      userId: user ? user.uid : null,
     };
 
-    onAddCustomer(finalData); // Ab hum updated data bhej rahe hain    console.log(formData);
+    console.log("Saving to Database:", finalData); // Debugging ke liye check kar lena
+    onAddCustomer(finalData);
+
     setFormData(createInitialForm());
+    setCommissionAmount(0); // Reset bhi kar do
     if (onCancelEdit) onCancelEdit();
   };
 
@@ -1003,6 +1036,20 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 Payment Details
               </div>
 
+              {/* 🆕 COMMISSION FIELD YAHAN ADD KI */}
+              <div>
+                <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                  Third-Party Commission (Rs.)
+                </label>
+                <input
+                  type="number"
+                  value={commissionAmount}
+                  onChange={(e) => setCommissionAmount(Number(e.target.value))}
+                  className="rounded p-2 border border-gray-200 text-sm w-full bg-white outline-none focus:border-blue-500"
+                  placeholder="0"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-semibold text-gray-600">
@@ -1167,6 +1214,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             ))}
           </div>
         )}
+
         {/* Individual Remarks - END MEIN */}
         {!isParty && (
           <div className="flex flex-col gap-2">
