@@ -631,12 +631,22 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }));
   };
 
+  // const addVehicle = () => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     vehicles: [
+  //       ...prev.vehicles,
+  //       { ...createEmptyVehicle(), id: crypto.randomUUID() },
+  //     ],
+  //   }));
+  // };
+
   const addVehicle = () => {
     setFormData((prev) => ({
       ...prev,
       vehicles: [
-        ...prev.vehicles,
-        { ...createEmptyVehicle(), id: crypto.randomUUID() },
+        { ...createEmptyVehicle(), id: crypto.randomUUID() }, // Nayi gaadi shuru mein
+        ...prev.vehicles, // Purani gaadiyan baad mein
       ],
     }));
   };
