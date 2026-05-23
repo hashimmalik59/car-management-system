@@ -369,7 +369,7 @@ const Main = ({ customer, setCustomer, user }) => {
               animate="animate"
               exit="exit"
               transition={{ duration: 0.3 }}
-              className="w-full lg:w-2/3 xl:w-1/2 mx-auto"
+              className="w-full mx-auto"
             >
               <Form
                 onAddCustomer={handleCustomer}
