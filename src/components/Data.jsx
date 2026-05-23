@@ -568,38 +568,47 @@ const Data = ({
     const search = searchTerm.toLowerCase();
 
     return customerData.filter((item) => {
+      // 1. Tab check (Ise sabse upar rakho taake tab ke bahar ka data filter na ho)
       const matchesTab = item.type === activeTab;
+      if (!matchesTab) return false;
 
+      // 2. Agar 'pending' search hai
+      if (search === "pending") {
+        if (item.type === "individual")
+          return Number(item.remainingBalance) > 0;
+        if (item.type === "party")
+          return (item.vehicles || []).some(
+            (v) => Number(v.vehicleRemaining) > 0,
+          );
+        return false;
+      }
+
+      // 3. Normal search logic
       let matchesSearch = false;
-
       if (item.type === "party") {
         const vehicleSearch = (item.vehicles ?? []).some(
           (v) =>
             v.plate?.toLowerCase().includes(search) ||
             v.model?.toLowerCase().includes(search) ||
-            (v.serviceType || [])
-              .join(" ") // ✅ serviceType already string array hai
-              .toLowerCase()
-              .includes(search),
+            (v.serviceType || []).join(" ").toLowerCase().includes(search),
         );
-
         matchesSearch =
           item.partyName?.toLowerCase().includes(search) ||
           item.phone?.toLowerCase().includes(search) ||
           vehicleSearch;
       } else {
         const serviceString = Array.isArray(item.serviceType)
-          ? item.serviceType.join(" ").toLowerCase() // ✅ already string array
+          ? item.serviceType.join(" ").toLowerCase()
           : (item.serviceType || "").toLowerCase();
 
         matchesSearch =
           item.partyName?.toLowerCase().includes(search) ||
           item.plate?.toLowerCase().includes(search) ||
-          item.phone.includes(search);
-        serviceString.includes(search);
+          (item.phone || "").includes(search) || // Defensive coding
+          serviceString.includes(search);
       }
 
-      return matchesTab && matchesSearch;
+      return matchesSearch;
     });
   }, [customerData, searchTerm, activeTab]);
 

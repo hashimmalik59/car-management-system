@@ -63,7 +63,7 @@ const Main = ({ customer, setCustomer, user }) => {
     fetchUserData();
   }, [user]);
 
-  function handleCustomer(newCustomer) {
+  async function handleCustomer(newCustomer) {
     let sanitizedCustomer = { ...newCustomer };
 
     if (newCustomer.type === "individual") {
@@ -123,7 +123,7 @@ const Main = ({ customer, setCustomer, user }) => {
             "Firebase cloud par update karne mein error aya:",
             error.message,
           );
-          alert("Update nahi ho saka, dobara koshish karein.");
+          // alert("Update nahi ho saka, dobara koshish karein.");
         }
       })();
 
@@ -135,52 +135,37 @@ const Main = ({ customer, setCustomer, user }) => {
         createdAt: new Date().toISOString(),
       };
 
-      // Background mein Firestore cloud par bhejo
-      (async () => {
-        try {
-          // Cloud ke liye gehri copy (Deep Copy) banao taake local state kharab na ho
-          const cloudData = JSON.parse(JSON.stringify(customerWithTime));
+      try {
+        // Cloud ke liye gehri copy (Deep Copy)
+        const cloudData = JSON.parse(JSON.stringify(customerWithTime));
 
-          // 1. Agar main object par attachment hai toh saaf karo
-          if (cloudData.attachment && cloudData.attachment.file) {
-            cloudData.attachment.file = null;
-          }
+        // Attachment saaf karo
+        if (cloudData.attachment?.file) cloudData.attachment.file = null;
 
-          // 2. 🚨 PARTY SPECIAL CLEANER: Agar vehicles hain, toh unki attachments se bhi file object hatao
-          if (cloudData.type === "party" && Array.isArray(cloudData.vehicles)) {
-            cloudData.vehicles = cloudData.vehicles.map((v) => {
-              if (v.attachment && v.attachment.file) {
-                return {
-                  ...v,
-                  attachment: {
-                    ...v.attachment,
-                    file: null, // Firebase ko crash karne wali file null kar di
-                  },
-                };
-              }
-              return v;
-            });
-          }
-
-          // 3. Cloud par save karo aur uski reference (docRef) pakro
-          const docRef = await addDoc(collection(db, "customers"), cloudData);
-          console.log(
-            "Data successfully cloud par save ho gaya! ID:",
-            docRef.id,
-          );
-
-          // 4. Local state ko update karo (UI mein asli file object rahega taake preview kharab na ho)
-          setCustomer((prev) => [
-            { ...customerWithTime, id: docRef.id },
-            ...prev,
-          ]);
-        } catch (error) {
-          console.error(
-            "Firebase cloud par save karne mein error aya:",
-            error.message,
-          );
+        // Party special cleaner
+        if (cloudData.type === "party" && Array.isArray(cloudData.vehicles)) {
+          cloudData.vehicles = cloudData.vehicles.map((v) => ({
+            ...v,
+            attachment: v.attachment
+              ? { ...v.attachment, file: null }
+              : v.attachment,
+          }));
         }
-      })();
+
+        // Cloud par save karo
+        const docRef = await addDoc(collection(db, "customers"), cloudData);
+
+        // Local state update
+        setCustomer((prev) => [
+          { ...customerWithTime, id: docRef.id },
+          ...prev,
+        ]);
+
+        return { success: true }; // <--- YEHI WOH JAWAB HAI JO FORM KO MILEGA
+      } catch (error) {
+        console.error("Error:", error.message);
+        return { success: false, message: error.message }; // <--- AGAR ERROR AAYA
+      }
     }
 
     setMainTab("ledger");
@@ -218,7 +203,27 @@ const Main = ({ customer, setCustomer, user }) => {
   };
 
   const filteredCustomers = customer.filter((item) => {
+    // Filter logic ke andar sabse upar ye line likho
+    console.log("Customer data being filtered:", item);
     const s = searchTerm.toLowerCase();
+
+    // 1. Agar user ne 'pending' search kiya hai
+    if (s === "pending") {
+      if (item.type === "individual") {
+        // return Number(item.remainingBalance) > 0;
+        const bal = Number(item.remainingBalance);
+        console.log("Checking individual:", item.partyName, "Balance:", bal);
+        return bal > 0;
+      }
+      if (item.type === "party") {
+        // Agar kisi bhi ek gaadi ka balance baqi hai, toh party show karo
+        return (item.vehicles || []).some(
+          (v) => Number(v.vehicleRemaining) > 0,
+        );
+      }
+    }
+
+    // 2. Agar 'pending' nahi hai, toh purana search logic chalau
     const service = Array.isArray(item.serviceType)
       ? item.serviceType.join(" ").toLowerCase()
       : item.serviceType?.toLowerCase() || "";

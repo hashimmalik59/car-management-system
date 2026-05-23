@@ -143,10 +143,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">
           Vehicle #{index + 1}
         </span>
+
         {canRemove && (
           <button
             type="button"
-            onClick={() => onRemove(index)}
+            onClick={() => onRemove(vehicle.id)} // Index ki jagah ID pass karo
             className="text-red-500 hover:text-red-700 text-xs font-bold"
           >
             ✕ Remove
@@ -651,14 +652,15 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }));
   };
 
-  const removeVehicle = (idx) => {
+  // NAYA BULLETPROOF FUNCTION (ID use karo, index nahi)
+  const removeVehicle = (idToRemove) => {
     setFormData((prev) => ({
       ...prev,
-      vehicles: prev.vehicles.filter((_, i) => i !== idx),
+      vehicles: prev.vehicles.filter((v) => v.id !== idToRemove),
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.type === "individual") {
@@ -685,12 +687,25 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       userId: user ? user.uid : null,
     };
 
-    console.log("Saving to Database:", finalData); // Debugging ke liye check kar lena
-    onAddCustomer(finalData);
+    // console.log("Saving to Database:", finalData); // Debugging ke liye check kar lena
+    // onAddCustomer(finalData);
 
-    setFormData(createInitialForm());
-    setCommissionAmount(0); // Reset bhi kar do
-    if (onCancelEdit) onCancelEdit();
+    // setFormData(createInitialForm());
+    // setCommissionAmount(0); // Reset bhi kar do
+    // if (onCancelEdit) onCancelEdit();
+
+    // 2. Yahan await ka intezar karo
+    const result = await onAddCustomer(finalData);
+
+    // 3. Result aane ke baad hi "kuch" karo
+    if (result && result.success) {
+      alert("Record Saved/Updated Successfully!");
+      setFormData(createInitialForm());
+      setCommissionAmount(0);
+      if (onCancelEdit) onCancelEdit();
+    } else if (result && !result.success) {
+      alert("Database Error: " + result.message);
+    }
   };
 
   return (
