@@ -202,65 +202,65 @@ const Main = ({ customer, setCustomer, user }) => {
     setMainTab("ledger");
   };
 
-  const filteredCustomers = customer.filter((item) => {
-    // Filter logic ke andar sabse upar ye line likho
-    console.log("Customer data being filtered:", item);
-    const s = searchTerm.toLowerCase();
+  // const filteredCustomers = customer.filter((item) => {
+  //   // Filter logic ke andar sabse upar ye line likho
+  //   console.log("Customer data being filtered:", item);
+  //   const s = searchTerm.toLowerCase();
 
-    // 1. Agar user ne 'pending' search kiya hai
-    if (s === "pending") {
-      if (item.type === "individual") {
-        // return Number(item.remainingBalance) > 0;
-        const bal = Number(item.remainingBalance);
-        console.log("Checking individual:", item.partyName, "Balance:", bal);
-        return bal > 0;
-      }
-      if (item.type === "party") {
-        // Agar kisi bhi ek gaadi ka balance baqi hai, toh party show karo
-        return (item.vehicles || []).some(
-          (v) => Number(v.vehicleRemaining) > 0,
-        );
-      }
-    }
+  //   // 1. Agar user ne 'pending' search kiya hai
+  //   if (s === "pending") {
+  //     if (item.type === "individual") {
+  //       // return Number(item.remainingBalance) > 0;
+  //       const bal = Number(item.remainingBalance);
+  //       console.log("Checking individual:", item.partyName, "Balance:", bal);
+  //       return bal > 0;
+  //     }
+  //     if (item.type === "party") {
+  //       // Agar kisi bhi ek gaadi ka balance baqi hai, toh party show karo
+  //       return (item.vehicles || []).some(
+  //         (v) => Number(v.vehicleRemaining) > 0,
+  //       );
+  //     }
+  //   }
 
-    // 2. Agar 'pending' nahi hai, toh purana search logic chalau
-    const service = Array.isArray(item.serviceType)
-      ? item.serviceType.join(" ").toLowerCase()
-      : item.serviceType?.toLowerCase() || "";
-    const party = item.partyName?.toLowerCase() || "";
-    const plate = item.plate?.toLowerCase() || "";
-    const phone = item.phone || "";
-    const cnic = item.cnic || "";
-    const region = item.region?.toLowerCase() || "";
-    const received = item.receivedBy?.toLowerCase() || "";
-    const handover = item.handoverTo?.toLowerCase() || "";
+  //   // 2. Agar 'pending' nahi hai, toh purana search logic chalau
+  //   const service = Array.isArray(item.serviceType)
+  //     ? item.serviceType.join(" ").toLowerCase()
+  //     : item.serviceType?.toLowerCase() || "";
+  //   const party = item.partyName?.toLowerCase() || "";
+  //   const plate = item.plate?.toLowerCase() || "";
+  //   const phone = item.phone || "";
+  //   const cnic = item.cnic || "";
+  //   const region = item.region?.toLowerCase() || "";
+  //   const received = item.receivedBy?.toLowerCase() || "";
+  //   const handover = item.handoverTo?.toLowerCase() || "";
 
-    const vehicleSearch =
-      item.type === "party"
-        ? (item.vehicles || []).some((v) => {
-            const vPlate = v.plate?.toLowerCase() || "";
-            const vModel = v.model?.toLowerCase() || "";
-            const vServices = Array.isArray(v.serviceType)
-              ? v.serviceType.join(" ").toLowerCase()
-              : "";
-            return (
-              vPlate.includes(s) || vModel.includes(s) || vServices.includes(s)
-            );
-          })
-        : false;
+  //   const vehicleSearch =
+  //     item.type === "party"
+  //       ? (item.vehicles || []).some((v) => {
+  //           const vPlate = v.plate?.toLowerCase() || "";
+  //           const vModel = v.model?.toLowerCase() || "";
+  //           const vServices = Array.isArray(v.serviceType)
+  //             ? v.serviceType.join(" ").toLowerCase()
+  //             : "";
+  //           return (
+  //             vPlate.includes(s) || vModel.includes(s) || vServices.includes(s)
+  //           );
+  //         })
+  //       : false;
 
-    return (
-      party.includes(s) ||
-      plate.includes(s) ||
-      phone.includes(s) ||
-      cnic.includes(s) ||
-      service.includes(s) ||
-      region.includes(s) ||
-      received.includes(s) ||
-      handover.includes(s) ||
-      vehicleSearch
-    );
-  });
+  //   return (
+  //     party.includes(s) ||
+  //     plate.includes(s) ||
+  //     phone.includes(s) ||
+  //     cnic.includes(s) ||
+  //     service.includes(s) ||
+  //     region.includes(s) ||
+  //     received.includes(s) ||
+  //     handover.includes(s) ||
+  //     vehicleSearch
+  //   );
+  // });
 
   const tabs = [
     {
@@ -316,6 +316,9 @@ const Main = ({ customer, setCustomer, user }) => {
     exit: { opacity: 0, y: -20, scale: 0.98 },
   };
 
+  const uniqueCustomers = Array.from(
+    new Map(customer.map((item) => [item.id, item])).values(),
+  );
   return (
     <main className="flex flex-col p-4 md:p-8 gap-6 min-h-screen">
       {/* Animated Navigation */}
@@ -395,7 +398,7 @@ const Main = ({ customer, setCustomer, user }) => {
               transition={{ duration: 0.3 }}
             >
               <Data
-                customerData={filteredCustomers}
+                customerData={uniqueCustomers}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 activeTab={dataActiveTab}

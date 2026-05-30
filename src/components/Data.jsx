@@ -568,22 +568,33 @@ const Data = ({
     const search = searchTerm.toLowerCase();
 
     return customerData.filter((item) => {
-      // 1. Tab check (Ise sabse upar rakho taake tab ke bahar ka data filter na ho)
-      const matchesTab = item.type === activeTab;
-      if (!matchesTab) return false;
+      // 1. Tab check (Sabse pehle filter out karo)
+      if (item.type !== activeTab) return false;
 
-      // 2. Agar 'pending' search hai
-      if (search === "pending") {
-        if (item.type === "individual")
-          return Number(item.remainingBalance) > 0;
-        if (item.type === "party")
-          return (item.vehicles || []).some(
-            (v) => Number(v.vehicleRemaining) > 0,
-          );
+      // 2. Pending ya Clear ka logic (Strict)
+      if (search === "pending" || search === "clear") {
+        if (item.type === "individual") {
+          const bal = Number(item.remainingBalance || 0);
+          return search === "pending" ? bal > 0 : bal === 0;
+        }
+
+        if (item.type === "party") {
+          const vehicles = item.vehicles || [];
+          if (vehicles.length === 0) return false;
+
+          if (search === "pending") {
+            // Kam az kam ek gaadi pending honi chahiye
+            return vehicles.some((v) => Number(v.vehicleRemaining || 0) > 0);
+          } else {
+            // search === "clear"
+            // Saari ki saari gaadiyan 0 balance honi chahiye
+            return vehicles.every((v) => Number(v.vehicleRemaining || 0) === 0);
+          }
+        }
         return false;
       }
 
-      // 3. Normal search logic
+      // 3. Normal Search (Agar pending/clear nahi hai)
       let matchesSearch = false;
       if (item.type === "party") {
         const vehicleSearch = (item.vehicles ?? []).some(
@@ -604,7 +615,7 @@ const Data = ({
         matchesSearch =
           item.partyName?.toLowerCase().includes(search) ||
           item.plate?.toLowerCase().includes(search) ||
-          (item.phone || "").includes(search) || // Defensive coding
+          (item.phone || "").includes(search) ||
           serviceString.includes(search);
       }
 
