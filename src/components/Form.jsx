@@ -38,13 +38,18 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
-// Yeh function calculation karega
 const calculateTotalAmount = (prices, commission, advance) => {
-  const serviceSum = Object.values(prices || {}).reduce((sum, v) => {
-    return sum + Number(v.price || 0) + Number(v.customPrice || 0);
-  }, 0);
+  // 1. Tumhare data mein 'price' aur 'customPrice' keys hain
+  // Hum un dono ko add kar rahe hain
+  const serviceSum = Object.values(prices || {}).reduce(
+    (sum, v) => sum + Number(v.price || 0) + Number(v.customPrice || 0),
+    0,
+  );
 
+  // 2. Ab hum 'serviceSum' mein 'commission' add kar rahe hain
   const total = serviceSum + Number(commission || 0);
+
+  // 3. Last mein, total mein se advance minus kar rahe hain
   const remaining = Math.max(total - Number(advance || 0), 0);
 
   return { total, remaining };
@@ -475,6 +480,25 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     remarks: "",
   });
 
+  const calculateNewTotal = (
+    currentPrices,
+    currentCommission,
+    currentAdvance,
+  ) => {
+    // 1. Service ke prices ka sum nikal raha hai
+    const servicesSum = Object.values(currentPrices || {}).reduce(
+      (sum, v) =>
+        sum + Number(v.regionPrice || 0) + Number(v.servicePrice || 0),
+      0,
+    );
+
+    // 2. Commission aur Advance ka hisab
+    const total = servicesSum + Number(currentCommission || 0);
+    const remaining = Math.max(total - Number(currentAdvance || 0), 0);
+
+    return { total, remaining };
+  };
+
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
 
@@ -595,7 +619,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(finalData);
 
     if (formData.type === "individual") {
       if (formData.serviceType.length === 0) {
@@ -999,7 +1022,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 Payment Details
               </div>
 
-              {/* 🆕 COMMISSION FIELD YAHAN ADD KI */}
+              {/* 🆕 COMMISSION FIELD */}
               <div>
                 <label className="text-[10px] font-semibold text-gray-600 block mb-1">
                   Third-Party Commission (Rs.)
@@ -1007,7 +1030,24 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 <input
                   type="number"
                   value={commissionAmount}
-                  onChange={(e) => setCommissionAmount(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setCommissionAmount(val);
+
+                    // Yahan humne tumhare naye function ko call kiya
+                    const result = calculateTotalAmount(
+                      formData.servicePrices,
+                      val,
+                      formData.advancePaid,
+                    );
+
+                    // Ab hum data ko update kar rahe hain
+                    setFormData((prev) => ({
+                      ...prev,
+                      totalAmount: result.total,
+                      remainingBalance: result.remaining,
+                    }));
+                  }}
                   className="rounded p-2 border border-gray-200 text-sm w-full bg-white outline-none focus:border-blue-500"
                   placeholder="0"
                 />
