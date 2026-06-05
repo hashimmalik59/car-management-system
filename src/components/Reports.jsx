@@ -121,7 +121,6 @@ const getItemAdvance = (item) => {
   }
   return Number(item.advancePaid || 0);
 };
-
 const printReport = (
   reportType,
   dateRange,
@@ -131,42 +130,101 @@ const printReport = (
 ) => {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
-    alert("Please allow popups!");
+    alert("Please allow popups to print!");
     return;
   }
 
-  // Yahan tumhara wahi purana CSS aur HTML wapas hai
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Report</title>
+      <title>Report - Iqra Motor Insurance</title>
+      <script src="https://cdn.tailwindcss.com"></script>
       <style>
-        body { font-family: sans-serif; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .text-right { text-align: right; }
+        body { font-family: sans-serif; padding: 20px; color: #333; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .card { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; }
+        .grid-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .font-bold { font-weight: bold; }
+        .text-green { color: green; }
+        .text-red { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 11px; }
+        th { background: #f4f4f4; }
       </style>
     </head>
     <body>
-      <h1>IQRA MOTOR INSURANCE</h1>
-      <h2>Report Details</h2>
-      
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Customer</th><th>Total</th></tr>
-        </thead>
-        <tbody>
-          ${individualData.map((item) => `<tr><td>${item.createdAt}</td><td>${item.partyName}</td><td class="text-right">${totals.grandTotalAmount}</td></tr>`).join("")}
-        </tbody>
-      </table>
+      <div class="header">
+        <h1>IQRA MOTOR INSURANCE</h1>
+        <p>${reportType.toUpperCase()} REPORT - ${dateRange.label}</p>
+      </div>
+
+      ${
+        individualData.length > 0
+          ? `
+        <h3>Individual Records (${individualData.length})</h3>
+        ${individualData
+          .map(
+            (item) => `
+          <div class="card">
+            <div class="flex-row">
+              <strong>${item.partyName}</strong>
+              <span>${item.plate || "No Plate"}</span>
+            </div>
+            <div class="grid-info">
+              <div>Total: ${getItemTotal(item).toLocaleString()}</div>
+              <div class="text-green">Advance: ${getItemAdvance(item).toLocaleString()}</div>
+              <div class="text-red">Remaining: ${getItemRemaining(item).toLocaleString()}</div>
+            </div>
+          </div>
+        `,
+          )
+          .join("")}
+      `
+          : ""
+      }
+
+      ${
+        partyData.length > 0
+          ? `
+        <h3>Party / Business Records (${partyData.length})</h3>
+        ${partyData
+          .map(
+            (item) => `
+          <div class="card">
+            <strong>${item.partyName}</strong>
+            <table>
+              <tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></tr>
+              ${(item.vehicles || [])
+                .map(
+                  (v) => `
+                <tr>
+                  <td>${v.plate}</td>
+                  <td>${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                  <td class="text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                  <td class="text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </table>
+          </div>
+        `,
+          )
+          .join("")}
+      `
+          : ""
+      }
+
+      <div style="margin-top:20px; text-align:center; font-size:10px;">
+        Generated on: ${new Date().toLocaleString()}
+      </div>
     </body>
     </html>
   `);
 
   printWindow.document.close();
-
-  // Ab ye "Bulletproof" trigger kaam karega
   setTimeout(() => {
     printWindow.focus();
     printWindow.print();
