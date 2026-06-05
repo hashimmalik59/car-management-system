@@ -100,7 +100,10 @@ const getItemTotal = (item) => {
     return Number(item.totalAmount || 0);
   }
   if (item.type === "party") {
-    return sumVehicleField(item.vehicles, "vehicleTotal") || Number(item.totalAmount || 0);
+    return (
+      sumVehicleField(item.vehicles, "vehicleTotal") ||
+      Number(item.totalAmount || 0)
+    );
   }
   return Number(item.totalAmount || 0);
 };
@@ -111,267 +114,63 @@ const getItemAdvance = (item) => {
     return Number(item.advancePaid || 0);
   }
   if (item.type === "party") {
-    return sumVehicleField(item.vehicles, "vehicleAdvance") || Number(item.advancePaid || 0);
+    return (
+      sumVehicleField(item.vehicles, "vehicleAdvance") ||
+      Number(item.advancePaid || 0)
+    );
   }
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report Function ────────────────────────────────────────────
-const printReport = (reportType, dateRange, individualData, partyData, totals) => {
-  const reportTitles = {
-    daily: "DAILY REPORT",
-    weekly: "WEEKLY REPORT",
-    monthly: "MONTHLY REPORT",
-    annual: "ANNUAL REPORT",
-  };
-
-  const rangeText = {
-    daily: `Date: ${dateRange.label}`,
-    weekly: `Week: ${dateRange.label}`,
-    monthly: `Month: ${dateRange.label}`,
-    annual: `Year: ${dateRange.label}`,
-  };
-
+const printReport = (
+  reportType,
+  dateRange,
+  individualData,
+  partyData,
+  totals,
+) => {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
-    alert("Please allow popups to print reports!");
+    alert("Please allow popups!");
     return;
   }
 
-  const getServicesHtml = (item) => {
-    const services = Array.isArray(item.serviceType) ? item.serviceType : [];
-    return services.map((s) => {
-      const price = item.servicePrices?.[s] || 0;
-      return `<div style="margin-bottom:2px"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:bold;text-transform:uppercase;background:#dbeafe;color:#1e40af">${s}</span> <span style="font-size:9px">Rs. ${Number(price).toLocaleString()}</span></div>`;
-    }).join("");
-  };
-
-  const getVehicleServicesHtml = (v) => {
-    const services = Array.isArray(v.serviceType) ? v.serviceType : [];
-    return services.map((s) => {
-      const price = v.servicePrices?.[s] || 0;
-      return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:bold;text-transform:uppercase;background:#ffedd5;color:#ea580c;margin-right:4px">${s}</span> <span style="font-size:8px">Rs. ${Number(price).toLocaleString()}</span>`;
-    }).join(" ");
-  };
-
+  // Yahan tumhara wahi purana CSS aur HTML wapas hai
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${reportTitles[reportType]} - Iqra Motor Insurance</title>
+      <title>Report</title>
       <style>
-        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; font-size: 12px; color: #333; }
-        .header { text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 22px; color: #1e40af; letter-spacing: 1px; }
-        .header h2 { margin: 5px 0 0; font-size: 14px; color: #666; font-weight: normal; }
-        .header .range { margin-top: 8px; font-size: 12px; color: #888; font-weight: bold; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 25px; }
-        .summary-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; background: #f9fafb; }
-        .summary-card .label { font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 6px; }
-        .summary-card .value { font-size: 16px; font-weight: bold; color: #1f2937; }
-        .summary-card.total { background: #dbeafe; border-color: #3b82f6; }
-        .summary-card.total .value { color: #1e40af; }
-        .summary-card.pending { background: #fee2e2; border-color: #ef4444; }
-        .summary-card.pending .value { color: #dc2626; }
-        .summary-card.advance { background: #d1fae5; border-color: #10b981; }
-        .summary-card.advance .value { color: #059669; }
-        .summary-card.customers { background: #fef3c7; border-color: #f59e0b; }
-        .summary-card.customers .value { color: #d97706; }
-        .section { margin-bottom: 25px; }
-        .section-title { font-size: 14px; font-weight: bold; color: #1e40af; border-left: 4px solid #1e40af; padding-left: 10px; margin-bottom: 12px; text-transform: uppercase; }
-        .section-title.party { color: #ea580c; border-left-color: #ea580c; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
-        th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
-        th { background-color: #f3f4f6; font-weight: bold; text-transform: uppercase; font-size: 10px; color: #4b5563; }
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-        .text-red { color: #dc2626; }
-        .text-green { color: #059669; }
-        .text-blue { color: #1e40af; }
-        .text-orange { color: #ea580c; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
-        .badge-individual { background: #dbeafe; color: #1e40af; }
-        .badge-party { background: #ffedd5; color: #ea580c; }
-        .footer { margin-top: 30px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 15px; font-size: 10px; color: #9ca3af; }
-        .party-vehicles { font-size: 10px; color: #6b7280; margin-top: 4px; }
-        .grand-total { background: #f3f4f6; font-weight: bold; }
-        .no-records { text-align: center; padding: 40px; color: #9ca3af; font-style: italic; }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>IQRA MOTOR INSURANCE</h1>
-        <h2>${reportTitles[reportType]}</h2>
-        <div class="range">${rangeText[reportType]}</div>
-        <div style="font-size: 10px; color: #999; margin-top: 4px;">Generated on: ${new Date().toLocaleString("en-GB")}</div>
-      </div>
-
-      <div class="summary-grid">
-        <div class="summary-card customers">
-          <div class="label">Total Customers</div>
-          <div class="value">${totals.totalCustomers}</div>
-        </div>
-        <div class="summary-card total">
-          <div class="label">Total Amount</div>
-          <div class="value">Rs. ${totals.grandTotalAmount.toLocaleString()}</div>
-        </div>
-        <div class="summary-card advance">
-          <div class="label">Total Advance</div>
-          <div class="value">Rs. ${totals.grandTotalAdvance.toLocaleString()}</div>
-        </div>
-        <div class="summary-card pending">
-          <div class="label">Total Remaining</div>
-          <div class="value">Rs. ${totals.grandTotalRemaining.toLocaleString()}</div>
-        </div>
-      </div>
-
-      ${individualData.length > 0 ? `
-      <div class="section">
-        <div class="section-title">Individual Records (${individualData.length})</div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Contact</th>
-              <th>Vehicle</th>
-              <th>Services</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Advance</th>
-              <th class="text-right">Remaining</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${individualData.map((item, idx) => {
-              const remaining = getItemRemaining(item);
-              const total = getItemTotal(item);
-              const advance = getItemAdvance(item);
-              return `
-              <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td>${formatShortDate(item.createdAt)}</td>
-                <td>
-                  <div class="font-bold text-blue">${item.partyName || "N/A"}</div>
-                  <div style="font-size: 9px; color: #666;">${item.cnic || "—"}</div>
-                </td>
-                <td>${item.phone || "—"}<br><span style="font-size: 9px; color: #666;">${item.bankName || "Cash"}</span></td>
-                <td>
-                  <div class="font-bold">${item.plate || "—"}</div>
-                  <div style="font-size: 9px; color: #666;">${item.model || "—"}</div>
-                </td>
-                <td>${getServicesHtml(item)}</td>
-                <td class="text-right font-bold">${total.toLocaleString()}</td>
-                <td class="text-right text-green">${advance.toLocaleString()}</td>
-                <td class="text-right text-red font-bold">${remaining.toLocaleString()}</td>
-                <td class="text-center">
-                  <span class="badge ${remaining > 0 ? 'badge-party' : 'badge-individual'}">
-                    ${remaining > 0 ? "Pending" : "Cleared"}
-                  </span>
-                </td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-          <tfoot>
-            <tr class="grand-total">
-              <td colspan="6" class="text-right">INDIVIDUAL TOTALS</td>
-              <td class="text-right">${totals.individualTotal.toLocaleString()}</td>
-              <td class="text-right text-green">${totals.individualAdvance.toLocaleString()}</td>
-              <td class="text-right text-red">${totals.individualRemaining.toLocaleString()}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      ` : ""}
-
-      ${partyData.length > 0 ? `
-      <div class="section">
-        <div class="section-title party">Party / Business Records (${partyData.length})</div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Date</th>
-              <th>Party Name</th>
-              <th>Contact</th>
-              <th>Vehicles</th>
-              <th class="text-right">Total</th>
-              <th class="text-right">Advance</th>
-              <th class="text-right">Remaining</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${partyData.map((item, idx) => {
-              const vehicles = item.vehicles || [];
-              const vTotal = getItemTotal(item);
-              const vAdvance = getItemAdvance(item);
-              const vRemaining = getItemRemaining(item);
-              const vehicleDetails = vehicles.map((v) => `
-                <div style="margin-bottom: 4px; padding: 4px; background: #f9fafb; border-radius: 4px;">
-                  <strong>${v.plate || "—"}</strong> (${v.model || "—"})<br>
-                  ${getVehicleServicesHtml(v)}
-                </div>
-              `).join("");
-              return `
-              <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td>${formatShortDate(item.createdAt)}</td>
-                <td>
-                  <div class="font-bold text-orange">${item.partyName || "N/A"}</div>
-                  <div style="font-size: 9px; color: #666;">NTN: ${item.ntn || "—"}</div>
-                </td>
-                <td>${item.phone || "—"}<br><span style="font-size: 9px; color: #666;">${item.bankName || "Cash"}</span></td>
-                <td>
-                  <div class="font-bold">${vehicles.length} Vehicle(s)</div>
-                  <div class="party-vehicles">${vehicleDetails}</div>
-                </td>
-                <td class="text-right font-bold">${vTotal.toLocaleString()}</td>
-                <td class="text-right text-green">${vAdvance.toLocaleString()}</td>
-                <td class="text-right text-red font-bold">${vRemaining.toLocaleString()}</td>
-                <td class="text-center">
-                  <span class="badge ${vRemaining > 0 ? 'badge-party' : 'badge-individual'}">
-                    ${vRemaining > 0 ? "Pending" : "Cleared"}
-                  </span>
-                </td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-          <tfoot>
-            <tr class="grand-total">
-              <td colspan="5" class="text-right">PARTY TOTALS</td>
-              <td class="text-right">${totals.partyTotal.toLocaleString()}</td>
-              <td class="text-right text-green">${totals.partyAdvance.toLocaleString()}</td>
-              <td class="text-right text-red">${totals.partyRemaining.toLocaleString()}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      ` : ""}
-
-      ${individualData.length === 0 && partyData.length === 0 ? `
-      <div class="no-records">
-        <div style="font-size: 24px; margin-bottom: 10px;">📭</div>
-        <div style="font-size: 14px; font-weight: bold;">No records found for this period</div>
-        <div style="font-size: 12px;">Try selecting a different date or report type</div>
-      </div>
-      ` : ""}
-
-      <div class="footer">
-        <p><strong>IQRA MOTOR INSURANCE</strong></p>
-        <p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p>
-        <p style="margin-top: 8px; font-size: 9px;">This is a computer generated report and does not require signature.</p>
-      </div>
-      <script>window.print();</script>
+      <h1>IQRA MOTOR INSURANCE</h1>
+      <h2>Report Details</h2>
+      
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Customer</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${individualData.map((item) => `<tr><td>${item.createdAt}</td><td>${item.partyName}</td><td class="text-right">${totals.grandTotalAmount}</td></tr>`).join("")}
+        </tbody>
+      </table>
     </body>
     </html>
   `);
+
   printWindow.document.close();
+
+  // Ab ye "Bulletproof" trigger kaam karega
+  setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+  }, 1000);
 };
 
 // ─── Animated Counter Component ──────────────────────────────────────
@@ -383,7 +182,8 @@ const AnimatedCounter = ({ value, prefix = "" }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {prefix}{value.toLocaleString()}
+      {prefix}
+      {value.toLocaleString()}
     </motion.span>
   );
 };
@@ -406,7 +206,9 @@ const GlassCard = ({ children, className = "", delay = 0 }) => {
 // ─── Main Reports Component ───────────────────────────────────────────
 const Reports = ({ customerData = [] }) => {
   const [reportType, setReportType] = useState("daily");
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [activeView, setActiveView] = useState("all");
 
   // ─── Date Range Calculation ───────────────────────────────────────
@@ -442,7 +244,10 @@ const Reports = ({ customerData = [] }) => {
         return {
           start,
           end,
-          label: date.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+          label: date.toLocaleDateString("en-GB", {
+            month: "long",
+            year: "numeric",
+          }),
         };
       }
       case "annual": {
@@ -468,18 +273,38 @@ const Reports = ({ customerData = [] }) => {
     });
   }, [customerData, dateRange]);
 
-  const individualData = filteredData.filter((item) => item.type === "individual");
+  const individualData = filteredData.filter(
+    (item) => item.type === "individual",
+  );
   const partyData = filteredData.filter((item) => item.type === "party");
 
   // ─── Calculate Totals ─────────────────────────────────────────────
   const totals = useMemo(() => {
-    const individualTotal = individualData.reduce((sum, item) => sum + getItemTotal(item), 0);
-    const individualAdvance = individualData.reduce((sum, item) => sum + getItemAdvance(item), 0);
-    const individualRemaining = individualData.reduce((sum, item) => sum + getItemRemaining(item), 0);
+    const individualTotal = individualData.reduce(
+      (sum, item) => sum + getItemTotal(item),
+      0,
+    );
+    const individualAdvance = individualData.reduce(
+      (sum, item) => sum + getItemAdvance(item),
+      0,
+    );
+    const individualRemaining = individualData.reduce(
+      (sum, item) => sum + getItemRemaining(item),
+      0,
+    );
 
-    const partyTotal = partyData.reduce((sum, item) => sum + getItemTotal(item), 0);
-    const partyAdvance = partyData.reduce((sum, item) => sum + getItemAdvance(item), 0);
-    const partyRemaining = partyData.reduce((sum, item) => sum + getItemRemaining(item), 0);
+    const partyTotal = partyData.reduce(
+      (sum, item) => sum + getItemTotal(item),
+      0,
+    );
+    const partyAdvance = partyData.reduce(
+      (sum, item) => sum + getItemAdvance(item),
+      0,
+    );
+    const partyRemaining = partyData.reduce(
+      (sum, item) => sum + getItemRemaining(item),
+      0,
+    );
 
     return {
       individualTotal,
@@ -518,18 +343,42 @@ const Reports = ({ customerData = [] }) => {
   };
 
   const reportTypes = [
-    { key: "daily", label: "Daily", icon: "📅", color: "from-blue-500 to-blue-600", shadow: "shadow-blue-500/30" },
-    { key: "weekly", label: "Weekly", icon: "📆", color: "from-violet-500 to-violet-600", shadow: "shadow-violet-500/30" },
-    { key: "monthly", label: "Monthly", icon: "📊", color: "from-purple-500 to-purple-600", shadow: "shadow-purple-500/30" },
-    { key: "annual", label: "Annual", icon: "📈", color: "from-emerald-500 to-emerald-600", shadow: "shadow-emerald-500/30" },
+    {
+      key: "daily",
+      label: "Daily",
+      icon: "📅",
+      color: "from-blue-500 to-blue-600",
+      shadow: "shadow-blue-500/30",
+    },
+    {
+      key: "weekly",
+      label: "Weekly",
+      icon: "📆",
+      color: "from-violet-500 to-violet-600",
+      shadow: "shadow-violet-500/30",
+    },
+    {
+      key: "monthly",
+      label: "Monthly",
+      icon: "📊",
+      color: "from-purple-500 to-purple-600",
+      shadow: "shadow-purple-500/30",
+    },
+    {
+      key: "annual",
+      label: "Annual",
+      icon: "📈",
+      color: "from-emerald-500 to-emerald-600",
+      shadow: "shadow-emerald-500/30",
+    },
   ];
 
   const displayData =
     activeView === "all"
       ? filteredData
       : activeView === "individual"
-      ? individualData
-      : partyData;
+        ? individualData
+        : partyData;
 
   // ─── RENDER ───────────────────────────────────────────────────────
   return (
@@ -548,7 +397,10 @@ const Reports = ({ customerData = [] }) => {
               animate={{ x: 0, opacity: 1 }}
               className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white"
             >
-              Reports & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-violet-500">Analytics</span>
+              Reports &{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-violet-500">
+                Analytics
+              </span>
             </motion.h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-1">
               Generate Daily, Weekly, Monthly & Annual Reports
@@ -558,7 +410,13 @@ const Reports = ({ customerData = [] }) => {
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={() =>
-              printReport(reportType, dateRange, individualData, partyData, totals)
+              printReport(
+                reportType,
+                dateRange,
+                individualData,
+                partyData,
+                totals,
+              )
             }
             className="flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 text-white rounded-xl font-bold text-sm shadow-lg shadow-gray-500/30 hover:shadow-xl transition-all"
           >
@@ -568,7 +426,8 @@ const Reports = ({ customerData = [] }) => {
             >
               🖨️
             </motion.span>
-            Print {reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report
+            Print {reportType.charAt(0).toUpperCase() + reportType.slice(1)}{" "}
+            Report
           </motion.button>
         </div>
       </GlassCard>
@@ -650,7 +509,9 @@ const Reports = ({ customerData = [] }) => {
 
       {/* Date Picker */}
       <div className="flex items-center gap-3 px-2">
-        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jump to:</label>
+        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          Jump to:
+        </label>
         <input
           type="date"
           value={selectedDate}
@@ -660,7 +521,9 @@ const Reports = ({ customerData = [] }) => {
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
+          onClick={() =>
+            setSelectedDate(new Date().toISOString().split("T")[0])
+          }
           className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30"
         >
           Today
@@ -767,8 +630,12 @@ const Reports = ({ customerData = [] }) => {
             >
               📭
             </motion.div>
-            <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400">No records found</h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Try selecting a different date or report type</p>
+            <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400">
+              No records found
+            </h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+              Try selecting a different date or report type
+            </p>
           </motion.div>
         ) : (
           <motion.div
@@ -779,276 +646,379 @@ const Reports = ({ customerData = [] }) => {
             className="flex flex-col gap-5"
           >
             {/* Individual Records */}
-            {(activeView === "all" || activeView === "individual") && individualData.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg shadow-lg shadow-blue-500/30">
-                      👤
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black text-gray-800 dark:text-white">Individual Records</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{individualData.length} customers found</p>
-                    </div>
-                  </div>
-                  <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
-                    Total: Rs. {totals.individualTotal.toLocaleString()}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {individualData.map((item, idx) => {
-                    const remaining = getItemRemaining(item);
-                    const total = getItemTotal(item);
-                    const advance = getItemAdvance(item);
-                    return (
-                      <motion.div
-                        key={item.id || idx}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        whileHover={{ scale: 1.01, x: 4 }}
-                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 p-5 transition-all"
-                      >
-                        <div className="flex flex-col md:flex-row gap-4">
-                          {/* Customer Info */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 flex items-center justify-center text-xl">
-                                🚗
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-800 dark:text-white">{item.partyName || "N/A"}</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{item.phone || "—"} · {item.cnic || "—"}</p>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {(Array.isArray(item.serviceType) ? item.serviceType : []).map((serviceName, si) => {
-                                const price = item.servicePrices?.[serviceName] || 0;
-                                return (
-                                  <motion.div
-                                    key={si}
-                                    whileHover={{ scale: 1.1 }}
-                                    className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 text-[10px] px-3 py-1.5 rounded-lg font-bold border border-blue-200/50 dark:border-blue-700/30"
-                                  >
-                                    {serviceName} · Rs. {Number(price).toLocaleString()}
-                                  </motion.div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Vehicle & Amount */}
-                          <div className="flex gap-6 items-center">
-                            <div className="text-center">
-                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Vehicle</div>
-                              <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{item.plate || "—"}</div>
-                              <div className="text-[10px] text-gray-400">{item.model || "—"}</div>
-                            </div>
-                            <div className="w-px h-12 bg-gray-200 dark:bg-gray-700" />
-                            <div className="text-center">
-                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Total</div>
-                              <div className="text-lg font-black text-gray-800 dark:text-white">{total.toLocaleString()}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Advance</div>
-                              <div className="text-lg font-black text-green-600 dark:text-green-400">{advance.toLocaleString()}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Remaining</div>
-                              <div className={`text-lg font-black ${remaining > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-                                {remaining.toLocaleString()}
-                              </div>
-                            </div>
-                            <motion.span
-                              whileHover={{ scale: 1.2 }}
-                              className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
-                                remaining > 0
-                                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                                  : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                              }`}
-                            >
-                              {remaining > 0 ? "● Pending" : "✓ Cleared"}
-                            </motion.span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* Individual Total Bar */}
+            {(activeView === "all" || activeView === "individual") &&
+              individualData.length > 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 p-4 bg-gradient-to-r from-blue-500/10 to-violet-500/10 dark:from-blue-900/20 dark:to-violet-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
+                  transition={{ delay: 0.2 }}
                 >
-                  <div className="flex justify-between items-center text-sm font-bold">
-                    <span className="text-gray-700 dark:text-gray-300">Individual Totals</span>
-                    <div className="flex gap-6">
-                      <span className="text-gray-800 dark:text-white">{totals.individualTotal.toLocaleString()}</span>
-                      <span className="text-green-600 dark:text-green-400">{totals.individualAdvance.toLocaleString()}</span>
-                      <span className="text-red-600 dark:text-red-400">{totals.individualRemaining.toLocaleString()}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg shadow-lg shadow-blue-500/30">
+                        👤
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-gray-800 dark:text-white">
+                          Individual Records
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {individualData.length} customers found
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
+                      Total: Rs. {totals.individualTotal.toLocaleString()}
                     </div>
                   </div>
+
+                  <div className="space-y-3">
+                    {individualData.map((item, idx) => {
+                      const remaining = getItemRemaining(item);
+                      const total = getItemTotal(item);
+                      const advance = getItemAdvance(item);
+                      return (
+                        <motion.div
+                          key={item.id || idx}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          whileHover={{ scale: 1.01, x: 4 }}
+                          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 p-5 transition-all"
+                        >
+                          <div className="flex flex-col md:flex-row gap-4">
+                            {/* Customer Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 flex items-center justify-center text-xl">
+                                  🚗
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-gray-800 dark:text-white">
+                                    {item.partyName || "N/A"}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {item.phone || "—"} · {item.cnic || "—"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {(Array.isArray(item.serviceType)
+                                  ? item.serviceType
+                                  : []
+                                ).map((serviceName, si) => {
+                                  // Yahan hum data check kar rahe hain taake NaN na aaye
+                                  const rawData =
+                                    item.servicePrices?.[serviceName];
+                                  const price =
+                                    typeof rawData === "object" &&
+                                    rawData !== null
+                                      ? Number(
+                                          rawData.price ||
+                                            rawData.customPrice ||
+                                            0,
+                                        )
+                                      : Number(rawData || 0);
+
+                                  return (
+                                    <motion.div
+                                      key={si}
+                                      whileHover={{ scale: 1.1 }}
+                                      className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 text-[10px] px-3 py-1.5 rounded-lg font-bold border border-blue-200/50 dark:border-blue-700/30"
+                                    >
+                                      {serviceName} · Rs.{" "}
+                                      {price.toLocaleString()}
+                                    </motion.div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Vehicle & Amount */}
+                            <div className="flex gap-6 items-center">
+                              <div className="text-center">
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">
+                                  Vehicle
+                                </div>
+                                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                  {item.plate || "—"}
+                                </div>
+                                <div className="text-[10px] text-gray-400">
+                                  {item.model || "—"}
+                                </div>
+                              </div>
+                              <div className="w-px h-12 bg-gray-200 dark:bg-gray-700" />
+                              <div className="text-center">
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">
+                                  Total
+                                </div>
+                                <div className="text-lg font-black text-gray-800 dark:text-white">
+                                  {total.toLocaleString()}
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">
+                                  Advance
+                                </div>
+                                <div className="text-lg font-black text-green-600 dark:text-green-400">
+                                  {advance.toLocaleString()}
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">
+                                  Remaining
+                                </div>
+                                <div
+                                  className={`text-lg font-black ${remaining > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}
+                                >
+                                  {remaining.toLocaleString()}
+                                </div>
+                              </div>
+                              <motion.span
+                                whileHover={{ scale: 1.2 }}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                                  remaining > 0
+                                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                                    : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                }`}
+                              >
+                                {remaining > 0 ? "● Pending" : "✓ Cleared"}
+                              </motion.span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Individual Total Bar */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-4 bg-gradient-to-r from-blue-500/10 to-violet-500/10 dark:from-blue-900/20 dark:to-violet-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
+                  >
+                    <div className="flex justify-between items-center text-sm font-bold">
+                      <span className="text-gray-700 dark:text-gray-300">
+                        Individual Totals
+                      </span>
+                      <div className="flex gap-6">
+                        <span className="text-gray-800 dark:text-white">
+                          {totals.individualTotal.toLocaleString()}
+                        </span>
+                        <span className="text-green-600 dark:text-green-400">
+                          {totals.individualAdvance.toLocaleString()}
+                        </span>
+                        <span className="text-red-600 dark:text-red-400">
+                          {totals.individualRemaining.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            )}
+              )}
 
             {/* Party Records */}
-            {(activeView === "all" || activeView === "party") && partyData.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg shadow-lg shadow-orange-500/30">
-                      🏢
+            {(activeView === "all" || activeView === "party") &&
+              partyData.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg shadow-lg shadow-orange-500/30">
+                        🏢
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-gray-800 dark:text-white">
+                          Party / Business Records
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {partyData.length} parties found
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-black text-gray-800 dark:text-white">Party / Business Records</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{partyData.length} parties found</p>
+                    <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
+                      Total: Rs. {totals.partyTotal.toLocaleString()}
                     </div>
                   </div>
-                  <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg">
-                    Total: Rs. {totals.partyTotal.toLocaleString()}
-                  </div>
-                </div>
 
-                <div className="space-y-4">
-                  {partyData.map((item, idx) => {
-                    const vehicles = item.vehicles || [];
-                    const vTotal = getItemTotal(item);
-                    const vAdvance = getItemAdvance(item);
-                    const vRemaining = getItemRemaining(item);
+                  <div className="space-y-4">
+                    {partyData.map((item, idx) => {
+                      const vehicles = item.vehicles || [];
+                      const vTotal = getItemTotal(item);
+                      const vAdvance = getItemAdvance(item);
+                      const vRemaining = getItemRemaining(item);
 
-                    return (
-                      <motion.div
-                        key={item.id || idx}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.08 }}
-                        whileHover={{ scale: 1.01 }}
-                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 overflow-hidden"
-                      >
-                        {/* Party Header */}
-                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-xl">
-                                🏢
+                      return (
+                        <motion.div
+                          key={item.id || idx}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.08 }}
+                          whileHover={{ scale: 1.01 }}
+                          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/20 overflow-hidden"
+                        >
+                          {/* Party Header */}
+                          <div className="bg-gradient-to-r from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-xl">
+                                  🏢
+                                </div>
+                                <div>
+                                  <h4 className="font-black text-white text-lg">
+                                    {item.partyName || "N/A"}
+                                  </h4>
+                                  <p className="text-xs text-orange-100">
+                                    {item.ntn || item.phone || "No Contact"}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-black text-white text-lg">{item.partyName || "N/A"}</h4>
-                                <p className="text-xs text-orange-100">{item.ntn || item.phone || "No Contact"}</p>
+                              <div className="text-right">
+                                <p className="text-[10px] text-orange-100 uppercase font-bold">
+                                  {formatShortDate(item.createdAt)}
+                                </p>
+                                <span
+                                  className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-1 ${
+                                    vRemaining > 0
+                                      ? "bg-red-500/30 text-white"
+                                      : "bg-green-500/30 text-white"
+                                  }`}
+                                >
+                                  {vRemaining > 0 ? "● PENDING" : "✓ CLEARED"}
+                                </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-[10px] text-orange-100 uppercase font-bold">{formatShortDate(item.createdAt)}</p>
-                              <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-1 ${
-                                vRemaining > 0
-                                  ? "bg-red-500/30 text-white"
-                                  : "bg-green-500/30 text-white"
-                              }`}>
-                                {vRemaining > 0 ? "● PENDING" : "✓ CLEARED"}
+                          </div>
+
+                          {/* Vehicles */}
+                          <div className="p-4 space-y-3">
+                            {vehicles.map((v, vidx) => (
+                              <motion.div
+                                key={vidx}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: vidx * 0.05 }}
+                                whileHover={{ x: 4 }}
+                                className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 flex items-center justify-center text-lg">
+                                  🚙
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-bold text-gray-800 dark:text-white text-sm">
+                                    {v.plate || "—"}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {v.model || "—"}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                    {(Array.isArray(v.serviceType)
+                                      ? v.serviceType
+                                      : []
+                                    ).map((serviceName, si) => {
+                                      const price =
+                                        v.servicePrices?.[serviceName] || 0;
+                                      return (
+                                        <span
+                                          key={si}
+                                          className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-[9px] px-2 py-0.5 rounded-md font-bold"
+                                        >
+                                          {serviceName} · Rs.{" "}
+                                          {Number(price).toLocaleString()}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 text-right">
+                                  <div>
+                                    <div className="text-[9px] text-gray-400 uppercase font-bold">
+                                      Total
+                                    </div>
+                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                      {Number(
+                                        v.vehicleTotal || 0,
+                                      ).toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[9px] text-gray-400 uppercase font-bold">
+                                      Advance
+                                    </div>
+                                    <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                                      {Number(
+                                        v.vehicleAdvance || 0,
+                                      ).toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[9px] text-gray-400 uppercase font-bold">
+                                      Remaining
+                                    </div>
+                                    <div className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                                      {Number(
+                                        v.vehicleRemaining || 0,
+                                      ).toLocaleString()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+
+                          {/* Party Footer */}
+                          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                            <div className="flex gap-4 text-[10px] text-gray-500 dark:text-gray-400">
+                              <span>📞 {item.phone || "—"}</span>
+                              <span>📍 {item.region || "—"}</span>
+                              <span>💳 {item.bankName || "Cash"}</span>
+                            </div>
+                            <div className="flex gap-4 text-xs font-mono font-bold">
+                              <span className="text-gray-700 dark:text-gray-300">
+                                {vTotal.toLocaleString()}
+                              </span>
+                              <span className="text-green-600 dark:text-green-400">
+                                {vAdvance.toLocaleString()}
+                              </span>
+                              <span className="text-red-600 dark:text-red-400">
+                                {vRemaining.toLocaleString()}
                               </span>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Vehicles */}
-                        <div className="p-4 space-y-3">
-                          {vehicles.map((v, vidx) => (
-                            <motion.div
-                              key={vidx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: vidx * 0.05 }}
-                              whileHover={{ x: 4 }}
-                              className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
-                            >
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 flex items-center justify-center text-lg">
-                                🚙
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-bold text-gray-800 dark:text-white text-sm">{v.plate || "—"}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{v.model || "—"}</div>
-                                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                  {(Array.isArray(v.serviceType) ? v.serviceType : []).map((serviceName, si) => {
-                                    const price = v.servicePrices?.[serviceName] || 0;
-                                    return (
-                                      <span
-                                        key={si}
-                                        className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-[9px] px-2 py-0.5 rounded-md font-bold"
-                                      >
-                                        {serviceName} · Rs. {Number(price).toLocaleString()}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                              <div className="flex gap-4 text-right">
-                                <div>
-                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Total</div>
-                                  <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{Number(v.vehicleTotal || 0).toLocaleString()}</div>
-                                </div>
-                                <div>
-                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Advance</div>
-                                  <div className="text-sm font-bold text-green-600 dark:text-green-400">{Number(v.vehicleAdvance || 0).toLocaleString()}</div>
-                                </div>
-                                <div>
-                                  <div className="text-[9px] text-gray-400 uppercase font-bold">Remaining</div>
-                                  <div className="text-sm font-bold text-orange-600 dark:text-orange-400">{Number(v.vehicleRemaining || 0).toLocaleString()}</div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-
-                        {/* Party Footer */}
-                        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
-                          <div className="flex gap-4 text-[10px] text-gray-500 dark:text-gray-400">
-                            <span>📞 {item.phone || "—"}</span>
-                            <span>📍 {item.region || "—"}</span>
-                            <span>💳 {item.bankName || "Cash"}</span>
-                          </div>
-                          <div className="flex gap-4 text-xs font-mono font-bold">
-                            <span className="text-gray-700 dark:text-gray-300">{vTotal.toLocaleString()}</span>
-                            <span className="text-green-600 dark:text-green-400">{vAdvance.toLocaleString()}</span>
-                            <span className="text-red-600 dark:text-red-400">{vRemaining.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* Party Grand Total */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 p-5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl text-white shadow-lg shadow-orange-500/30"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🏆</span>
-                      <span className="font-black text-lg">Party Grand Total</span>
-                    </div>
-                    <div className="flex gap-6 text-sm font-mono font-bold">
-                      <span>{totals.partyTotal.toLocaleString()}</span>
-                      <span className="opacity-80">{totals.partyAdvance.toLocaleString()}</span>
-                      <span className="opacity-80">{totals.partyRemaining.toLocaleString()}</span>
-                    </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
+
+                  {/* Party Grand Total */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl text-white shadow-lg shadow-orange-500/30"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🏆</span>
+                        <span className="font-black text-lg">
+                          Party Grand Total
+                        </span>
+                      </div>
+                      <div className="flex gap-6 text-sm font-mono font-bold">
+                        <span>{totals.partyTotal.toLocaleString()}</span>
+                        <span className="opacity-80">
+                          {totals.partyAdvance.toLocaleString()}
+                        </span>
+                        <span className="opacity-80">
+                          {totals.partyRemaining.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            )}
+              )}
           </motion.div>
         )}
       </AnimatePresence>

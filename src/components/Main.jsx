@@ -66,6 +66,9 @@ const Main = ({ customer, setCustomer, user }) => {
   async function handleCustomer(newCustomer) {
     let sanitizedCustomer = { ...newCustomer };
 
+    console.log("Form se jo data aaya:", newCustomer);
+    console.log("Us mein servicePrices ye hai:", newCustomer.servicePrices);
+
     if (newCustomer.type === "individual") {
       sanitizedCustomer = {
         ...newCustomer,
