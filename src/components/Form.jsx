@@ -52,12 +52,28 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
 };
 
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
-  const getTotal = (prices) => {
+  // Helper to get total of all service prices (object values with servicePrice)
+  const getServicesTotal = (prices) => {
     return Object.values(prices || {}).reduce(
-      (sum, val) => sum + Number(val?.servicePrice || 0),
+      (sum, val) => sum + (Number(val?.servicePrice) || 0),
       0,
     );
   };
+
+  // Calculate total based on current values (used for immediate update)
+  const computeTotals = (
+    servicesTotal,
+    regionPrice,
+    onlinePayment,
+    advance,
+  ) => {
+    const total = servicesTotal + regionPrice + onlinePayment;
+    const remaining = Math.max(total - advance, 0);
+    return { total, remaining };
+  };
+
+  // Helper to get current advance
+  const currentAdvance = Number(vehicle.vehicleAdvance) || 0;
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -76,30 +92,45 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const removeAttachment = () => onChange(index, "attachment", null);
 
+  // Region change: reset regionPrice to 0, region becomes new value
   const handleRegionChange = (regionValue) => {
+    const servicesTotal = getServicesTotal(vehicle.servicePrices);
+    const onlinePayment = Number(vehicle.onlinePayment) || 0;
+    const advance = currentAdvance;
+    const newRegionPrice = 0;
+    const { total, remaining } = computeTotals(
+      servicesTotal,
+      newRegionPrice,
+      onlinePayment,
+      advance,
+    );
     onChange(index, "region", regionValue);
-    onChange(index, "regionPrice", 0);
-    const servicesTotal = getTotal(vehicle.servicePrices);
-    const newTotal = servicesTotal;
-    onChange(index, "vehicleTotal", newTotal);
-    const advance = Number(vehicle.vehicleAdvance) || 0;
-    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
+    onChange(index, "regionPrice", newRegionPrice);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
   };
 
+  // Region price change
   const handleRegionPriceChange = (price) => {
-    const regionPrice = Number(price) || 0;
-    onChange(index, "regionPrice", regionPrice);
-    const servicesTotal = getTotal(vehicle.servicePrices);
-    const newTotal = servicesTotal + regionPrice;
-    onChange(index, "vehicleTotal", newTotal);
-    const advance = Number(vehicle.vehicleAdvance) || 0;
-    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
+    const servicesTotal = getServicesTotal(vehicle.servicePrices);
+    const onlinePayment = Number(vehicle.onlinePayment) || 0;
+    const advance = currentAdvance;
+    const newRegionPrice = Number(price) || 0;
+    const { total, remaining } = computeTotals(
+      servicesTotal,
+      newRegionPrice,
+      onlinePayment,
+      advance,
+    );
+    onChange(index, "regionPrice", newRegionPrice);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
   };
 
+  // Service toggle
   const handleServiceToggle = (service) => {
     let updatedServices = [...vehicle.serviceType];
     let updatedPrices = { ...vehicle.servicePrices };
-
     if (updatedServices.includes(service)) {
       updatedServices = updatedServices.filter((s) => s !== service);
       delete updatedPrices[service];
@@ -107,29 +138,81 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       updatedServices.push(service);
       updatedPrices[service] = { servicePrice: "" };
     }
-
-    const total = getTotal(updatedPrices);
-    const advance = Number(vehicle.vehicleAdvance) || 0;
-    const remaining = Math.max(total - advance, 0);
-
+    const newServicesTotal = getServicesTotal(updatedPrices);
+    const regionPrice = Number(vehicle.regionPrice) || 0;
+    const onlinePayment = Number(vehicle.onlinePayment) || 0;
+    const advance = currentAdvance;
+    const { total, remaining } = computeTotals(
+      newServicesTotal,
+      regionPrice,
+      onlinePayment,
+      advance,
+    );
     onChange(index, "serviceType", updatedServices);
     onChange(index, "servicePrices", updatedPrices);
     onChange(index, "vehicleTotal", total);
     onChange(index, "vehicleRemaining", remaining);
   };
 
+  // Service price change
   const handleServicePriceChange = (service, price) => {
     const servicePrice = Number(price) || 0;
     const updatedPrices = {
       ...vehicle.servicePrices,
       [service]: { servicePrice },
     };
+    const newServicesTotal = getServicesTotal(updatedPrices);
+    const regionPrice = Number(vehicle.regionPrice) || 0;
+    const onlinePayment = Number(vehicle.onlinePayment) || 0;
+    const advance = currentAdvance;
+    const { total, remaining } = computeTotals(
+      newServicesTotal,
+      regionPrice,
+      onlinePayment,
+      advance,
+    );
     onChange(index, "servicePrices", updatedPrices);
-    const servicesTotal = getTotal(updatedPrices);
-    const newTotal = servicesTotal + (Number(vehicle.regionPrice) || 0);
-    onChange(index, "vehicleTotal", newTotal);
-    const advance = Number(vehicle.vehicleAdvance) || 0;
-    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
+  };
+
+  // Online payment toggle
+  const handleOnlinePaymentToggle = () => {
+    const newEnabled = !vehicle.onlinePaymentEnabled;
+    const servicesTotal = getServicesTotal(vehicle.servicePrices);
+    const regionPrice = Number(vehicle.regionPrice) || 0;
+    const advance = currentAdvance;
+    let newOnlinePayment = vehicle.onlinePayment || 0;
+    if (!newEnabled) {
+      newOnlinePayment = 0;
+    }
+    const { total, remaining } = computeTotals(
+      servicesTotal,
+      regionPrice,
+      newOnlinePayment,
+      advance,
+    );
+    onChange(index, "onlinePaymentEnabled", newEnabled);
+    onChange(index, "onlinePayment", newOnlinePayment);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
+  };
+
+  // Online payment amount change
+  const handleOnlinePaymentChange = (price) => {
+    const newOnlinePayment = Number(price) || 0;
+    const servicesTotal = getServicesTotal(vehicle.servicePrices);
+    const regionPrice = Number(vehicle.regionPrice) || 0;
+    const advance = currentAdvance;
+    const { total, remaining } = computeTotals(
+      servicesTotal,
+      regionPrice,
+      newOnlinePayment,
+      advance,
+    );
+    onChange(index, "onlinePayment", newOnlinePayment);
+    onChange(index, "vehicleTotal", total);
+    onChange(index, "vehicleRemaining", remaining);
   };
 
   return (
@@ -248,6 +331,30 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
+      {/* Online Payment Section */}
+      <div className="flex flex-col gap-2 mt-1">
+        <label className="flex items-center gap-2 cursor-pointer text-green-400">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-green-500"
+            checked={vehicle.onlinePaymentEnabled || false}
+            onChange={handleOnlinePaymentToggle}
+          />
+          <span className="text-[11px] font-medium">💳 Online Payment</span>
+        </label>
+        {vehicle.onlinePaymentEnabled && (
+          <div className="ml-6">
+            <input
+              type="number"
+              placeholder="Online Payment Custom Price (Rs.)"
+              className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+              value={vehicle.onlinePayment === 0 ? "" : vehicle.onlinePayment}
+              onChange={(e) => handleOnlinePaymentChange(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
       {vehicle.serviceType.includes("Conversion") && (
         <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2">
           <label className="text-[10px] font-bold text-orange-400 uppercase">
@@ -288,7 +395,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             value={vehicle.vehicleAdvance || 0}
             onChange={(e) => {
               const advance = Number(e.target.value) || 0;
-              const total = vehicle.vehicleTotal || 0;
+              const total = Number(vehicle.vehicleTotal) || 0;
               const remaining = Math.max(total - advance, 0);
               onChange(index, "vehicleAdvance", advance);
               onChange(index, "vehicleRemaining", remaining);
@@ -422,6 +529,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     tokenTaxTo: "",
     remarks: "",
     bankName: "Cash",
+    onlinePaymentEnabled: false,
+    onlinePayment: 0,
   });
 
   const createInitialForm = () => ({
@@ -473,7 +582,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   };
 
-  // FIXED: region change – compute inside setFormData
   const handleIndividualRegionChange = (regionValue) => {
     setFormData((prev) => {
       const servicesTotal = Object.values(prev.servicePrices).reduce(
@@ -491,7 +599,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
-  // FIXED: region price change – compute inside setFormData
   const handleIndividualRegionPriceChange = (price) => {
     const regionPrice = Number(price) || 0;
     setFormData((prev) => {
@@ -510,7 +617,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
-  // FIXED: service price change – compute inside setFormData
   const handleIndividualServicePriceChange = (service, price) => {
     const servicePrice = Number(price) || 0;
     setFormData((prev) => {
@@ -565,6 +671,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           region: v.region ?? "",
           regionPrice: v.regionPrice ?? 0,
           conversionServiceType: v.conversionServiceType ?? "",
+          onlinePaymentEnabled: v.onlinePaymentEnabled ?? false,
+          onlinePayment: v.onlinePayment ?? 0,
         }));
       }
       setFormData(normalized);

@@ -95,7 +95,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print functions (same as before) ─────────────────────────────
+// ─── Print functions (unchanged) ─────────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -124,7 +124,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${item.plate || "N/A"}</span></div>
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -185,7 +185,7 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <h3>Vehicles Details:</h3>
         <table class="table">
           <thead>
@@ -199,7 +199,7 @@ const printPartyReceipt = (item) => {
                 <td>${idx + 1}</td>
                 <td>${v.plate || "---"}</td>
                 <td>${v.model || "---"}</td>
-                <td>${v.region || "---"}${v.cityPrice ? ` (Rs. ${Number(v.cityPrice).toLocaleString()})` : ""}</td>
+                <td>${v.region || "---"}${v.regionPrice ? ` (Rs. ${Number(v.regionPrice).toLocaleString()})` : ""}</td>
                 <td>${
                   (v.serviceType || [])
                     .map((s) => {
@@ -212,7 +212,7 @@ const printPartyReceipt = (item) => {
                 <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-              </tr>
+              <tr>
             `,
               )
               .join("")}
@@ -285,7 +285,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
           <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${vehicle.plate || "N/A"}</span></div>
           <div class="info-row"><span class="label">Model:</span><span class="value">${vehicle.model || "N/A"}</span></div>
           <div class="info-row"><span class="label">Region:</span><span class="value">${vehicle.region || "N/A"}</span></div>
-          ${vehicle.cityPrice ? `<div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${Number(vehicle.cityPrice).toLocaleString()}</span></div>` : ""}
+          ${vehicle.regionPrice ? `<div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${Number(vehicle.regionPrice).toLocaleString()}</span></div>` : ""}
           ${vehicle.tokenTaxFrom ? `<div class="info-row"><span class="label">Token Tax From:</span><span class="value">${vehicle.tokenTaxFrom}</span></div>` : ""}
           ${vehicle.tokenTaxTo ? `<div class="info-row"><span class="label">Token Tax To:</span><span class="value">${vehicle.tokenTaxTo}</span></div>` : ""}
         </div>
@@ -329,7 +329,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (dark theme, fixed) ──────────────────────────
+// ─── Party Ledger Block (merged Region & Region Price, fixed NaN) ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -405,8 +405,9 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
               <th className="px-4 py-2.5">#</th>
               <th className="px-4 py-2.5">Vehicle Details</th>
-              <th className="px-4 py-2.5">Region & City Price</th>
+              <th className="px-4 py-2.5">Region & Region Price</th>
               <th className="px-4 py-2.5">Services</th>
+              <th className="px-4 py-2.5">Online Payment</th>
               <th className="px-4 py-2.5">Attachment</th>
               <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
@@ -419,7 +420,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
@@ -453,17 +454,17 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {v?.region && (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
+                    {v?.region ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-200 w-fit">
                           📍 {v.region}
                         </span>
-                        {v?.cityPrice > 0 && (
-                          <span className="text-[10px] text-gray-400 font-mono">
-                            City: Rs. {Number(v.cityPrice).toLocaleString()}
-                          </span>
-                        )}
+                        <span className="text-xs text-gray-400 mt-1">
+                          Rs. {(Number(v?.regionPrice) || 0).toLocaleString()}
+                        </span>
                       </div>
+                    ) : (
+                      "—"
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -492,6 +493,11 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                         </span>
                       </div>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-green-400">
+                    {v?.onlinePaymentEnabled
+                      ? (Number(v?.onlinePayment) || 0).toLocaleString()
+                      : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v?.attachment} />
@@ -526,7 +532,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tfoot className="bg-gray-700 border-t-2 border-gray-600">
               <tr className="text-xs font-bold text-gray-200">
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-3 text-right text-gray-300 uppercase"
                 >
                   GRAND TOTAL
@@ -569,7 +575,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
-// ─── Main Data Component (dark theme, fully fixed) ───────────────────
+// ─── Main Data Component (with sorting: newest first) ─────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -583,7 +589,8 @@ const Data = ({
     const search = (searchTerm || "").toLowerCase();
     if (!Array.isArray(customerData)) return [];
 
-    return customerData.filter((item) => {
+    // Step 1: Filter
+    let filtered = customerData.filter((item) => {
       if (!item || item.type !== activeTab) return false;
 
       if (search === "pending" || search === "clear") {
@@ -629,6 +636,15 @@ const Data = ({
       }
       return matchesSearch;
     });
+
+    // Step 2: Sort by createdAt descending (newest first)
+    filtered.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    });
+
+    return filtered;
   }, [customerData, searchTerm, activeTab]);
 
   return (
@@ -696,7 +712,7 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* INDIVIDUAL TABLE */}
+      {/* INDIVIDUAL TABLE (merged Region & Region Price, fixed NaN) */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -705,7 +721,7 @@ const Data = ({
                 <tr className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
                   <th className="p-4">Customer & ID</th>
                   <th className="p-4">Service & Vehicle</th>
-                  <th className="p-4">Region & City Price</th>
+                  <th className="p-4">Region & Region Price</th>
                   <th className="p-4">Tracking (From/To)</th>
                   <th className="p-4">Commission</th>
                   <th className="p-4">Payment Details</th>
@@ -783,12 +799,10 @@ const Data = ({
                             <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
                               📍 {item.region}
                             </span>
-                            {item.cityPrice > 0 && (
-                              <span className="text-[10px] text-gray-400 font-mono">
-                                City Price: Rs.{" "}
-                                {Number(item.cityPrice).toLocaleString()}
-                              </span>
-                            )}
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              Rs.{" "}
+                              {(Number(item.regionPrice) || 0).toLocaleString()}
+                            </span>
                           </div>
                         )}
                       </td>

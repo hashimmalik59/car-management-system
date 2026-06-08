@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Helper Functions (unchanged) ─────────────────────────────────────
+// ─── Helper Functions ─────────────────────────────────────
 const formatShortDate = (iso) => {
   if (!iso) return "—";
   try {
@@ -26,7 +26,7 @@ const getIndividualServicePrice = (servicePrices, serviceName) => {
   return Number(val || 0);
 };
 
-// ─── Attachment Display (unchanged) ───────────────────────────────────
+// ─── Attachment Display ───────────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
@@ -102,9 +102,8 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print Functions (unchanged, they use their own styling) ──────────
+// ─── Print Functions ──────────────────────────────────────
 const printIndividualReceipt = (item) => {
-  // ... same as before (no change)
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -163,7 +162,6 @@ const printIndividualReceipt = (item) => {
 };
 
 const printPartyReceipt = (item) => {
-  // ... same as before (no change)
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
@@ -254,7 +252,6 @@ const printPartyReceipt = (item) => {
 };
 
 const printVehicleReceipt = (vehicle, partyData) => {
-  // ... same as before (no change)
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
   const remaining = Number(vehicle.vehicleRemaining || 0);
@@ -553,7 +550,7 @@ const PartyLedgerBlock = ({ item }) => {
   );
 };
 
-// ─── Date Helpers (unchanged) ────────────────────────────────────────
+// ─── Date Helpers ────────────────────────────────────────────────────
 const getStartOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -605,7 +602,7 @@ const getEndOfYear = (date) => {
   return d;
 };
 
-// ─── Get remaining/total/advance (unchanged) ─────────────────────────
+// ─── Get remaining/total/advance ────────────────────────────────────
 const getItemRemaining = (item) => {
   if (!item) return 0;
   if (item.type === "individual") return Number(item.remainingBalance || 0);
@@ -687,14 +684,16 @@ const printReport = (
                 (item) => `
         <div class="card">
           <strong>${item.partyName}</strong>
-          <table><thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></td></thead>
+          <table><thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></tr></thead>
           <tbody>${(item.vehicles || [])
             .map(
               (v) => `
-            <tr><td>${v.plate}</td><td>${Number(v.vehicleTotal || 0).toLocaleString()}</td>
-            <td class="text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
-            <td class="text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-            </tr>`,
+            <tr>
+              <td>${v.plate}</td>
+              <td>${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+              <td class="text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+              <td class="text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+            </td>`,
             )
             .join("")}</tbody>
           </table>
@@ -714,7 +713,7 @@ const printReport = (
   }, 1000);
 };
 
-// ─── Main Reports Component (dark theme) ─────────────────────────────
+// ─── Main Reports Component (fixed JSX) ─────────────────────────────
 const Reports = ({ customerData = [] }) => {
   const [reportType, setReportType] = useState("daily");
   const [selectedDate, setSelectedDate] = useState(
@@ -839,7 +838,7 @@ const Reports = ({ customerData = [] }) => {
         : partyData;
 
   return (
-    <div className="w-full flex flex-col gap-6 bg-gray-900 text-gray-100">
+    <div className="w-full flex flex-col gap-6 bg-gray-900 text-gray-100 px-4 md:px-6 py-6 rounded-2xl">
       {/* Header */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-5 shadow-xl">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
