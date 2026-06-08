@@ -23,18 +23,12 @@ const getServicePrice = (servicePrices, serviceName) => {
     return 0;
   }
 
-  // If it's a number, return it
   if (typeof val === "number") return val;
-
-  // If it's a string, convert to number
   if (typeof val === "string") {
     const num = Number(val);
     if (!isNaN(num)) return num;
   }
-
-  // If it's an object, look for common price fields
   if (typeof val === "object") {
-    // Try common keys
     const priceKeys = [
       "servicePrice",
       "price",
@@ -48,7 +42,6 @@ const getServicePrice = (servicePrices, serviceName) => {
         if (!isNaN(num)) return num;
       }
     }
-    // Last resort: find first numeric value in the object
     for (let anyKey in val) {
       const num = Number(val[anyKey]);
       if (!isNaN(num) && val[anyKey] !== null && val[anyKey] !== "") {
@@ -63,7 +56,7 @@ const getServicePrice = (servicePrices, serviceName) => {
   return 0;
 };
 
-// ─── Attachment Display (dark theme) ──────────────────────────────
+// ─── Attachment Display ──────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   if (!attachment) return <span className="text-gray-500 text-xs">—</span>;
@@ -147,7 +140,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── PRINT FUNCTIONS (using improved getServicePrice) ─────────────────────────────
+// ─── PRINT FUNCTIONS (unchanged) ─────────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -378,7 +371,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block ────────────────────────── (same as before, uses getServicePrice)
+// ─── Party Ledger Block (delete button passes item as second argument) ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -419,7 +412,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             Edit
           </button>
           <button
-            onClick={() => onDelete(item.id)}
+            onClick={() => onDelete(item.id, item)}
             className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-medium shadow"
           >
             Del
@@ -616,7 +609,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
-// ─── Main Data Component (uses improved getServicePrice) ─────────────────────────
+// ─── Main Data Component (no refresh button) ─────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -751,7 +744,7 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* INDIVIDUAL TABLE (fixed service price display) */}
+      {/* INDIVIDUAL TABLE */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -939,7 +932,7 @@ const Data = ({
                             Edit
                           </button>
                           <button
-                            onClick={() => onDelete(item.id)}
+                            onClick={() => onDelete(item.id, item)}
                             className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold shadow"
                           >
                             Del

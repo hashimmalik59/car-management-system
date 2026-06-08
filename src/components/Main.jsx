@@ -13,6 +13,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  getDoc,
 } from "firebase/firestore";
 
 const Main = ({ customer, setCustomer, user }) => {
@@ -20,15 +21,12 @@ const Main = ({ customer, setCustomer, user }) => {
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mainTab, setMainTab] = useState("form");
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch user-specific data from Firestore
   const fetchUserData = useCallback(async () => {
     if (!user) {
       setCustomer([]);
       return;
     }
-    setIsRefreshing(true);
     try {
       const q = query(
         collection(db, "customers"),
@@ -39,30 +37,22 @@ const Main = ({ customer, setCustomer, user }) => {
         id: doc.id,
         ...doc.data(),
       }));
-      // Sort by createdAt descending (newest first)
       loadedCustomers.sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
       );
       setCustomer(loadedCustomers);
     } catch (error) {
       console.error("Error fetching data:", error.message);
-      // Optional: show toast
-    } finally {
-      setIsRefreshing(false);
     }
   }, [user, setCustomer]);
 
-  // Initial load and refetch when user changes
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
 
-  // Auto-refresh when app comes back to foreground (tab/window focus)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchUserData();
-      }
+      if (document.visibilityState === "visible") fetchUserData();
     };
     window.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
@@ -70,9 +60,7 @@ const Main = ({ customer, setCustomer, user }) => {
   }, [fetchUserData]);
 
   async function handleCustomer(newCustomer) {
-    // Sanitize numbers & compute balances
     let sanitizedCustomer = { ...newCustomer };
-
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
       const advance = Number(newCustomer.advancePaid) || 0;
@@ -83,7 +71,6 @@ const Main = ({ customer, setCustomer, user }) => {
         remainingBalance: total - advance,
       };
     }
-
     if (newCustomer.type === "party") {
       sanitizedCustomer = {
         ...newCustomer,
@@ -97,9 +84,7 @@ const Main = ({ customer, setCustomer, user }) => {
       };
     }
 
-    // EDITING existing customer
     if (editingCustomer) {
-      // Optimistic local update
       setCustomer((prev) =>
         prev.map((c) =>
           c.id === editingCustomer.id
@@ -107,8 +92,6 @@ const Main = ({ customer, setCustomer, user }) => {
             : c,
         ),
       );
-
-      // Prepare clean data for Firestore (remove file objects)
       const updateData = { ...sanitizedCustomer };
       if (updateData.attachment?.file) delete updateData.attachment.file;
       if (updateData.type === "party" && updateData.vehicles) {
@@ -118,7 +101,6 @@ const Main = ({ customer, setCustomer, user }) => {
           return clean;
         });
       }
-
       try {
         const docRef = doc(db, "customers", editingCustomer.id);
         await updateDoc(docRef, updateData);
@@ -133,7 +115,6 @@ const Main = ({ customer, setCustomer, user }) => {
           );
         } else {
           alert("Update failed: " + error.message);
-          // Rollback: refetch to get correct state
           await fetchUserData();
         }
         setEditingCustomer(null);
@@ -141,14 +122,11 @@ const Main = ({ customer, setCustomer, user }) => {
       return;
     }
 
-    // ADDING new customer
     const customerWithTime = {
       ...sanitizedCustomer,
       userId: user.uid,
       createdAt: new Date().toISOString(),
     };
-
-    // Deep copy for Firestore (remove file data)
     const cloudData = JSON.parse(JSON.stringify(customerWithTime));
     if (cloudData.attachment?.file) delete cloudData.attachment.file;
     if (cloudData.type === "party" && cloudData.vehicles) {
@@ -158,7 +136,6 @@ const Main = ({ customer, setCustomer, user }) => {
         return clean;
       });
     }
-
     try {
       const docRef = await addDoc(collection(db, "customers"), cloudData);
       setCustomer((prev) => [{ ...customerWithTime, id: docRef.id }, ...prev]);
@@ -171,27 +148,50 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   }
 
-  const handleDelete = async (idToDelete) => {
+  const handleDelete = async (idToDelete, itemData = null) => {
+    console.log("Delete called for ID:", idToDelete);
     if (!window.confirm("Are you sure you want to delete this record?")) return;
 
-    // Save current customer list for potential rollback
     const previousCustomers = [...customer];
-    // Optimistic local delete
     setCustomer((prev) => prev.filter((c) => c.id !== idToDelete));
 
     try {
-      await deleteDoc(doc(db, "customers", idToDelete));
-      console.log("Delete successful from Firestore:", idToDelete);
+      const docRef = doc(db, "customers", idToDelete);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        console.warn(
+          "Document ID not found. Trying fallback search by partyName + phone...",
+        );
+        if (itemData && itemData.partyName && itemData.phone) {
+          const q = query(
+            collection(db, "customers"),
+            where("userId", "==", user.uid),
+            where("partyName", "==", itemData.partyName),
+            where("phone", "==", itemData.phone),
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const realDoc = snapshot.docs[0];
+            console.log("Found matching document with real ID:", realDoc.id);
+            await deleteDoc(doc(db, "customers", realDoc.id));
+            console.log("Fallback delete successful");
+            await fetchUserData();
+            return;
+          } else {
+            console.warn("No matching document found by data.");
+          }
+        }
+        await fetchUserData();
+        return;
+      }
+      await deleteDoc(docRef);
+      console.log("Delete successful");
+      const verify = await getDoc(docRef);
+      if (verify.exists()) throw new Error("Still exists!");
     } catch (error) {
-      console.error("Delete error:", error.message);
-      // Rollback local state
+      console.error("Delete error:", error);
       setCustomer(previousCustomers);
-      alert(
-        "Delete failed: " +
-          error.message +
-          "\nPlease check your network and try again.",
-      );
-      // Optional: refetch to be absolutely sure
+      alert("Delete failed: " + error.message);
       await fetchUserData();
     }
   };
@@ -343,10 +343,8 @@ const Main = ({ customer, setCustomer, user }) => {
                 setSearchTerm={setSearchTerm}
                 activeTab={dataActiveTab}
                 setActiveTab={setDataActiveTab}
-                onDelete={handleDelete}
+                onDelete={(id, item) => handleDelete(id, item)}
                 onEdit={handleEdit}
-                onRefresh={fetchUserData}
-                isRefreshing={isRefreshing}
               />
             </motion.div>
           )}
