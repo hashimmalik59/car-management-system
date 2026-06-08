@@ -1,12 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
-// Main.jsx ke bilkul top par yeh do lines add karo:
-import { db } from "../firebase"; // Tumhara firebase config file ka rasta
-// Purani line ko hatao aur ab isko lagao:
-// Top par jahan query, where, getDocs import kiya tha, wahan yeh do cheezein aur add karo:
+import { db } from "../firebase";
 import {
   collection,
   addDoc,
@@ -23,60 +20,67 @@ const Main = ({ customer, setCustomer, user }) => {
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mainTab, setMainTab] = useState("form");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Cloud se sirf is login user ka data fetch karne ke liye useEffect
-  React.useEffect(() => {
+  // Fetch user-specific data from Firestore
+  const fetchUserData = useCallback(async () => {
     if (!user) {
       setCustomer([]);
       return;
     }
+    setIsRefreshing(true);
+    try {
+      const q = query(
+        collection(db, "customers"),
+        where("userId", "==", user.uid),
+      );
+      const querySnapshot = await getDocs(q);
+      const loadedCustomers = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Sort by createdAt descending (newest first)
+      loadedCustomers.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+      );
+      setCustomer(loadedCustomers);
+    } catch (error) {
+      console.error("Error fetching data:", error.message);
+      // Optional: show toast
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user, setCustomer]);
 
-    const fetchUserData = async () => {
-      try {
-        const q = query(
-          collection(db, "customers"),
-          where("userId", "==", user.uid),
-        );
+  // Initial load and refetch when user changes
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
-        const querySnapshot = await getDocs(q);
-        const loadedCustomers = [];
-
-        querySnapshot.forEach((doc) => {
-          loadedCustomers.push({
-            id: doc.id,
-            ...doc.data(),
-          });
-        });
-
-        const recentFirst = [...loadedCustomers].reverse();
-        setCustomer(recentFirst);
-        console.log(
-          "Sirf is user ka data cloud se load hogaya:",
-          loadedCustomers.length,
-          "records",
-        );
-      } catch (error) {
-        console.error("Data fetch karne mein masla aya:", error.message);
+  // Auto-refresh when app comes back to foreground (tab/window focus)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUserData();
       }
     };
-
-    fetchUserData();
-  }, [user]);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchUserData]);
 
   async function handleCustomer(newCustomer) {
+    // Sanitize numbers & compute balances
     let sanitizedCustomer = { ...newCustomer };
 
-    console.log("Form se jo data aaya:", newCustomer);
-    console.log("Us mein servicePrices ye hai:", newCustomer.servicePrices);
-
     if (newCustomer.type === "individual") {
+      const total = Number(newCustomer.totalAmount) || 0;
+      const advance = Number(newCustomer.advancePaid) || 0;
       sanitizedCustomer = {
         ...newCustomer,
-        totalAmount: Number(newCustomer.totalAmount) || 0,
-        advancePaid: Number(newCustomer.advancePaid) || 0,
-        remainingBalance:
-          (Number(newCustomer.totalAmount) || 0) -
-          (Number(newCustomer.advancePaid) || 0),
+        totalAmount: total,
+        advancePaid: advance,
+        remainingBalance: total - advance,
       };
     }
 
@@ -93,177 +97,119 @@ const Main = ({ customer, setCustomer, user }) => {
       };
     }
 
+    // EDITING existing customer
     if (editingCustomer) {
-      // 1. Local state (UI) ko foran update karo taake app fast chalay
-      setCustomer(
-        customer.map((c) =>
+      // Optimistic local update
+      setCustomer((prev) =>
+        prev.map((c) =>
           c.id === editingCustomer.id
             ? { ...sanitizedCustomer, id: editingCustomer.id }
             : c,
         ),
       );
 
-      // 2. Background mein Firestore cloud par update bhejo
-      (async () => {
-        try {
-          const updatedCloudData = { ...sanitizedCustomer };
-
-          if (updatedCloudData.attachment && updatedCloudData.attachment.file) {
-            updatedCloudData.attachment = {
-              ...updatedCloudData.attachment,
-              file: null,
-            };
-          }
-
-          const docRef = doc(db, "customers", editingCustomer.id);
-          await updateDoc(docRef, updatedCloudData);
-          console.log(
-            "Data successfully cloud par UPDATE ho gaya! ID:",
-            editingCustomer.id,
-          );
-        } catch (error) {
-          console.error(
-            "Firebase cloud par update karne mein error aya:",
-            error.message,
-          );
-          // alert("Update nahi ho saka, dobara koshish karein.");
-        }
-      })();
-
-      setEditingCustomer(null);
-    } else {
-      // Naya customer object tayyar karo (Bina kisi local ID ke)
-      const customerWithTime = {
-        ...sanitizedCustomer,
-        createdAt: new Date().toISOString(),
-      };
+      // Prepare clean data for Firestore (remove file objects)
+      const updateData = { ...sanitizedCustomer };
+      if (updateData.attachment?.file) delete updateData.attachment.file;
+      if (updateData.type === "party" && updateData.vehicles) {
+        updateData.vehicles = updateData.vehicles.map((v) => {
+          const clean = { ...v };
+          if (clean.attachment?.file) delete clean.attachment.file;
+          return clean;
+        });
+      }
 
       try {
-        // Cloud ke liye gehri copy (Deep Copy)
-        const cloudData = JSON.parse(JSON.stringify(customerWithTime));
-
-        // Attachment saaf karo
-        if (cloudData.attachment?.file) cloudData.attachment.file = null;
-
-        // Party special cleaner
-        if (cloudData.type === "party" && Array.isArray(cloudData.vehicles)) {
-          cloudData.vehicles = cloudData.vehicles.map((v) => ({
-            ...v,
-            attachment: v.attachment
-              ? { ...v.attachment, file: null }
-              : v.attachment,
-          }));
-        }
-
-        // Cloud par save karo
-        const docRef = await addDoc(collection(db, "customers"), cloudData);
-
-        // Local state update
-        setCustomer((prev) => [
-          { ...customerWithTime, id: docRef.id },
-          ...prev,
-        ]);
-
-        return { success: true }; // <--- YEHI WOH JAWAB HAI JO FORM KO MILEGA
+        const docRef = doc(db, "customers", editingCustomer.id);
+        await updateDoc(docRef, updateData);
+        setEditingCustomer(null);
+        setMainTab("ledger");
       } catch (error) {
-        console.error("Error:", error.message);
-        return { success: false, message: error.message }; // <--- AGAR ERROR AAYA
+        console.error("Update error:", error.message);
+        if (error.code === "not-found") {
+          alert("Record no longer exists. It will be removed.");
+          setCustomer((prev) =>
+            prev.filter((c) => c.id !== editingCustomer.id),
+          );
+        } else {
+          alert("Update failed: " + error.message);
+          // Rollback: refetch to get correct state
+          await fetchUserData();
+        }
+        setEditingCustomer(null);
       }
+      return;
     }
 
-    setMainTab("ledger");
+    // ADDING new customer
+    const customerWithTime = {
+      ...sanitizedCustomer,
+      userId: user.uid,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Deep copy for Firestore (remove file data)
+    const cloudData = JSON.parse(JSON.stringify(customerWithTime));
+    if (cloudData.attachment?.file) delete cloudData.attachment.file;
+    if (cloudData.type === "party" && cloudData.vehicles) {
+      cloudData.vehicles = cloudData.vehicles.map((v) => {
+        const clean = { ...v };
+        if (clean.attachment?.file) delete clean.attachment.file;
+        return clean;
+      });
+    }
+
+    try {
+      const docRef = await addDoc(collection(db, "customers"), cloudData);
+      setCustomer((prev) => [{ ...customerWithTime, id: docRef.id }, ...prev]);
+      setMainTab("ledger");
+      return { success: true };
+    } catch (error) {
+      console.error("Add error:", error.message);
+      alert("Failed to save: " + error.message);
+      return { success: false, message: error.message };
+    }
   }
 
   const handleDelete = async (idToDelete) => {
-    // 🚨 YEH LINE ADD KARO CHECK KARNE KE LIYE:
-    console.log("Delete karne ke liye yeh ID aayi hai:", idToDelete);
+    if (!window.confirm("Are you sure you want to delete this record?")) return;
 
-    if (window.confirm("Kya aap waqai yeh record delete karna chahte hain?")) {
-      try {
-        const docRef = doc(db, "customers", idToDelete);
-        await deleteDoc(docRef);
-        console.log("Record cloud se successfully delete ho gaya!");
-        setCustomer(customer.filter((c) => c.id !== idToDelete));
-      } catch (error) {
-        console.error("Cloud se delete karne mein masla aya:", error.message);
-      }
+    // Save current customer list for potential rollback
+    const previousCustomers = [...customer];
+    // Optimistic local delete
+    setCustomer((prev) => prev.filter((c) => c.id !== idToDelete));
+
+    try {
+      await deleteDoc(doc(db, "customers", idToDelete));
+      console.log("Delete successful from Firestore:", idToDelete);
+    } catch (error) {
+      console.error("Delete error:", error.message);
+      // Rollback local state
+      setCustomer(previousCustomers);
+      alert(
+        "Delete failed: " +
+          error.message +
+          "\nPlease check your network and try again.",
+      );
+      // Optional: refetch to be absolutely sure
+      await fetchUserData();
     }
   };
 
   const handleEdit = (idToEdit) => {
     const target = customer.find((c) => c.id === idToEdit);
-    if (!target) {
-      console.error("Customer not found:", idToEdit);
-      return;
+    if (target) {
+      setEditingCustomer({ ...target });
+      setMainTab("form");
+    } else {
+      console.error("Customer not found for edit:", idToEdit);
     }
-    setEditingCustomer({ ...target });
-    setMainTab("form");
   };
 
   const handleCancelEdit = () => {
     setEditingCustomer(null);
     setMainTab("ledger");
   };
-
-  // const filteredCustomers = customer.filter((item) => {
-  //   // Filter logic ke andar sabse upar ye line likho
-  //   console.log("Customer data being filtered:", item);
-  //   const s = searchTerm.toLowerCase();
-
-  //   // 1. Agar user ne 'pending' search kiya hai
-  //   if (s === "pending") {
-  //     if (item.type === "individual") {
-  //       // return Number(item.remainingBalance) > 0;
-  //       const bal = Number(item.remainingBalance);
-  //       console.log("Checking individual:", item.partyName, "Balance:", bal);
-  //       return bal > 0;
-  //     }
-  //     if (item.type === "party") {
-  //       // Agar kisi bhi ek gaadi ka balance baqi hai, toh party show karo
-  //       return (item.vehicles || []).some(
-  //         (v) => Number(v.vehicleRemaining) > 0,
-  //       );
-  //     }
-  //   }
-
-  //   // 2. Agar 'pending' nahi hai, toh purana search logic chalau
-  //   const service = Array.isArray(item.serviceType)
-  //     ? item.serviceType.join(" ").toLowerCase()
-  //     : item.serviceType?.toLowerCase() || "";
-  //   const party = item.partyName?.toLowerCase() || "";
-  //   const plate = item.plate?.toLowerCase() || "";
-  //   const phone = item.phone || "";
-  //   const cnic = item.cnic || "";
-  //   const region = item.region?.toLowerCase() || "";
-  //   const received = item.receivedBy?.toLowerCase() || "";
-  //   const handover = item.handoverTo?.toLowerCase() || "";
-
-  //   const vehicleSearch =
-  //     item.type === "party"
-  //       ? (item.vehicles || []).some((v) => {
-  //           const vPlate = v.plate?.toLowerCase() || "";
-  //           const vModel = v.model?.toLowerCase() || "";
-  //           const vServices = Array.isArray(v.serviceType)
-  //             ? v.serviceType.join(" ").toLowerCase()
-  //             : "";
-  //           return (
-  //             vPlate.includes(s) || vModel.includes(s) || vServices.includes(s)
-  //           );
-  //         })
-  //       : false;
-
-  //   return (
-  //     party.includes(s) ||
-  //     plate.includes(s) ||
-  //     phone.includes(s) ||
-  //     cnic.includes(s) ||
-  //     service.includes(s) ||
-  //     region.includes(s) ||
-  //     received.includes(s) ||
-  //     handover.includes(s) ||
-  //     vehicleSearch
-  //   );
-  // });
 
   const tabs = [
     {
@@ -295,19 +241,19 @@ const Main = ({ customer, setCustomer, user }) => {
         active:
           "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30",
         inactive:
-          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400",
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600",
       },
       violet: {
         active:
           "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/30",
         inactive:
-          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400",
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600",
       },
       emerald: {
         active:
           "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30",
         inactive:
-          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400",
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600",
       },
     };
     return isActive ? colors[key].active : colors[key].inactive;
@@ -319,12 +265,8 @@ const Main = ({ customer, setCustomer, user }) => {
     exit: { opacity: 0, y: -20, scale: 0.98 },
   };
 
-  const uniqueCustomers = Array.from(
-    new Map(customer.map((item) => [item.id, item])).values(),
-  );
   return (
     <main className="flex flex-col p-4 md:p-8 gap-6 min-h-screen">
-      {/* Animated Navigation */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -354,11 +296,7 @@ const Main = ({ customer, setCustomer, user }) => {
                 <div className="flex flex-col items-start">
                   <span className="leading-none">{tab.label}</span>
                   <span
-                    className={`text-[8px] font-medium leading-none mt-0.5 ${
-                      mainTab === tab.key
-                        ? "text-white/70"
-                        : "text-gray-400 dark:text-gray-500"
-                    }`}
+                    className={`text-[8px] font-medium leading-none mt-0.5 ${mainTab === tab.key ? "text-white/70" : "text-gray-400 dark:text-gray-500"}`}
                   >
                     {tab.desc}
                   </span>
@@ -369,7 +307,6 @@ const Main = ({ customer, setCustomer, user }) => {
         </div>
       </motion.div>
 
-      {/* Content Area */}
       <div className="w-full max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {mainTab === "form" && (
@@ -401,13 +338,15 @@ const Main = ({ customer, setCustomer, user }) => {
               transition={{ duration: 0.3 }}
             >
               <Data
-                customerData={uniqueCustomers}
+                customerData={customer}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 activeTab={dataActiveTab}
                 setActiveTab={setDataActiveTab}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                onRefresh={fetchUserData}
+                isRefreshing={isRefreshing}
               />
             </motion.div>
           )}

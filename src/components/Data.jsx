@@ -11,6 +11,58 @@ const sumVehicleField = (vehicles = [], field) => {
   return vehicles.reduce((sum, v) => sum + (Number(v?.[field]) || 0), 0);
 };
 
+// ---------- IMPROVED: Service price extraction (handles number, string, object) ----------
+const getServicePrice = (servicePrices, serviceName) => {
+  if (!servicePrices || typeof servicePrices !== "object") {
+    console.warn("servicePrices is missing or invalid", servicePrices);
+    return 0;
+  }
+  const val = servicePrices[serviceName];
+  if (val === undefined || val === null) {
+    console.warn(`No price found for service: ${serviceName}`, servicePrices);
+    return 0;
+  }
+
+  // If it's a number, return it
+  if (typeof val === "number") return val;
+
+  // If it's a string, convert to number
+  if (typeof val === "string") {
+    const num = Number(val);
+    if (!isNaN(num)) return num;
+  }
+
+  // If it's an object, look for common price fields
+  if (typeof val === "object") {
+    // Try common keys
+    const priceKeys = [
+      "servicePrice",
+      "price",
+      "amount",
+      "total",
+      "regionPrice",
+    ];
+    for (let key of priceKeys) {
+      if (val[key] !== undefined) {
+        const num = Number(val[key]);
+        if (!isNaN(num)) return num;
+      }
+    }
+    // Last resort: find first numeric value in the object
+    for (let anyKey in val) {
+      const num = Number(val[anyKey]);
+      if (!isNaN(num) && val[anyKey] !== null && val[anyKey] !== "") {
+        console.warn(
+          `Using fallback price from key "${anyKey}" for service ${serviceName}`,
+        );
+        return num;
+      }
+    }
+  }
+  console.warn(`Could not extract price for service ${serviceName}`, val);
+  return 0;
+};
+
 // ─── Attachment Display (dark theme) ──────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -95,7 +147,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print functions (unchanged) ─────────────────────────────
+// ─── PRINT FUNCTIONS (using improved getServicePrice) ─────────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -132,8 +184,8 @@ const printIndividualReceipt = (item) => {
           Array.isArray(item.serviceType)
             ? item.serviceType
                 .map((s) => {
-                  const price = item.servicePrices?.[s] || 0;
-                  return `${s} — Rs. ${Number(price).toLocaleString()}`;
+                  const price = getServicePrice(item.servicePrices, s);
+                  return `${s} — Rs. ${price.toLocaleString()}`;
                 })
                 .join("<br/>")
             : "N/A"
@@ -203,8 +255,8 @@ const printPartyReceipt = (item) => {
                 <td>${
                   (v.serviceType || [])
                     .map((s) => {
-                      const price = v.servicePrices?.[s] || 0;
-                      return `${s} (Rs. ${Number(price).toLocaleString()})`;
+                      const price = getServicePrice(v.servicePrices, s);
+                      return `${s} (Rs. ${price.toLocaleString()})`;
                     })
                     .join(", ") || "---"
                 }</td>
@@ -212,7 +264,7 @@ const printPartyReceipt = (item) => {
                 <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                 <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-              <tr>
+              </tr>
             `,
               )
               .join("")}
@@ -241,11 +293,8 @@ const printVehicleReceipt = (vehicle, partyData) => {
 
   const servicesHtml = (vehicle.serviceType || [])
     .map((s) => {
-      const price =
-        vehicle.servicePrices?.[s]?.regionPrice ||
-        vehicle.servicePrices?.[s]?.servicePrice ||
-        0;
-      return `${s} — Rs. ${Number(price).toLocaleString()}`;
+      const price = getServicePrice(vehicle.servicePrices, s);
+      return `${s} — Rs. ${price.toLocaleString()}`;
     })
     .join("<br/>");
 
@@ -329,7 +378,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (merged Region & Region Price, fixed NaN) ──────────
+// ─── Party Ledger Block ────────────────────────── (same as before, uses getServicePrice)
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -337,14 +386,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
-
-  const getServicePrice = (servicePrices, serviceName) => {
-    const pObj = servicePrices?.[serviceName];
-    if (pObj && typeof pObj === "object") {
-      return (Number(pObj.regionPrice) || 0) + (Number(pObj.servicePrice) || 0);
-    }
-    return Number(pObj || 0);
-  };
 
   return (
     <motion.div
@@ -575,7 +616,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
-// ─── Main Data Component (with sorting: newest first) ─────────────────────────
+// ─── Main Data Component (uses improved getServicePrice) ─────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -589,7 +630,6 @@ const Data = ({
     const search = (searchTerm || "").toLowerCase();
     if (!Array.isArray(customerData)) return [];
 
-    // Step 1: Filter
     let filtered = customerData.filter((item) => {
       if (!item || item.type !== activeTab) return false;
 
@@ -637,7 +677,6 @@ const Data = ({
       return matchesSearch;
     });
 
-    // Step 2: Sort by createdAt descending (newest first)
     filtered.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
       const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
@@ -712,7 +751,7 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* INDIVIDUAL TABLE (merged Region & Region Price, fixed NaN) */}
+      {/* INDIVIDUAL TABLE (fixed service price display) */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -758,8 +797,10 @@ const Data = ({
                           {Array.isArray(item.serviceType) &&
                           item.serviceType.length > 0 ? (
                             item.serviceType.map((serviceName, idx) => {
-                              const price =
-                                item.servicePrices?.[serviceName] || 0;
+                              const price = getServicePrice(
+                                item.servicePrices,
+                                serviceName,
+                              );
                               return (
                                 <div
                                   key={idx}
@@ -767,7 +808,7 @@ const Data = ({
                                 >
                                   <div className="uppercase">{serviceName}</div>
                                   <div className="text-[8px] text-gray-400 mt-1">
-                                    Rs. {Number(price).toLocaleString()}
+                                    Rs. {price.toLocaleString()}
                                   </div>
                                 </div>
                               );

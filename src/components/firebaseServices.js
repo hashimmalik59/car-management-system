@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   query,
+  where,
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
@@ -15,13 +16,14 @@ import {
 const CUSTOMERS_COLLECTION = "customers";
 
 // ─── CREATE ─────────────────────────────
-export const addCustomerToFirestore = async (customerData) => {
+export const addCustomerToFirestore = async (customerData, userId) => {
   try {
-    // crypto.randomUUID() hatayein, Firestore apna ID deta hai
+    // Remove any existing id (Firestore will generate new one)
     const { id, ...dataWithoutId } = customerData;
 
     const docRef = await addDoc(collection(db, CUSTOMERS_COLLECTION), {
       ...dataWithoutId,
+      userId, // ✅ CRITICAL: attach user ID for security
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -33,11 +35,12 @@ export const addCustomerToFirestore = async (customerData) => {
   }
 };
 
-// ─── READ ─────────────────────────────
-export const getAllCustomersFromFirestore = async () => {
+// ─── READ (all customers for a specific user) ─────
+export const getCustomersByUser = async (userId) => {
   try {
     const q = query(
       collection(db, CUSTOMERS_COLLECTION),
+      where("userId", "==", userId),
       orderBy("createdAt", "desc"),
     );
     const querySnapshot = await getDocs(q);
@@ -48,7 +51,6 @@ export const getAllCustomersFromFirestore = async () => {
       customers.push({
         id: doc.id,
         ...data,
-        // Firestore timestamp ko ISO string mein convert
         createdAt:
           data.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
       });
@@ -61,12 +63,16 @@ export const getAllCustomersFromFirestore = async () => {
 };
 
 // ─── UPDATE ─────────────────────────────
-export const updateCustomerInFirestore = async (id, updatedData) => {
+export const updateCustomerInFirestore = async (id, updatedData, userId) => {
   try {
     const docRef = doc(db, CUSTOMERS_COLLECTION, id);
+    // First verify that this document belongs to the user (optional but recommended)
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists() || docSnap.data().userId !== userId) {
+      throw new Error("Unauthorized or document not found");
+    }
 
-    // id aur createdAt remove karein taake overwrite na ho
-    const { id: _, createdAt, ...dataToUpdate } = updatedData;
+    const { id: _, createdAt, userId: __, ...dataToUpdate } = updatedData;
 
     await updateDoc(docRef, {
       ...dataToUpdate,
@@ -81,9 +87,15 @@ export const updateCustomerInFirestore = async (id, updatedData) => {
 };
 
 // ─── DELETE ─────────────────────────────
-export const deleteCustomerFromFirestore = async (id) => {
+export const deleteCustomerFromFirestore = async (id, userId) => {
   try {
-    await deleteDoc(doc(db, CUSTOMERS_COLLECTION, id));
+    const docRef = doc(db, CUSTOMERS_COLLECTION, id);
+    // Verify ownership before deleting
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists() || docSnap.data().userId !== userId) {
+      throw new Error("Unauthorized or document not found");
+    }
+    await deleteDoc(docRef);
     return id;
   } catch (error) {
     console.error("Error deleting customer:", error);
