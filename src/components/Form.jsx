@@ -27,9 +27,8 @@ const bankOptions = [
   "Others",
 ];
 
-// 🆕 Region options with city PRICE field (like services)
+// Region options with city PRICE field (like services)
 const regionOptions = [
-  // { value: "", label: "Select Region" },
   { value: "KPK", label: "KPK" },
   { value: "Punjab", label: "Punjab" },
   { value: "Sindh", label: "Sindh" },
@@ -39,23 +38,24 @@ const regionOptions = [
 ];
 
 const calculateTotalAmount = (prices, commission, advance) => {
-  // 1. Tumhare data mein 'price' aur 'customPrice' keys hain
-  // Hum un dono ko add kar rahe hain
+  // Sum regionPrice + servicePrice (or price + customPrice depending on mode)
   const serviceSum = Object.values(prices || {}).reduce(
-    (sum, v) => sum + Number(v.price || 0) + Number(v.customPrice || 0),
+    (sum, v) =>
+      sum +
+      Number(v.regionPrice || 0) +
+      Number(v.servicePrice || 0) +
+      Number(v.price || 0) +
+      Number(v.customPrice || 0),
     0,
   );
 
-  // 2. Ab hum 'serviceSum' mein 'commission' add kar rahe hain
   const total = serviceSum + Number(commission || 0);
-
-  // 3. Last mein, total mein se advance minus kar rahe hain
   const remaining = Math.max(total - Number(advance || 0), 0);
 
   return { total, remaining };
 };
 
-// Vehicle Card for Party
+// Vehicle Card for Party (unchanged)
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getTotal = (prices) => {
     return Object.values(prices || {}).reduce(
@@ -106,7 +106,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       delete updatedPrices[service];
     } else {
       updatedServices.push(service);
-      // ✅ Yahan dekho, maine teeno keys dal di hain:
       updatedPrices[service] = {
         region: "",
         regionPrice: "",
@@ -134,7 +133,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         {canRemove && (
           <button
             type="button"
-            onClick={() => onRemove(vehicle.id)} // Index ki jagah ID pass karo
+            onClick={() => onRemove(vehicle.id)}
             className="text-red-500 hover:text-red-700 text-xs font-bold"
           >
             ✕ Remove
@@ -195,7 +194,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
               {vehicle.serviceType.includes(service) && (
                 <div className="flex flex-col gap-2 mt-2">
-                  {/* 1. Region Dropdown */}
                   <select
                     className="w-full rounded p-1.5 border border-orange-300 text-[11px] outline-none bg-white"
                     value={vehicle.servicePrices?.[service]?.region || ""}
@@ -217,10 +215,9 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                     ))}
                   </select>
 
-                  {/* 2. Region Price Input */}
                   <input
                     type="number"
-                    placeholder="Reion price"
+                    placeholder="Region price"
                     className="w-full rounded p-1.5 border border-orange-300 text-[11px] outline-none"
                     value={vehicle.servicePrices?.[service]?.regionPrice || ""}
                     onChange={(e) => {
@@ -238,7 +235,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                     }}
                   />
 
-                  {/* 3. Service Custom Price Input */}
                   <input
                     type="number"
                     placeholder="Service Price"
@@ -265,7 +261,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* 🆕 PARTY VEHICLE CONVERSION INPUT */}
+      {/* Conversion Details */}
       {vehicle.serviceType.includes("Conversion") && (
         <div className="flex flex-col bg-orange-100 p-3 rounded-xl border border-orange-200 gap-1 mt-2">
           <label className="text-[10px] font-bold text-orange-700 uppercase">
@@ -294,7 +290,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             readOnly
             className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
             value={vehicle.vehicleTotal ?? ""}
-            onChange={(e) => handleAmountChange("vehicleTotal", e.target.value)}
           />
         </div>
         <div className="flex flex-col">
@@ -307,11 +302,8 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             value={vehicle.vehicleAdvance || 0}
             onChange={(e) => {
               const advance = Number(e.target.value) || 0;
-
               const total = vehicle.vehicleTotal || 0;
-
               const remaining = Math.max(total - advance, 0);
-
               onChange(index, "vehicleAdvance", advance);
               onChange(index, "vehicleRemaining", remaining);
             }}
@@ -439,7 +431,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     model: "",
     region: "",
     cityPrice: "",
-    conversionServiceType: "", // 🆕 PARTY VEHICLE KE LIYE ADD KIYA
+    conversionServiceType: "",
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -464,7 +456,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     model: "",
     region: "",
     cityPrice: "",
-    conversionServiceType: "", // 🆕 INDIVIDUAL KE LIYE ADD KIYA
+    conversionServiceType: "",
     serviceType: [],
     servicePrices: {},
     attachment: null,
@@ -480,34 +472,35 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     remarks: "",
   });
 
-  const calculateNewTotal = (
-    currentPrices,
-    currentCommission,
-    currentAdvance,
-  ) => {
-    // 1. Service ke prices ka sum nikal raha hai
-    const servicesSum = Object.values(currentPrices || {}).reduce(
-      (sum, v) =>
-        sum + Number(v.regionPrice || 0) + Number(v.servicePrice || 0),
-      0,
-    );
-
-    // 2. Commission aur Advance ka hisab
-    const total = servicesSum + Number(currentCommission || 0);
-    const remaining = Math.max(total - Number(currentAdvance || 0), 0);
-
-    return { total, remaining };
-  };
-
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
+
+  // 🆕 FIX: Function to handle advance and total recalculation for individual
+  const handleIndividualAmountChange = (field, value) => {
+    const numValue = Number(value) || 0;
+
+    if (field === "advancePaid") {
+      // Recalculate total using current servicePrices and commission
+      const { total, remaining } = calculateTotalAmount(
+        formData.servicePrices,
+        commissionAmount,
+        numValue,
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        advancePaid: numValue,
+        totalAmount: total,
+        remainingBalance: remaining,
+      }));
+    }
+  };
 
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
 
       if (editingData?.type === "individual") {
-        // ✅ Commission sirf Individual mein load hoga
         setCommissionAmount(Number(editingData.commissionAmount || 0));
 
         const total = Number(editingData.totalAmount ?? 0);
@@ -525,9 +518,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           conversionServiceType: editingData.conversionServiceType ?? "",
         };
       } else {
-        // ✅ Party mode mein commission ko 0 set karo
         setCommissionAmount(0);
-
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
           ...createEmptyVehicle(),
           ...v,
@@ -544,7 +535,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       }
       setFormData(normalized);
     } else {
-      // Reset logic
       setFormData(createInitialForm());
       setCommissionAmount(0);
     }
@@ -552,17 +542,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
   const isParty = formData.type === "party";
 
-  // 🆕 Handle individual city price change
   const handleIndividualCityPriceChange = (value) => {
     const cityPrice = Number(value) || 0;
-
     setFormData((prev) => {
       const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
         (sum, val) => sum + (Number(val) || 0),
         0,
       );
       const total = servicesTotal + cityPrice;
-
       return {
         ...prev,
         cityPrice: value,
@@ -572,14 +559,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
-  // 🆕 Handle individual region change
   const handleIndividualRegionChange = (value) => {
     setFormData((prev) => {
       const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
         (sum, val) => sum + (Number(val) || 0),
         0,
       );
-
       return {
         ...prev,
         region: value,
@@ -603,13 +588,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     setFormData((prev) => ({
       ...prev,
       vehicles: [
-        { ...createEmptyVehicle(), id: crypto.randomUUID() }, // Nayi gaadi shuru mein
-        ...prev.vehicles, // Purani gaadiyan baad mein
+        { ...createEmptyVehicle(), id: crypto.randomUUID() },
+        ...prev.vehicles,
       ],
     }));
   };
 
-  // NAYA BULLETPROOF FUNCTION (ID use karo, index nahi)
   const removeVehicle = (idToRemove) => {
     setFormData((prev) => ({
       ...prev,
@@ -630,33 +614,19 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         (v) => !v.plate?.trim() || v.serviceType.length === 0,
       );
       if (invalid) {
-        alert(
-          "Har gaadi ka plate number aur kam az kam ek service fill karein!",
-        );
+        alert("Har gaadi ka plate number aur kam az ek service fill karein!");
         return;
       }
     }
 
-    // 🆕 Yahan commissionAmount ko pack karna zaroori hai
     const finalData = {
       ...formData,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
     };
 
-    console.log("Saving this data", finalData);
-
-    // console.log("Saving to Database:", finalData); // Debugging ke liye check kar lena
-    // onAddCustomer(finalData);
-
-    // setFormData(createInitialForm());
-    // setCommissionAmount(0); // Reset bhi kar do
-    // if (onCancelEdit) onCancelEdit();
-
-    // 2. Yahan await ka intezar karo
     const result = await onAddCustomer(finalData);
 
-    // 3. Result aane ke baad hi "kuch" karo
     if (result && result.success) {
       alert("Record Saved/Updated Successfully!");
       setFormData(createInitialForm());
@@ -711,6 +681,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           {editingData ? "Update" : "New"} {isParty ? "Party" : "Individual"}{" "}
           Entry
         </h1>
+
         {/* Party / Customer Name */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -727,6 +698,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             }
           />
         </div>
+
         {/* Contact & ID */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
@@ -761,6 +733,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             />
           </div>
         </div>
+
         {/* Received & Handover */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
@@ -995,7 +968,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               </div>
             </div>
 
-            {/* 🆕 Agar services mein "Conversion" selected hai toh yeh zinda hoga */}
+            {/* Conversion Details for Individual */}
             {formData.serviceType.includes("Conversion") && (
               <div className="flex flex-col bg-blue-50 p-3 rounded-xl border border-blue-200 gap-1 mb-3">
                 <label className="text-[10px] font-bold text-blue-600 uppercase">
@@ -1022,7 +995,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 Payment Details
               </div>
 
-              {/* 🆕 COMMISSION FIELD */}
+              {/* Commission Field */}
               <div>
                 <label className="text-[10px] font-semibold text-gray-600 block mb-1">
                   Third-Party Commission (Rs.)
@@ -1033,15 +1006,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   onChange={(e) => {
                     const val = Number(e.target.value);
                     setCommissionAmount(val);
-
-                    // Yahan humne tumhare naye function ko call kiya
                     const result = calculateTotalAmount(
                       formData.servicePrices,
                       val,
                       formData.advancePaid,
                     );
-
-                    // Ab hum data ko update kar rahe hain
                     setFormData((prev) => ({
                       ...prev,
                       totalAmount: result.total,
@@ -1058,7 +1027,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   <label className="text-[10px] font-semibold text-gray-600">
                     Total Amount (Rs.)
                   </label>
-
                   <input
                     type="number"
                     readOnly
@@ -1071,7 +1039,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   <label className="text-[10px] font-semibold text-gray-600">
                     Advance Paid (Rs.)
                   </label>
-
                   <input
                     type="number"
                     value={formData.advancePaid ?? ""}
@@ -1090,7 +1057,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 <span className="text-[10px] font-bold text-gray-600">
                   Remaining Balance
                 </span>
-
                 <span className="text-base font-bold text-blue-600">
                   Rs. {(formData.remainingBalance || 0).toLocaleString()}
                 </span>
@@ -1218,7 +1184,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         )}
 
-        {/* Individual Remarks - END MEIN */}
+        {/* Individual Remarks */}
         {!isParty && (
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1235,6 +1201,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             />
           </div>
         )}
+
         <button
           type="submit"
           className={`font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}`}
