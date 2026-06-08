@@ -59,7 +59,9 @@ const Main = ({ customer, setCustomer, user }) => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchUserData]);
 
+  // ================= OPTIMISTIC HANDLE CUSTOMER (ADD & EDIT) with fallback =================
   async function handleCustomer(newCustomer) {
+    // --- Sanitization ---
     let sanitizedCustomer = { ...newCustomer };
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
@@ -84,15 +86,23 @@ const Main = ({ customer, setCustomer, user }) => {
       };
     }
 
+    // ---------- EDITING (optimistic with fallback) ----------
     if (editingCustomer) {
+      const previousCustomers = [...customer];
+      const editingId = editingCustomer.id;
+      const editingData = { ...sanitizedCustomer };
+
+      // 1. Optimistic local update
       setCustomer((prev) =>
         prev.map((c) =>
-          c.id === editingCustomer.id
-            ? { ...sanitizedCustomer, id: editingCustomer.id }
-            : c,
+          c.id === editingId ? { ...editingData, id: editingId } : c,
         ),
       );
-      const updateData = { ...sanitizedCustomer };
+      setEditingCustomer(null);
+      setMainTab("ledger");
+
+      // 2. Prepare clean data for Firestore
+      const updateData = { ...editingData };
       if (updateData.attachment?.file) delete updateData.attachment.file;
       if (updateData.type === "party" && updateData.vehicles) {
         updateData.vehicles = updateData.vehicles.map((v) => {
@@ -101,53 +111,89 @@ const Main = ({ customer, setCustomer, user }) => {
           return clean;
         });
       }
+
+      // 3. Background update with fallback search
       try {
-        const docRef = doc(db, "customers", editingCustomer.id);
+        const docRef = doc(db, "customers", editingId);
         await updateDoc(docRef, updateData);
-        setEditingCustomer(null);
-        setMainTab("ledger");
+        console.log("Edit saved to Firestore");
       } catch (error) {
-        console.error("Update error:", error.message);
-        if (error.code === "not-found") {
-          alert("Record no longer exists. It will be removed.");
-          setCustomer((prev) =>
-            prev.filter((c) => c.id !== editingCustomer.id),
-          );
-        } else {
-          alert("Update failed: " + error.message);
-          await fetchUserData();
+        console.error("Edit save error:", error);
+        // Fallback: if not-found, search by partyName + phone
+        if (
+          error.code === "not-found" &&
+          editingData.partyName &&
+          editingData.phone
+        ) {
+          console.log("Fallback: searching by partyName + phone");
+          try {
+            const q = query(
+              collection(db, "customers"),
+              where("userId", "==", user.uid),
+              where("partyName", "==", editingData.partyName),
+              where("phone", "==", editingData.phone),
+            );
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+              const realDoc = snapshot.docs[0];
+              const realId = realDoc.id;
+              await updateDoc(doc(db, "customers", realId), updateData);
+              // Replace local ID with real one
+              setCustomer((prev) =>
+                prev.map((c) =>
+                  c.id === editingId ? { ...c, id: realId } : c,
+                ),
+              );
+              console.log("Fallback edit successful");
+              return;
+            }
+          } catch (fbErr) {
+            console.error("Fallback edit failed:", fbErr);
+          }
         }
-        setEditingCustomer(null);
+        // Rollback UI on complete failure
+        setCustomer(previousCustomers);
+        alert("Save failed: " + error.message);
       }
       return;
     }
 
+    // ---------- ADDING (optimistic) ----------
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
     const customerWithTime = {
       ...sanitizedCustomer,
       userId: user.uid,
       createdAt: new Date().toISOString(),
     };
-    const cloudData = JSON.parse(JSON.stringify(customerWithTime));
-    if (cloudData.attachment?.file) delete cloudData.attachment.file;
-    if (cloudData.type === "party" && cloudData.vehicles) {
-      cloudData.vehicles = cloudData.vehicles.map((v) => {
-        const clean = { ...v };
-        if (clean.attachment?.file) delete clean.attachment.file;
-        return clean;
-      });
-    }
+    const newCustomerWithId = { ...customerWithTime, id: tempId };
+    setCustomer((prev) => [newCustomerWithId, ...prev]);
+    setMainTab("ledger");
+
     try {
+      const cloudData = JSON.parse(JSON.stringify(customerWithTime));
+      if (cloudData.attachment?.file) delete cloudData.attachment.file;
+      if (cloudData.type === "party" && cloudData.vehicles) {
+        cloudData.vehicles = cloudData.vehicles.map((v) => {
+          const clean = { ...v };
+          if (clean.attachment?.file) delete clean.attachment.file;
+          return clean;
+        });
+      }
       const docRef = await addDoc(collection(db, "customers"), cloudData);
-      setCustomer((prev) => [{ ...customerWithTime, id: docRef.id }, ...prev]);
-      setMainTab("ledger");
+      setCustomer((prev) =>
+        prev.map((c) => (c.id === tempId ? { ...c, id: docRef.id } : c)),
+      );
+      console.log("Added to Firestore with ID:", docRef.id);
       return { success: true };
     } catch (error) {
-      console.error("Add error:", error.message);
+      console.error("Add error:", error);
+      setCustomer((prev) => prev.filter((c) => c.id !== tempId));
       alert("Failed to save: " + error.message);
       return { success: false, message: error.message };
     }
   }
 
+  // ================= DELETE (with fallback) =================
   const handleDelete = async (idToDelete, itemData = null) => {
     console.log("Delete called for ID:", idToDelete);
     if (!window.confirm("Are you sure you want to delete this record?")) return;
