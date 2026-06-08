@@ -1202,21 +1202,23 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         )}
 
-        <button
-          type="submit"
-          className={`font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}`}
-        >
-          {editingData ? "Update Record" : "Save to Khata"}
-        </button>
-        {editingData && (
+        <div className="sticky bottom-0 bg-white pt-3 pb-1 mt-4 border-t border-gray-200 z-10">
           <button
-            type="button"
-            onClick={onCancelEdit}
-            className="text-red-500 text-xs font-bold self-center"
+            type="submit"
+            className={`w-full font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}`}
           >
-            Cancel Edit
+            {editingData ? "Update Record" : "Save to Khata"}
           </button>
-        )}
+          {editingData && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="text-red-500 text-xs font-bold self-center block mx-auto mt-2"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );
