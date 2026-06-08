@@ -7,36 +7,21 @@ const rowVariants = {
 };
 
 const sumVehicleField = (vehicles = [], field) => {
-  return (vehicles || []).reduce(
-    (sum, v) => sum + (Number(v?.[field]) || 0),
-    0,
-  );
+  if (!Array.isArray(vehicles)) return 0;
+  return vehicles.reduce((sum, v) => sum + (Number(v?.[field]) || 0), 0);
 };
 
-const calculateTotalRemaining = (data) => {
-  return data.reduce((total, item) => {
-    if (item.type === "party") {
-      const vehicles = item.vehicles ?? [];
-      const partyRemaining = sumVehicleField(vehicles, "vehicleRemaining");
-      return total + partyRemaining;
-    }
-    return total + (item.remainingBalance || 0);
-  }, 0);
-};
-
-// ─── Attachment Display with click-to-view ───────────────────────────
+// ─── Attachment Display (dark theme) ──────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
-
-  if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
+  if (!attachment) return <span className="text-gray-500 text-xs">—</span>;
 
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-
   const fileName = attachment?.name || attachment?.preview || "";
-
   const isImage =
     attachment?.file?.type?.startsWith("image/") ||
     imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
+
   return (
     <>
       <div
@@ -47,20 +32,18 @@ const AttachmentDisplay = ({ attachment }) => {
           <img
             src={attachment.preview}
             alt="attach"
-            className="w-6 h-6 object-cover rounded border border-gray-200"
+            className="w-6 h-6 object-cover rounded border border-gray-600"
           />
         ) : (
           <span className="text-base">📄</span>
         )}
         <span
-          className="text-[10px] text-gray-600 truncate max-w-[100px]"
+          className="text-[10px] text-gray-400 truncate max-w-[100px]"
           title={attachment.name}
         >
           {attachment.name}
         </span>
       </div>
-
-      {/* Lightbox Modal */}
       <AnimatePresence>
         {viewerOpen && (
           <motion.div
@@ -68,14 +51,14 @@ const AttachmentDisplay = ({ attachment }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setViewerOpen(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-4xl max-h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl"
+              className="relative max-w-4xl max-h-[90vh] bg-gray-800 rounded-xl overflow-hidden shadow-2xl"
             >
               <button
                 onClick={() => setViewerOpen(false)}
@@ -92,7 +75,7 @@ const AttachmentDisplay = ({ attachment }) => {
               ) : (
                 <div className="p-8 text-center">
                   <span className="text-6xl mb-4 block">📄</span>
-                  <p className="text-gray-700 font-mono text-sm mb-4">
+                  <p className="text-gray-300 font-mono text-sm mb-4">
                     {attachment.name}
                   </p>
                   <a
@@ -112,7 +95,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print Individual Receipt ─────────────────────────────────────────
+// ─── Print functions (same as before) ─────────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -145,20 +128,16 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
-        <div class="info-row">
-          <span class="value">
-            ${
-              Array.isArray(item.serviceType)
-                ? item.serviceType
-                    .map((serviceName) => {
-                      const price = item.servicePrices?.[serviceName] || 0;
-                      return `${serviceName} — Rs. ${Number(price).toLocaleString()}`;
-                    })
-                    .join("<br/>")
-                : "N/A"
-            }
-          </span>
-        </div>
+        <div class="info-row"><span class="value">${
+          Array.isArray(item.serviceType)
+            ? item.serviceType
+                .map((s) => {
+                  const price = item.servicePrices?.[s] || 0;
+                  return `${s} — Rs. ${Number(price).toLocaleString()}`;
+                })
+                .join("<br/>")
+            : "N/A"
+        }</span></div>
         <h3>Payment Summary:</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
@@ -172,7 +151,6 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── Print Party Full Receipt (all vehicles) ──────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -223,8 +201,8 @@ const printPartyReceipt = (item) => {
                 <td>${v.model || "---"}</td>
                 <td>${v.region || "---"}${v.cityPrice ? ` (Rs. ${Number(v.cityPrice).toLocaleString()})` : ""}</td>
                 <td>${
-                  v.serviceType
-                    ?.map((s) => {
+                  (v.serviceType || [])
+                    .map((s) => {
                       const price = v.servicePrices?.[s] || 0;
                       return `${s} (Rs. ${Number(price).toLocaleString()})`;
                     })
@@ -239,8 +217,12 @@ const printPartyReceipt = (item) => {
               )
               .join("")}
           </tbody>
-          <tfoot style="background: #f2f2f2;">
-            <tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td><td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td><td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td></tr>
+          <tfoot style="background:#f2f2f2;">
+            <tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
+              <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
+            </tr>
           </tfoot>
         </table>
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
@@ -252,13 +234,11 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// 🆕 NEW: Print Single Vehicle Receipt for Party
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
   const remaining = Number(vehicle.vehicleRemaining || 0);
 
-  // Format services with prices
   const servicesHtml = (vehicle.serviceType || [])
     .map((s) => {
       const price =
@@ -335,13 +315,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
         
-        ${
-          vehicle.remarks
-            ? `
-          <div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>
-        `
-            : ""
-        }
+        ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
 
         <div class="footer">
           <p>Thank you for choosing Iqra Motor Insurance</p>
@@ -355,14 +329,22 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (with per-vehicle print button) ────────────────
+// ─── Party Ledger Block (dark theme, fixed) ──────────────────────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
-  const vehicles = item.vehicles ?? [];
+  const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
 
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+
+  const getServicePrice = (servicePrices, serviceName) => {
+    const pObj = servicePrices?.[serviceName];
+    if (pObj && typeof pObj === "object") {
+      return (Number(pObj.regionPrice) || 0) + (Number(pObj.servicePrice) || 0);
+    }
+    return Number(pObj || 0);
+  };
 
   return (
     <motion.div
@@ -370,13 +352,13 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
       initial="hidden"
       animate="visible"
       transition={{ duration: 0.3 }}
-      className="w-full rounded-xl border border-gray-200 overflow-hidden shadow-sm"
+      className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg"
     >
-      <div className="bg-orange-600 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
         <p className="text-white font-bold text-sm tracking-wide uppercase">
           PARTY LEDGER :{" "}
-          <span className="text-yellow-200">{item.partyName || "N/A"}</span>
-          {(item.ntn || item.phone) && (
+          <span className="text-yellow-300">{item?.partyName || "N/A"}</span>
+          {(item?.ntn || item?.phone) && (
             <span className="text-orange-200 font-normal text-xs ml-2">
               ({item.ntn || item.phone})
             </span>
@@ -385,42 +367,42 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         <div className="flex gap-2">
           <button
             onClick={() => printPartyReceipt(item)}
-            className="px-3 py-1 bg-green-500/70 hover:bg-green-500 text-white rounded text-[10px] font-bold"
+            className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-[10px] font-medium shadow"
           >
             🖨️ Print All
           </button>
           <button
             onClick={() => onEdit(item.id)}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-bold"
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium shadow"
           >
             Edit
           </button>
           <button
             onClick={() => onDelete(item.id)}
-            className="px-3 py-1 bg-red-500/70 hover:bg-red-500 text-white rounded text-[10px] font-bold"
+            className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-medium shadow"
           >
             Del
           </button>
         </div>
       </div>
-      <div className="bg-gray-50 px-4 py-1.5 flex flex-wrap gap-x-6 gap-y-1 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase">
-        {item.phone && <span>📞 {item.phone}</span>}
-        {item.region && <span>📍 {item.region}</span>}
-        {item.receivedBy && <span>FROM: {item.receivedBy}</span>}
-        {item.handoverTo && (
-          <span className="text-orange-600">TO: {item.handoverTo}</span>
+      <div className="bg-gray-900/60 px-4 py-1.5 flex flex-wrap gap-x-6 gap-y-1 border-b border-gray-700 text-[10px] font-medium text-gray-300 uppercase">
+        {item?.phone && <span>📞 {item.phone}</span>}
+        {item?.region && <span>📍 {item.region}</span>}
+        {item?.receivedBy && <span>FROM: {item.receivedBy}</span>}
+        {item?.handoverTo && (
+          <span className="text-orange-400">TO: {item.handoverTo}</span>
         )}
-        {item.tokenTaxFrom && (
-          <span className="text-indigo-600">TAX FROM: {item.tokenTaxFrom}</span>
+        {item?.tokenTaxFrom && (
+          <span className="text-indigo-400">TAX FROM: {item.tokenTaxFrom}</span>
         )}
-        {item.tokenTaxTo && (
-          <span className="text-pink-600">TAX TO: {item.tokenTaxTo}</span>
+        {item?.tokenTaxTo && (
+          <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
         )}
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
-          <thead className="bg-gray-100 border-b border-gray-200">
-            <tr className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+          <thead className="bg-gray-700 border-b border-gray-600">
+            <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
               <th className="px-4 py-2.5">#</th>
               <th className="px-4 py-2.5">Vehicle Details</th>
               <th className="px-4 py-2.5">Region & City Price</th>
@@ -433,12 +415,12 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5 text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-700">
             {!hasVehicles ? (
               <tr>
                 <td
                   colSpan={10}
-                  className="px-4 py-4 text-center text-gray-400 text-xs"
+                  className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
                 </td>
@@ -447,37 +429,37 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               vehicles.map((v, idx) => (
                 <tr
                   key={idx}
-                  className="text-sm hover:bg-orange-50/30 transition-colors"
+                  className="text-sm hover:bg-gray-700/50 transition-colors"
                 >
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">
-                    {String(idx + 1).padStart(2, "0")}
+                    {idx + 1}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-bold text-gray-800 text-xs uppercase">
-                      {v.plate || "---"}
+                    <div className="font-bold text-white text-xs uppercase">
+                      {v?.plate || "---"}
                     </div>
                     <div className="text-[10px] text-gray-400 italic">
-                      {v.model || "---"}
+                      {v?.model || "---"}
                     </div>
-                    {v.tokenTaxFrom && (
-                      <div className="text-[9px] text-indigo-600 font-bold mt-1">
+                    {v?.tokenTaxFrom && (
+                      <div className="text-[9px] text-indigo-400 font-bold mt-1">
                         TAX FROM: {v.tokenTaxFrom}
                       </div>
                     )}
-                    {v.tokenTaxTo && (
-                      <div className="text-[9px] text-pink-600 font-bold">
+                    {v?.tokenTaxTo && (
+                      <div className="text-[9px] text-pink-400 font-bold">
                         TAX TO: {v.tokenTaxTo}
                       </div>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {v.region && (
+                    {v?.region && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold w-fit">
+                        <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
                           📍 {v.region}
                         </span>
-                        {v.cityPrice > 0 && (
-                          <span className="text-[10px] text-gray-600 font-mono">
+                        {v?.cityPrice > 0 && (
+                          <span className="text-[10px] text-gray-400 font-mono">
                             City: Rs. {Number(v.cityPrice).toLocaleString()}
                           </span>
                         )}
@@ -486,26 +468,24 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {v.serviceType?.map((serviceName, si) => {
-                        const price =
-                          v.servicePrices?.[serviceName]?.regionPrice ||
-                          v.servicePrices?.[serviceName]?.servicePrice ||
-                          0;
-                        return (
-                          <div
-                            key={si}
-                            className="bg-orange-100 text-orange-700 text-[9px] px-2 py-1 rounded font-bold"
-                          >
-                            <div className="uppercase">{serviceName}</div>
-                            <div className="text-[8px] text-gray-700 mt-1">
-                              Rs. {Number(price).toLocaleString()}
-                            </div>
+                      {(v?.serviceType || []).map((serviceName, si) => (
+                        <div
+                          key={si}
+                          className="bg-gray-700 text-gray-200 text-[9px] px-2 py-1 rounded font-bold"
+                        >
+                          <div className="uppercase">{serviceName}</div>
+                          <div className="text-[8px] text-gray-400 mt-1">
+                            Rs.{" "}
+                            {getServicePrice(
+                              v?.servicePrices,
+                              serviceName,
+                            ).toLocaleString()}
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
-                    {v.conversionServiceType && (
-                      <div className="bg-orange-100 text-orange-700 text-[9px] px-2 py-1 border border-orange-300 my-1 rounded font-bold">
+                    {v?.conversionServiceType && (
+                      <div className="bg-gray-700 text-blue-300 text-[9px] px-2 py-1 border border-gray-600 my-1 rounded font-bold">
                         Conversion:{" "}
                         <span className="font-normal">
                           {v.conversionServiceType}
@@ -514,56 +494,26 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <AttachmentDisplay attachment={v.attachment} />
-                    {(() => {
-                      const remarks = Array.isArray(v.remarks)
-                        ? v.remarks
-                        : v.remarks
-                          ? [
-                              typeof v.remarks === "object"
-                                ? v.remarks
-                                : {
-                                    text: v.remarks,
-                                    createdAt: Date.now(),
-                                  },
-                            ]
-                          : [];
-
-                      const latest = remarks[remarks.length - 1];
-                      return latest ? (
-                        <div className="mt-1 space-y-1">
-                          <div className="text-[10px] text-gray-500 italic break-words">
-                            <span className="font-bold">Remarks:</span>{" "}
-                            {latest.text}
-                          </div>
-                          <div className="text-[9px] text-gray-400">
-                            {new Date(
-                              latest.createdAt || Date.now(),
-                            ).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ) : null;
-                    })()}
+                    <AttachmentDisplay attachment={v?.attachment} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="text-[9px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold border border-blue-200">
-                      {v.bankName || "Cash"}
+                    <span className="text-[9px] bg-gray-700 text-gray-200 px-2 py-1 rounded font-bold border border-gray-600">
+                      {v?.bankName || "Cash"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-700">
-                    {Number(v.vehicleTotal || 0).toLocaleString()}
+                  <td className="px-4 py-3 text-right font-mono text-white">
+                    {Number(v?.vehicleTotal).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-green-600">
-                    {Number(v.vehicleAdvance || 0).toLocaleString()}
+                  <td className="px-4 py-3 text-right font-mono text-green-400">
+                    {Number(v?.vehicleAdvance).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-xs font-mono font-bold text-orange-600">
-                    {Number(v.vehicleRemaining || 0).toLocaleString()}
+                  <td className="px-4 py-3 text-right font-mono text-orange-400">
+                    {Number(v?.vehicleRemaining).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => printVehicleReceipt(v, item)}
-                      className="px-2 py-1 bg-green-50 text-green-600 rounded text-[9px] font-bold border border-green-200 hover:bg-green-600 hover:text-white"
-                      title="Print this vehicle only"
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-[9px] font-medium text-gray-200"
                     >
                       🖨️ Print
                     </button>
@@ -573,43 +523,43 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             )}
           </tbody>
           {hasVehicles && (
-            <tfoot className="bg-orange-50 border-t-2 border-orange-200">
-              <tr className="text-xs font-bold">
+            <tfoot className="bg-gray-700 border-t-2 border-gray-600">
+              <tr className="text-xs font-bold text-gray-200">
                 <td
                   colSpan={6}
-                  className="px-4 py-3 text-right text-gray-700 uppercase"
+                  className="px-4 py-3 text-right text-gray-300 uppercase"
                 >
                   GRAND TOTAL
                 </td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-gray-800 bg-orange-100">
-                  {Number(totalAllVehicles).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold">
+                  {totalAllVehicles.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-green-700 bg-orange-100">
-                  {Number(advanceAllVehicles).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold text-green-400">
+                  {advanceAllVehicles.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-red-600 bg-orange-100">
-                  {Number(remainingAllVehicles).toLocaleString()}
+                <td className="px-4 py-3 text-right font-mono font-bold text-red-400">
+                  {remainingAllVehicles.toLocaleString()}
                 </td>
-                <td className="bg-orange-100"></td>
+                <td className="bg-gray-700"></td>
               </tr>
             </tfoot>
           )}
         </table>
       </div>
-      <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-4 text-[10px] text-gray-500">
+      <div className="bg-gray-900/80 border-t border-gray-700 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-4 text-[10px] text-gray-300">
           <span>💰 Total: Rs. {totalAllVehicles.toLocaleString()}</span>
           <span>💵 Advance: Rs. {advanceAllVehicles.toLocaleString()}</span>
           <span>📊 Remaining: Rs. {remainingAllVehicles.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-3">
           <div
-            className={`text-lg font-mono font-bold ${remainingAllVehicles > 0 ? "text-red-600" : "text-green-600"}`}
+            className={`text-lg font-mono font-bold ${remainingAllVehicles > 0 ? "text-red-400" : "text-green-400"}`}
           >
             {remainingAllVehicles.toLocaleString()}
           </div>
           <span
-            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${remainingAllVehicles > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
+            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${remainingAllVehicles > 0 ? "bg-red-900/50 text-red-300" : "bg-green-900/50 text-green-300"}`}
           >
             {remainingAllVehicles > 0 ? "● PENDING" : "● CLEARED"}
           </span>
@@ -619,50 +569,49 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
-// ─── Main Data Component (unchanged except passing new props) ─────────
+// ─── Main Data Component (dark theme, fully fixed) ───────────────────
 const Data = ({
-  customerData,
-  searchTerm,
+  customerData = [],
+  searchTerm = "",
   setSearchTerm,
-  activeTab,
+  activeTab = "individual",
   setActiveTab,
   onEdit,
   onDelete,
 }) => {
   const filteredData = useMemo(() => {
-    const search = searchTerm.toLowerCase();
+    const search = (searchTerm || "").toLowerCase();
+    if (!Array.isArray(customerData)) return [];
 
     return customerData.filter((item) => {
-      // 1. Tab check
-      if (item.type !== activeTab) return false;
+      if (!item || item.type !== activeTab) return false;
 
-      // 2. Pending ya Clear ka logic
       if (search === "pending" || search === "clear") {
         if (item.type === "individual") {
           const bal = Number(item.remainingBalance || 0);
           return search === "pending" ? bal > 0 : bal === 0;
         }
-
         if (item.type === "party") {
           const vehicles = item.vehicles || [];
           if (vehicles.length === 0) return false;
           if (search === "pending") {
-            return vehicles.some((v) => Number(v.vehicleRemaining || 0) > 0);
+            return vehicles.some((v) => Number(v?.vehicleRemaining || 0) > 0);
           } else {
-            return vehicles.every((v) => Number(v.vehicleRemaining || 0) === 0);
+            return vehicles.every(
+              (v) => Number(v?.vehicleRemaining || 0) === 0,
+            );
           }
         }
         return false;
       }
 
-      // 3. Normal Search
       let matchesSearch = false;
       if (item.type === "party") {
-        const vehicleSearch = (item.vehicles ?? []).some(
+        const vehicleSearch = (item.vehicles || []).some(
           (v) =>
-            v.plate?.toLowerCase().includes(search) ||
-            v.model?.toLowerCase().includes(search) ||
-            (v.serviceType || []).join(" ").toLowerCase().includes(search),
+            v?.plate?.toLowerCase().includes(search) ||
+            v?.model?.toLowerCase().includes(search) ||
+            (v?.serviceType || []).join(" ").toLowerCase().includes(search),
         );
         matchesSearch =
           item.partyName?.toLowerCase().includes(search) ||
@@ -687,18 +636,18 @@ const Data = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="shadow-xl md:shadow-2xl w-full rounded-2xl px-4 md:px-6 py-5 flex flex-col gap-5 bg-white border border-gray-100"
+      className="shadow-xl w-full rounded-2xl px-4 md:px-6 py-5 flex flex-col gap-5 bg-gray-800 border border-gray-700"
     >
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b pb-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-700 pb-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800">
+          <h1 className="text-xl md:text-2xl font-bold text-white">
             Customer Ledger
           </h1>
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
             Viewing:{" "}
             <span
               className={
-                activeTab === "individual" ? "text-blue-600" : "text-orange-600"
+                activeTab === "individual" ? "text-blue-400" : "text-orange-400"
               }
             >
               {activeTab} Records
@@ -714,18 +663,22 @@ const Data = ({
           transition={{ delay: 0.2 }}
           type="search"
           placeholder="Search Name, Phone, Plate, Service..."
-          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="flex bg-gray-100 p-1 rounded-xl w-fit border border-gray-200">
+      <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("individual")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "individual" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+            activeTab === "individual"
+              ? "bg-gray-800 shadow text-blue-400"
+              : "text-gray-400 hover:text-gray-200"
+          }`}
         >
           Individual Ledger
         </motion.button>
@@ -733,7 +686,11 @@ const Data = ({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("party")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "party" ? "bg-white shadow text-orange-600" : "text-gray-500 hover:text-gray-700"}`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+            activeTab === "party"
+              ? "bg-gray-800 shadow text-orange-400"
+              : "text-gray-400 hover:text-gray-200"
+          }`}
         >
           Party / Business
         </motion.button>
@@ -744,8 +701,8 @@ const Data = ({
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
             <table className="min-w-full text-left border-collapse">
-              <thead className="hidden md:table-header-group bg-gray-50">
-                <tr className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              <thead className="hidden md:table-header-group bg-gray-700">
+                <tr className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
                   <th className="p-4">Customer & ID</th>
                   <th className="p-4">Service & Vehicle</th>
                   <th className="p-4">Region & City Price</th>
@@ -756,10 +713,10 @@ const Data = ({
                   <th className="p-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 block md:table-row-group">
+              <tbody className="divide-y divide-gray-700 block md:table-row-group">
                 {filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="p-10 text-center text-gray-400">
+                    <td colSpan="8" className="p-10 text-center text-gray-500">
                       No individual records found.
                     </td>
                   </tr>
@@ -767,16 +724,16 @@ const Data = ({
                   filteredData.map((item) => (
                     <tr
                       key={item.id}
-                      className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-50/30 md:bg-transparent hover:bg-blue-50/40"
+                      className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-800/50 md:bg-transparent hover:bg-gray-700/50"
                     >
                       <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="text-sm font-bold uppercase text-gray-800">
+                        <div className="text-sm font-bold uppercase text-white">
                           {item.partyName || "N/A"}
                         </div>
-                        <div className="text-[10px] text-gray-500 font-mono">
+                        <div className="text-[10px] text-gray-400 font-mono">
                           {item.cnic}
                         </div>
-                        <div className="text-[11px] text-blue-600 font-medium">
+                        <div className="text-[11px] text-blue-400 font-medium">
                           {item.phone}
                         </div>
                       </td>
@@ -790,30 +747,30 @@ const Data = ({
                               return (
                                 <div
                                   key={idx}
-                                  className="bg-blue-100 text-blue-700 text-[9px] px-2 py-1 rounded font-bold"
+                                  className="bg-gray-700 text-blue-300 text-[9px] px-2 py-1 rounded font-bold"
                                 >
                                   <div className="uppercase">{serviceName}</div>
-                                  <div className="text-[8px] text-gray-700 mt-1">
+                                  <div className="text-[8px] text-gray-400 mt-1">
                                     Rs. {Number(price).toLocaleString()}
                                   </div>
                                 </div>
                               );
                             })
                           ) : (
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-gray-500">
                               No services
                             </span>
                           )}
                         </div>
                         {item.conversionServiceType && (
-                          <div className="bg-blue-50 border border-blue-200 p-1.5 mb-2 rounded text-[10px] text-blue-700 font-bold">
+                          <div className="bg-gray-700 border border-gray-600 p-1.5 mb-2 rounded text-[10px] text-blue-400 font-bold">
                             Conversion:{" "}
                             <span className="font-normal">
                               {item.conversionServiceType}
                             </span>
                           </div>
                         )}
-                        <div className="text-sm font-semibold text-gray-700">
+                        <div className="text-sm font-semibold text-white">
                           {item.plate}
                         </div>
                         <div className="text-[10px] text-gray-400 italic">
@@ -823,11 +780,11 @@ const Data = ({
                       <td className="p-2 md:p-4 block md:table-cell">
                         {item.region && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold w-fit">
+                            <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
                               📍 {item.region}
                             </span>
                             {item.cityPrice > 0 && (
-                              <span className="text-[10px] text-gray-600 font-mono">
+                              <span className="text-[10px] text-gray-400 font-mono">
                                 City Price: Rs.{" "}
                                 {Number(item.cityPrice).toLocaleString()}
                               </span>
@@ -836,60 +793,52 @@ const Data = ({
                         )}
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="text-[10px] text-gray-700">
-                          <span className="text-gray-400 font-bold">FROM:</span>{" "}
+                        <div className="text-[10px] text-gray-300">
+                          <span className="text-gray-500 font-bold">FROM:</span>{" "}
                           {item.receivedBy || "---"}
                         </div>
-                        <div className="text-[10px] text-orange-600 font-bold">
-                          <span className="text-gray-400">TO:</span>{" "}
+                        <div className="text-[10px] text-orange-400 font-bold">
+                          <span className="text-gray-500">TO:</span>{" "}
                           {item.handoverTo || "---"}
                         </div>
                         {item.tokenTaxFrom && (
-                          <span className="text-[9px] text-indigo-600 font-bold">
+                          <span className="text-[9px] text-indigo-400 font-bold">
                             Token Tax From: {item.tokenTaxFrom}
                           </span>
                         )}
                         <br />
                         {item.tokenTaxTo && (
-                          <span className="text-[9px] text-pink-600 font-bold">
+                          <span className="text-[9px] text-pink-400 font-bold">
                             Token Tax To: {item.tokenTaxTo}
                           </span>
                         )}
                       </td>
-                      <td className="p-4 text-sm text-gray-700">
-                        {item.commissionAmount > 0 ? (
-                          <span className="font-bold text-red-600">
-                            Rs. {Number(item.commissionAmount).toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
+                      <td className="p-4 text-sm text-gray-300">
+                        {item.commissionAmount > 0
+                          ? `Rs. ${Number(item.commissionAmount).toLocaleString()}`
+                          : "-"}
                       </td>
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
                             <span
-                              className={`text-[8px] font-black uppercase ${
-                                (item.remainingBalance || 0) > 0
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }`}
+                              className={`text-[8px] font-black uppercase ${(item.remainingBalance || 0) > 0 ? "text-red-400" : "text-green-400"}`}
                             >
                               {(item.remainingBalance || 0) > 0
                                 ? "● Pending"
                                 : "● Cleared"}
                             </span>
-                            <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md font-bold border border-gray-200">
+                            <span className="text-[9px] bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded-md font-bold border border-gray-600">
                               {item.bankName || "Cash"}
                             </span>
                           </div>
-                          <div className="text-[10px] text-gray-600">
+                          <div className="text-[10px] text-gray-300">
                             Total: {(item.totalAmount || 0).toLocaleString()}
                           </div>
-                          <div className="text-[10px] text-green-600 font-medium">
+                          <div className="text-[10px] text-green-400 font-medium">
                             Advance: {(item.advancePaid || 0).toLocaleString()}
                           </div>
-                          <div className="text-[11px] font-bold text-red-600">
+                          <div className="text-[11px] font-bold text-red-400">
                             Bal: {(item.remainingBalance || 0).toLocaleString()}
                           </div>
                         </div>
@@ -898,14 +847,14 @@ const Data = ({
                         <AttachmentDisplay attachment={item.attachment} />
                         {item.remarks && (
                           <div className="mt-1 space-y-1">
-                            <div className="text-[10px] text-gray-500 italic break-words">
+                            <div className="text-[10px] text-gray-400 italic break-words">
                               <span className="font-bold">Remarks:</span>{" "}
                               {typeof item.remarks === "string"
                                 ? item.remarks
                                 : item.remarks.text || item.remarks}
                             </div>
                             {item.createdAt && (
-                              <div className="text-[9px] text-gray-400 font-mono">
+                              <div className="text-[9px] text-gray-500 font-mono">
                                 📅{" "}
                                 {new Date(item.createdAt).toLocaleDateString(
                                   "en-GB",
@@ -924,19 +873,19 @@ const Data = ({
                         <div className="flex gap-2 justify-end md:justify-center">
                           <button
                             onClick={() => printIndividualReceipt(item)}
-                            className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold border border-green-100 hover:bg-green-600 hover:text-white"
+                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-[10px] font-bold border border-gray-600"
                           >
                             🖨️ Print
                           </button>
                           <button
                             onClick={() => onEdit(item.id)}
-                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold border border-blue-100 hover:bg-blue-600 hover:text-white"
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => onDelete(item.id)}
-                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold border border-red-100 hover:bg-red-600 hover:text-white"
+                            className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold shadow"
                           >
                             Del
                           </button>
@@ -955,7 +904,7 @@ const Data = ({
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (
-            <div className="p-10 text-center text-gray-400 text-sm">
+            <div className="p-10 text-center text-gray-500 text-sm">
               No party records found.
             </div>
           ) : (

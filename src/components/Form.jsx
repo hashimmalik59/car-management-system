@@ -38,7 +38,6 @@ const regionOptions = [
 ];
 
 const calculateTotalAmount = (prices, commission, advance) => {
-  // Sum regionPrice + servicePrice (or price + customPrice depending on mode)
   const serviceSum = Object.values(prices || {}).reduce(
     (sum, v) =>
       sum +
@@ -48,14 +47,12 @@ const calculateTotalAmount = (prices, commission, advance) => {
       Number(v.customPrice || 0),
     0,
   );
-
   const total = serviceSum + Number(commission || 0);
   const remaining = Math.max(total - Number(advance || 0), 0);
-
   return { total, remaining };
 };
 
-// Vehicle Card for Party (unchanged)
+// Vehicle Card for Party (dark theme)
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getTotal = (prices) => {
     return Object.values(prices || {}).reduce(
@@ -81,21 +78,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   };
 
   const removeAttachment = () => onChange(index, "attachment", null);
-
-  const handleAmountChange = (field, value) => {
-    const numValue = Number(value) || 0;
-
-    const total =
-      field === "vehicleTotal" ? numValue : vehicle.vehicleTotal || 0;
-
-    const advance =
-      field === "vehicleAdvance" ? numValue : vehicle.vehicleAdvance || 0;
-
-    const remaining = Math.max(total - advance, 0);
-
-    onChange(index, field, numValue);
-    onChange(index, "vehicleRemaining", remaining);
-  };
 
   const handleServiceToggle = (service) => {
     let updatedServices = [...vehicle.serviceType];
@@ -124,17 +106,16 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   };
 
   return (
-    <div className="relative flex flex-col gap-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+    <div className="relative flex flex-col gap-3 p-3 bg-gray-800 border border-gray-700 rounded-xl">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">
           Vehicle #{index + 1}
         </span>
-
         {canRemove && (
           <button
             type="button"
             onClick={() => onRemove(vehicle.id)}
-            className="text-red-500 hover:text-red-700 text-xs font-bold"
+            className="text-red-400 hover:text-red-300 text-xs font-bold"
           >
             ✕ Remove
           </button>
@@ -148,7 +129,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
             placeholder="ISL-786"
             required
             value={vehicle.plate}
@@ -161,7 +142,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
             placeholder="Civic-2015"
             value={vehicle.model}
             onChange={(e) => onChange(index, "model", e.target.value)}
@@ -174,12 +155,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         <label className="text-[10px] font-bold text-gray-400 uppercase">
           Services
         </label>
-
-        <div className="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-orange-100">
+        <div className="grid grid-cols-2 gap-2 bg-gray-900 p-2.5 rounded-lg border border-gray-700">
           {serviceOptions.map((service) => (
             <div
               key={service}
-              className="flex flex-col bg-orange-50 rounded-md p-2"
+              className="flex flex-col bg-gray-800 rounded-md p-2"
             >
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -188,14 +168,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                   checked={vehicle.serviceType.includes(service)}
                   onChange={() => handleServiceToggle(service)}
                 />
-
-                <span className="text-[11px]">{service}</span>
+                <span className="text-[11px] text-gray-200">{service}</span>
               </label>
 
               {vehicle.serviceType.includes(service) && (
                 <div className="flex flex-col gap-2 mt-2">
                   <select
-                    className="w-full rounded p-1.5 border border-orange-300 text-[11px] outline-none bg-white"
+                    className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none"
                     value={vehicle.servicePrices?.[service]?.region || ""}
                     onChange={(e) => {
                       const currentData =
@@ -218,7 +197,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                   <input
                     type="number"
                     placeholder="Region price"
-                    className="w-full rounded p-1.5 border border-orange-300 text-[11px] outline-none"
+                    className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                     value={vehicle.servicePrices?.[service]?.regionPrice || ""}
                     onChange={(e) => {
                       const currentData =
@@ -238,7 +217,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                   <input
                     type="number"
                     placeholder="Service Price"
-                    className="w-full rounded p-1.5 border border-orange-300 text-[11px] outline-none"
+                    className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                     value={vehicle.servicePrices?.[service]?.servicePrice || ""}
                     onChange={(e) => {
                       const currentData =
@@ -263,8 +242,8 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
       {/* Conversion Details */}
       {vehicle.serviceType.includes("Conversion") && (
-        <div className="flex flex-col bg-orange-100 p-3 rounded-xl border border-orange-200 gap-1 mt-2">
-          <label className="text-[10px] font-bold text-orange-700 uppercase">
+        <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2">
+          <label className="text-[10px] font-bold text-orange-400 uppercase">
             Conversion Details (Specify Type)
           </label>
           <input
@@ -275,30 +254,30 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             onChange={(e) =>
               onChange(index, "conversionServiceType", e.target.value)
             }
-            className="rounded p-2 border border-orange-300 text-sm outline-none focus:border-orange-500 bg-white"
+            className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
           />
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
             Total Amount (Rs.)
           </label>
           <input
             type="number"
             readOnly
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-gray-200 text-sm outline-none"
             value={vehicle.vehicleTotal ?? ""}
           />
         </div>
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
             Advance Paid (Rs.)
           </label>
           <input
             type="number"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
             value={vehicle.vehicleAdvance || 0}
             onChange={(e) => {
               const advance = Number(e.target.value) || 0;
@@ -311,11 +290,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      <div className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-md">
-        <span className="text-[10px] font-bold text-gray-600">
+      <div className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-md">
+        <span className="text-[10px] font-bold text-gray-300">
           Remaining for this Vehicle
         </span>
-        <span className="text-sm font-bold text-orange-600">
+        <span className="text-sm font-bold text-orange-400">
           Rs. {(vehicle.vehicleRemaining || 0).toLocaleString()}
         </span>
       </div>
@@ -323,25 +302,23 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       {/* Token Tax */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
             Token Tax From
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
-            placeholder=""
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
             value={vehicle.tokenTaxFrom || ""}
             onChange={(e) => onChange(index, "tokenTaxFrom", e.target.value)}
           />
         </div>
         <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
             Token Tax To
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
-            placeholder=""
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
             value={vehicle.tokenTaxTo || ""}
             onChange={(e) => onChange(index, "tokenTaxTo", e.target.value)}
           />
@@ -354,9 +331,9 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           Attachment
         </label>
         {!vehicle.attachment ? (
-          <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-300 rounded-lg bg-white cursor-pointer hover:bg-orange-50">
-            <span className="text-orange-600 text-lg">📎</span>
-            <span className="text-[11px]">Upload Doc/Image</span>
+          <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-500 rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700">
+            <span className="text-orange-400 text-lg">📎</span>
+            <span className="text-[11px] text-gray-300">Upload Doc/Image</span>
             <input
               type="file"
               className="hidden"
@@ -365,7 +342,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             />
           </label>
         ) : (
-          <div className="flex items-center gap-2 p-2 bg-white border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg">
             {vehicle.attachment.preview &&
             vehicle.attachment?.file?.type?.startsWith("image/") ? (
               <img
@@ -376,13 +353,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             ) : (
               <span className="text-2xl">📄</span>
             )}
-            <span className="text-[11px] flex-1 truncate">
+            <span className="text-[11px] flex-1 truncate text-gray-200">
               {vehicle.attachment.name}
             </span>
             <button
               type="button"
               onClick={removeAttachment}
-              className="text-red-500 hover:text-red-700"
+              className="text-red-400 hover:text-red-300"
             >
               ✕
             </button>
@@ -392,11 +369,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
       {/* Vehicle Bank Account */}
       <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-orange-600 uppercase">
+        <label className="text-[10px] font-bold text-orange-400 uppercase">
           Vehicle Bank Account
         </label>
         <select
-          className="rounded p-2 border border-orange-300 text-sm bg-white outline-none focus:border-orange-500"
+          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
           value={vehicle.bankName || "Cash"}
           onChange={(e) => onChange(index, "bankName", e.target.value)}
         >
@@ -410,11 +387,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
       {/* Remarks */}
       <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-gray-500 uppercase">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
           Remarks
         </label>
         <textarea
-          className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-orange-400"
+          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
           placeholder="Vehicle remarks..."
           value={vehicle.remarks || ""}
           onChange={(e) => onChange(index, "remarks", e.target.value)}
@@ -475,18 +452,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
 
-  // 🆕 FIX: Function to handle advance and total recalculation for individual
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
-
     if (field === "advancePaid") {
-      // Recalculate total using current servicePrices and commission
       const { total, remaining } = calculateTotalAmount(
         formData.servicePrices,
         commissionAmount,
         numValue,
       );
-
       setFormData((prev) => ({
         ...prev,
         advancePaid: numValue,
@@ -499,13 +472,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
-
       if (editingData?.type === "individual") {
         setCommissionAmount(Number(editingData.commissionAmount || 0));
-
         const total = Number(editingData.totalAmount ?? 0);
         const advance = Number(editingData.advancePaid ?? 0);
-
         normalized = {
           ...normalized,
           totalAmount: total,
@@ -541,39 +511,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   }, [editingData]);
 
   const isParty = formData.type === "party";
-
-  const handleIndividualCityPriceChange = (value) => {
-    const cityPrice = Number(value) || 0;
-    setFormData((prev) => {
-      const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
-        (sum, val) => sum + (Number(val) || 0),
-        0,
-      );
-      const total = servicesTotal + cityPrice;
-      return {
-        ...prev,
-        cityPrice: value,
-        totalAmount: total,
-        remainingBalance: Math.max(total - (prev.advancePaid || 0), 0),
-      };
-    });
-  };
-
-  const handleIndividualRegionChange = (value) => {
-    setFormData((prev) => {
-      const servicesTotal = Object.values(prev.servicePrices || {}).reduce(
-        (sum, val) => sum + (Number(val) || 0),
-        0,
-      );
-      return {
-        ...prev,
-        region: value,
-        cityPrice: "",
-        totalAmount: servicesTotal,
-        remainingBalance: Math.max(servicesTotal - (prev.advancePaid || 0), 0),
-      };
-    });
-  };
 
   const handleVehicleChange = (idx, field, value) => {
     setFormData((prev) => ({
@@ -626,7 +563,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     };
 
     const result = await onAddCustomer(finalData);
-
     if (result && result.success) {
       alert("Record Saved/Updated Successfully!");
       setFormData(createInitialForm());
@@ -638,9 +574,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   };
 
   return (
-    <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-white border border-gray-100 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
+    <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-gray-800 border border-gray-700 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
       {/* Tab Switcher */}
-      <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+      <div className="flex bg-gray-700 p-1 rounded-xl mb-4">
         <button
           type="button"
           onClick={() =>
@@ -650,13 +586,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               id: prev.id,
             }))
           }
-          className={`flex-1 py-2 rounded-lg font-bold text-xs ${
-            !isParty ? "bg-white shadow text-blue-600" : "text-gray-500"
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
+            !isParty
+              ? "bg-gray-800 shadow text-blue-400"
+              : "text-gray-400 hover:text-gray-200"
           }`}
         >
           INDIVIDUAL
         </button>
-
         <button
           type="button"
           onClick={() =>
@@ -666,8 +603,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               id: prev.id,
             }))
           }
-          className={`flex-1 py-2 rounded-lg font-bold text-xs ${
-            isParty ? "bg-white shadow text-orange-600" : "text-gray-500"
+          className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
+            isParty
+              ? "bg-gray-800 shadow text-orange-400"
+              : "text-gray-400 hover:text-gray-200"
           }`}
         >
           PARTY / BUSINESS
@@ -676,7 +615,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <h1
-          className={`font-bold text-xl ${isParty ? "text-orange-600" : "text-blue-600"}`}
+          className={`font-bold text-xl ${isParty ? "text-orange-400" : "text-blue-400"}`}
         >
           {editingData ? "Update" : "New"} {isParty ? "Party" : "Individual"}{" "}
           Entry
@@ -689,7 +628,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-300 text-sm focus:border-blue-500 outline-none"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500"
             placeholder={isParty ? "Al-Madina Motors" : "Ali Khan"}
             required
             value={formData.partyName}
@@ -707,7 +646,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
               placeholder="03xxxxxxxx"
               value={formData.phone}
               onChange={(e) =>
@@ -721,7 +660,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
               placeholder={isParty ? "NTN-786" : "17301-"}
               value={isParty ? formData.ntn : formData.cnic}
               onChange={(e) =>
@@ -742,7 +681,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
               placeholder="Muhammad Ali"
               value={formData.receivedBy}
               onChange={(e) =>
@@ -756,7 +695,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </label>
             <input
               type="text"
-              className="rounded p-2 border border-gray-300 text-sm"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
               placeholder="Ahmad Khan"
               value={formData.handoverTo}
               onChange={(e) =>
@@ -768,39 +707,37 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
         {/* Individual Vehicle Info */}
         {!isParty && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Vehicle No
-                </label>
-                <input
-                  type="text"
-                  className="rounded p-2 border border-gray-300 text-sm"
-                  placeholder="KHI-456"
-                  required
-                  value={formData.plate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, plate: e.target.value })
-                  }
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Model
-                </label>
-                <input
-                  type="text"
-                  className="rounded p-2 border border-gray-300 text-sm"
-                  placeholder="Civic-2020"
-                  value={formData.model}
-                  onChange={(e) =>
-                    setFormData({ ...formData, model: e.target.value })
-                  }
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Vehicle No
+              </label>
+              <input
+                type="text"
+                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
+                placeholder="KHI-456"
+                required
+                value={formData.plate}
+                onChange={(e) =>
+                  setFormData({ ...formData, plate: e.target.value })
+                }
+              />
             </div>
-          </>
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Model
+              </label>
+              <input
+                type="text"
+                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
+                placeholder="Civic-2020"
+                value={formData.model}
+                onChange={(e) =>
+                  setFormData({ ...formData, model: e.target.value })
+                }
+              />
+            </div>
+          </div>
         )}
 
         {/* Payment Method - ONLY for Individual */}
@@ -810,7 +747,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               Payment Method
             </label>
             <select
-              className="rounded p-2 border border-gray-300 text-sm bg-white"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm"
               value={formData.bankName}
               onChange={(e) =>
                 setFormData({ ...formData, bankName: e.target.value })
@@ -832,22 +769,21 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Services
               </label>
-              <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <div className="grid grid-cols-2 gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700">
                 {serviceOptions.map((s) => (
                   <div
                     key={s}
-                    className="flex flex-col bg-blue-50 rounded-md p-2"
+                    className="flex flex-col bg-gray-800 rounded-md p-2"
                   >
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-blue-500"
                         checked={formData.serviceType.includes(s)}
                         onChange={() => {
                           setFormData((prev) => {
                             let updatedServices = [...prev.serviceType];
                             let updatedPrices = { ...prev.servicePrices };
-
                             if (updatedServices.includes(s)) {
                               updatedServices = updatedServices.filter(
                                 (x) => x !== s,
@@ -861,13 +797,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                                 customPrice: "",
                               };
                             }
-
                             const { total, remaining } = calculateTotalAmount(
                               updatedPrices,
                               commissionAmount,
                               prev.advancePaid,
                             );
-
                             return {
                               ...prev,
                               serviceType: updatedServices,
@@ -878,13 +812,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                           });
                         }}
                       />
-                      <span className="text-[11px]">{s}</span>
+                      <span className="text-[11px] text-gray-200">{s}</span>
                     </label>
 
                     {formData.serviceType.includes(s) && (
                       <div className="flex flex-col gap-2 mt-2">
                         <select
-                          className="w-full rounded p-1.5 border border-blue-300 text-[11px] outline-none bg-white"
+                          className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none"
                           value={formData.servicePrices?.[s]?.region || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -908,7 +842,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         <input
                           type="number"
                           placeholder="Price"
-                          className="w-full rounded p-1.5 border border-blue-300 text-[11px] outline-none"
+                          className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                           value={formData.servicePrices?.[s]?.price || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -935,7 +869,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         <input
                           type="number"
                           placeholder="Custom Price"
-                          className="w-full rounded p-1.5 border border-blue-300 text-[11px] outline-none"
+                          className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                           value={formData.servicePrices?.[s]?.customPrice || ""}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -970,8 +904,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
             {/* Conversion Details for Individual */}
             {formData.serviceType.includes("Conversion") && (
-              <div className="flex flex-col bg-blue-50 p-3 rounded-xl border border-blue-200 gap-1 mb-3">
-                <label className="text-[10px] font-bold text-blue-600 uppercase">
+              <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mb-3">
+                <label className="text-[10px] font-bold text-blue-400 uppercase">
                   Conversion Details (Specify Type)
                 </label>
                 <input
@@ -985,19 +919,18 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                       conversionServiceType: e.target.value,
                     })
                   }
-                  className="rounded p-2 border border-blue-300 text-sm outline-none focus:border-blue-500 bg-white"
+                  className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
                 />
               </div>
             )}
 
-            <div className="bg-blue-50 rounded-lg border border-blue-100 p-3 space-y-2">
-              <div className="text-[10px] font-bold text-gray-500 uppercase">
+            <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
+              <div className="text-[10px] font-bold text-gray-400 uppercase">
                 Payment Details
               </div>
 
-              {/* Commission Field */}
               <div>
-                <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                <label className="text-[10px] font-semibold text-gray-300 block mb-1">
                   Third-Party Commission (Rs.)
                 </label>
                 <input
@@ -1017,26 +950,25 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                       remainingBalance: result.remaining,
                     }));
                   }}
-                  className="rounded p-2 border border-gray-200 text-sm w-full bg-white outline-none focus:border-blue-500"
+                  className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
                   placeholder="0"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-600">
+                  <label className="text-[10px] font-semibold text-gray-300">
                     Total Amount (Rs.)
                   </label>
                   <input
                     type="number"
                     readOnly
                     value={formData.totalAmount ?? ""}
-                    className="rounded p-2 border border-gray-200 text-sm w-full bg-gray-100"
+                    className="rounded p-2 border border-gray-600 bg-gray-800 text-gray-300 text-sm w-full"
                   />
                 </div>
-
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-600">
+                  <label className="text-[10px] font-semibold text-gray-300">
                     Advance Paid (Rs.)
                   </label>
                   <input
@@ -1048,16 +980,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         e.target.value,
                       )
                     }
-                    className="rounded p-2 border border-gray-200 text-sm w-full bg-white"
+                    className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-between bg-white px-3 py-2 rounded-md">
-                <span className="text-[10px] font-bold text-gray-600">
+              <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
+                <span className="text-[10px] font-bold text-gray-300">
                   Remaining Balance
                 </span>
-                <span className="text-base font-bold text-blue-600">
+                <span className="text-base font-bold text-blue-400">
                   Rs. {(formData.remainingBalance || 0).toLocaleString()}
                 </span>
               </div>
@@ -1066,13 +998,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             {/* Individual Token Tax */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Token Tax From
                 </label>
                 <input
                   type="text"
-                  className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
-                  placeholder=""
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
                   value={formData.tokenTaxFrom || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, tokenTaxFrom: e.target.value })
@@ -1080,13 +1011,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 />
               </div>
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Token Tax To
                 </label>
                 <input
                   type="text"
-                  className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-400"
-                  placeholder=""
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
                   value={formData.tokenTaxTo || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, tokenTaxTo: e.target.value })
@@ -1101,9 +1031,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 Attachment
               </label>
               {!formData.attachment ? (
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100">
-                  <span className="text-blue-600 text-lg">📎</span>
-                  <span className="text-[11px]">Upload Doc/Image</span>
+                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-blue-500 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                  <span className="text-blue-400 text-lg">📎</span>
+                  <span className="text-[11px] text-gray-300">
+                    Upload Doc/Image
+                  </span>
                   <input
                     type="file"
                     className="hidden"
@@ -1127,7 +1059,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   />
                 </label>
               ) : (
-                <div className="flex items-center gap-2 p-2 bg-white border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg">
                   {formData.attachment?.preview &&
                   formData.attachment?.file?.type?.startsWith("image/") ? (
                     <img
@@ -1138,7 +1070,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   ) : (
                     <span className="text-2xl">📄</span>
                   )}
-                  <span className="text-[11px] flex-1 truncate">
+                  <span className="text-[11px] flex-1 truncate text-gray-200">
                     {formData.attachment.name}
                   </span>
                   <button
@@ -1146,7 +1078,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                     onClick={() =>
                       setFormData((prev) => ({ ...prev, attachment: null }))
                     }
-                    className="text-red-500"
+                    className="text-red-400 hover:text-red-300"
                   >
                     ✕
                   </button>
@@ -1166,7 +1098,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               <button
                 type="button"
                 onClick={addVehicle}
-                className="text-orange-600 font-bold text-sm"
+                className="text-orange-400 font-bold text-sm hover:text-orange-300"
               >
                 + Add Vehicle
               </button>
@@ -1191,7 +1123,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               Remarks
             </label>
             <textarea
-              className="rounded p-2 border border-gray-300 text-sm outline-none focus:border-blue-500"
+              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
               placeholder="Enter remarks..."
               rows={3}
               value={formData.remarks || ""}
@@ -1202,10 +1134,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         )}
 
-        <div className="sticky bottom-0 bg-white pt-3 pb-1 mt-4 border-t border-gray-200 z-10">
+        <div className="sticky bottom-0 bg-gray-800 pt-3 pb-1 mt-4 border-t border-gray-700 z-10">
           <button
             type="submit"
-            className={`w-full font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
           >
             {editingData ? "Update Record" : "Save to Khata"}
           </button>
@@ -1213,7 +1145,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             <button
               type="button"
               onClick={onCancelEdit}
-              className="text-red-500 text-xs font-bold self-center block mx-auto mt-2"
+              className="text-red-400 text-xs font-bold self-center block mx-auto mt-2 hover:text-red-300"
             >
               Cancel Edit
             </button>

@@ -1,10 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { useDarkMode } from "./DarkModeContext";
 
 const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
-  const { darkMode, toggleDarkMode } = useDarkMode();
-
   const stats = [
     {
       label: "Customers",
@@ -78,24 +75,6 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
               </motion.div>
             ))}
 
-            {/* Dark Mode Toggle */}
-            {/* <motion.button
-              whileHover={{ scale: 1.1, rotate: darkMode ? -15 : 15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={toggleDarkMode}
-              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer"
-              title={darkMode ? "Light Mode" : "Dark Mode"}
-            >
-              <motion.span
-                animate={{ rotate: darkMode ? 180 : 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-lg"
-              >
-                {darkMode ? "☀️" : "🌙"}
-              </motion.span>
-            </motion.button> */}
-
-            {/* Sahi Jagah: Logout Button Dark Mode ke sath fit kiya */}
             <motion.button
               whileHover={{ scale: 1.1, x: 2 }}
               whileTap={{ scale: 0.9 }}
