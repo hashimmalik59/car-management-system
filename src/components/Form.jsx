@@ -27,7 +27,6 @@ const bankOptions = [
   "Others",
 ];
 
-// Region options with city PRICE field (like services)
 const regionOptions = [
   { value: "KPK", label: "KPK" },
   { value: "Punjab", label: "Punjab" },
@@ -37,7 +36,7 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
-const calculateTotalAmount = (prices, commission, advance) => {
+const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
   const serviceSum = Object.values(prices || {}).reduce(
     (sum, v) =>
       sum +
@@ -47,17 +46,15 @@ const calculateTotalAmount = (prices, commission, advance) => {
       Number(v.customPrice || 0),
     0,
   );
-  const total = serviceSum + Number(commission || 0);
+  const total = serviceSum + Number(commission || 0) + Number(regionPrice || 0);
   const remaining = Math.max(total - Number(advance || 0), 0);
   return { total, remaining };
 };
 
-// Vehicle Card for Party (dark theme)
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getTotal = (prices) => {
     return Object.values(prices || {}).reduce(
-      (sum, val) =>
-        sum + (Number(val?.regionPrice || 0) + Number(val?.servicePrice || 0)),
+      (sum, val) => sum + Number(val?.servicePrice || 0),
       0,
     );
   };
@@ -79,6 +76,26 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const removeAttachment = () => onChange(index, "attachment", null);
 
+  const handleRegionChange = (regionValue) => {
+    onChange(index, "region", regionValue);
+    onChange(index, "regionPrice", 0);
+    const servicesTotal = getTotal(vehicle.servicePrices);
+    const newTotal = servicesTotal;
+    onChange(index, "vehicleTotal", newTotal);
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
+  };
+
+  const handleRegionPriceChange = (price) => {
+    const regionPrice = Number(price) || 0;
+    onChange(index, "regionPrice", regionPrice);
+    const servicesTotal = getTotal(vehicle.servicePrices);
+    const newTotal = servicesTotal + regionPrice;
+    onChange(index, "vehicleTotal", newTotal);
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
+  };
+
   const handleServiceToggle = (service) => {
     let updatedServices = [...vehicle.serviceType];
     let updatedPrices = { ...vehicle.servicePrices };
@@ -88,11 +105,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       delete updatedPrices[service];
     } else {
       updatedServices.push(service);
-      updatedPrices[service] = {
-        region: "",
-        regionPrice: "",
-        servicePrice: "",
-      };
+      updatedPrices[service] = { servicePrice: "" };
     }
 
     const total = getTotal(updatedPrices);
@@ -103,6 +116,20 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "servicePrices", updatedPrices);
     onChange(index, "vehicleTotal", total);
     onChange(index, "vehicleRemaining", remaining);
+  };
+
+  const handleServicePriceChange = (service, price) => {
+    const servicePrice = Number(price) || 0;
+    const updatedPrices = {
+      ...vehicle.servicePrices,
+      [service]: { servicePrice },
+    };
+    onChange(index, "servicePrices", updatedPrices);
+    const servicesTotal = getTotal(updatedPrices);
+    const newTotal = servicesTotal + (Number(vehicle.regionPrice) || 0);
+    onChange(index, "vehicleTotal", newTotal);
+    const advance = Number(vehicle.vehicleAdvance) || 0;
+    onChange(index, "vehicleRemaining", Math.max(newTotal - advance, 0));
   };
 
   return (
@@ -150,7 +177,39 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* Services */}
+      <div className="flex flex-col">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">
+          Region
+        </label>
+        <select
+          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+          value={vehicle.region || ""}
+          onChange={(e) => handleRegionChange(e.target.value)}
+        >
+          <option value="">Select Region</option>
+          {regionOptions.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {vehicle.region && (
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
+            Region Custom Price (Rs.)
+          </label>
+          <input
+            type="number"
+            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+            value={vehicle.regionPrice === 0 ? "" : vehicle.regionPrice}
+            onChange={(e) => handleRegionPriceChange(e.target.value)}
+            placeholder="Region price"
+          />
+        </div>
+      )}
+
       <div className="flex flex-col gap-1">
         <label className="text-[10px] font-bold text-gray-400 uppercase">
           Services
@@ -173,65 +232,14 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
               {vehicle.serviceType.includes(service) && (
                 <div className="flex flex-col gap-2 mt-2">
-                  <select
-                    className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none"
-                    value={vehicle.servicePrices?.[service]?.region || ""}
-                    onChange={(e) => {
-                      const currentData =
-                        vehicle.servicePrices?.[service] || {};
-                      const updatedPrices = {
-                        ...vehicle.servicePrices,
-                        [service]: { ...currentData, region: e.target.value },
-                      };
-                      onChange(index, "servicePrices", updatedPrices);
-                    }}
-                  >
-                    <option value="">Select Region</option>
-                    {regionOptions.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="number"
-                    placeholder="Region price"
-                    className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
-                    value={vehicle.servicePrices?.[service]?.regionPrice || ""}
-                    onChange={(e) => {
-                      const currentData =
-                        vehicle.servicePrices?.[service] || {};
-                      const updatedPrices = {
-                        ...vehicle.servicePrices,
-                        [service]: {
-                          ...currentData,
-                          regionPrice: e.target.value,
-                        },
-                      };
-                      onChange(index, "servicePrices", updatedPrices);
-                      onChange(index, "vehicleTotal", getTotal(updatedPrices));
-                    }}
-                  />
-
                   <input
                     type="number"
                     placeholder="Service Price"
                     className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                     value={vehicle.servicePrices?.[service]?.servicePrice || ""}
-                    onChange={(e) => {
-                      const currentData =
-                        vehicle.servicePrices?.[service] || {};
-                      const updatedPrices = {
-                        ...vehicle.servicePrices,
-                        [service]: {
-                          ...currentData,
-                          servicePrice: e.target.value,
-                        },
-                      };
-                      onChange(index, "servicePrices", updatedPrices);
-                      onChange(index, "vehicleTotal", getTotal(updatedPrices));
-                    }}
+                    onChange={(e) =>
+                      handleServicePriceChange(service, e.target.value)
+                    }
                   />
                 </div>
               )}
@@ -240,7 +248,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* Conversion Details */}
       {vehicle.serviceType.includes("Conversion") && (
         <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2">
           <label className="text-[10px] font-bold text-orange-400 uppercase">
@@ -299,7 +306,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </span>
       </div>
 
-      {/* Token Tax */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -325,7 +331,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* Attachment */}
       <div className="flex flex-col gap-2">
         <label className="text-[10px] font-bold text-gray-400 uppercase">
           Attachment
@@ -367,7 +372,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         )}
       </div>
 
-      {/* Vehicle Bank Account */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold text-orange-400 uppercase">
           Vehicle Bank Account
@@ -385,7 +389,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </select>
       </div>
 
-      {/* Remarks */}
       <div className="flex flex-col">
         <label className="text-[10px] font-bold text-gray-400 uppercase">
           Remarks
@@ -407,7 +410,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     plate: "",
     model: "",
     region: "",
-    cityPrice: "",
+    regionPrice: 0,
     conversionServiceType: "",
     serviceType: [],
     servicePrices: {},
@@ -432,7 +435,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     plate: "",
     model: "",
     region: "",
-    cityPrice: "",
+    regionPrice: 0,
     conversionServiceType: "",
     serviceType: [],
     servicePrices: {},
@@ -459,6 +462,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         formData.servicePrices,
         commissionAmount,
         numValue,
+        formData.regionPrice,
       );
       setFormData((prev) => ({
         ...prev,
@@ -467,6 +471,66 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         remainingBalance: remaining,
       }));
     }
+  };
+
+  // FIXED: region change – compute inside setFormData
+  const handleIndividualRegionChange = (regionValue) => {
+    setFormData((prev) => {
+      const servicesTotal = Object.values(prev.servicePrices).reduce(
+        (sum, v) => sum + Number(v?.price || 0) + Number(v?.customPrice || 0),
+        0,
+      );
+      const newTotal = servicesTotal + (prev.commissionAmount || 0);
+      return {
+        ...prev,
+        region: regionValue,
+        regionPrice: 0,
+        totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
+      };
+    });
+  };
+
+  // FIXED: region price change – compute inside setFormData
+  const handleIndividualRegionPriceChange = (price) => {
+    const regionPrice = Number(price) || 0;
+    setFormData((prev) => {
+      const servicesTotal = Object.values(prev.servicePrices).reduce(
+        (sum, v) => sum + Number(v?.price || 0) + Number(v?.customPrice || 0),
+        0,
+      );
+      const newTotal =
+        servicesTotal + regionPrice + (prev.commissionAmount || 0);
+      return {
+        ...prev,
+        regionPrice,
+        totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
+      };
+    });
+  };
+
+  // FIXED: service price change – compute inside setFormData
+  const handleIndividualServicePriceChange = (service, price) => {
+    const servicePrice = Number(price) || 0;
+    setFormData((prev) => {
+      const updatedPrices = {
+        ...prev.servicePrices,
+        [service]: { ...prev.servicePrices[service], price: servicePrice },
+      };
+      const servicesTotal = Object.values(updatedPrices).reduce(
+        (sum, v) => sum + Number(v?.price || 0) + Number(v?.customPrice || 0),
+        0,
+      );
+      const newTotal =
+        servicesTotal + (prev.regionPrice || 0) + (prev.commissionAmount || 0);
+      return {
+        ...prev,
+        servicePrices: updatedPrices,
+        totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
+      };
+    });
   };
 
   useEffect(() => {
@@ -484,7 +548,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           tokenTaxFrom: editingData.tokenTaxFrom ?? "",
           tokenTaxTo: editingData.tokenTaxTo ?? "",
           region: editingData.region ?? "",
-          cityPrice: editingData.cityPrice ?? "",
+          regionPrice: editingData.regionPrice ?? 0,
           conversionServiceType: editingData.conversionServiceType ?? "",
         };
       } else {
@@ -499,7 +563,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           ),
           bankName: v.bankName || "Cash",
           region: v.region ?? "",
-          cityPrice: v.cityPrice ?? "",
+          regionPrice: v.regionPrice ?? 0,
           conversionServiceType: v.conversionServiceType ?? "",
         }));
       }
@@ -575,7 +639,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-gray-800 border border-gray-700 lg:sticky lg:top-5 h-fit max-h-[90vh] overflow-y-auto">
-      {/* Tab Switcher */}
       <div className="flex bg-gray-700 p-1 rounded-xl mb-4">
         <button
           type="button"
@@ -621,7 +684,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           Entry
         </h1>
 
-        {/* Party / Customer Name */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
             {isParty ? "Business / Party Name" : "Customer Name"}
@@ -638,7 +700,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           />
         </div>
 
-        {/* Contact & ID */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -661,7 +722,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             <input
               type="text"
               className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
-              placeholder={isParty ? "NTN-786" : "17301-"}
+              placeholder={isParty ? "NTN-786" : "17301-12345678"}
               value={isParty ? formData.ntn : formData.cnic}
               onChange={(e) =>
                 setFormData({
@@ -673,7 +734,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         </div>
 
-        {/* Received & Handover */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -705,66 +765,75 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         </div>
 
-        {/* Individual Vehicle Info */}
-        {!isParty && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Vehicle No
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
-                placeholder="KHI-456"
-                required
-                value={formData.plate}
-                onChange={(e) =>
-                  setFormData({ ...formData, plate: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Model
-              </label>
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
-                placeholder="Civic-2020"
-                value={formData.model}
-                onChange={(e) =>
-                  setFormData({ ...formData, model: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Payment Method - ONLY for Individual */}
-        {!isParty && (
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              Payment Method
-            </label>
-            <select
-              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm"
-              value={formData.bankName}
-              onChange={(e) =>
-                setFormData({ ...formData, bankName: e.target.value })
-              }
-            >
-              {bankOptions.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Individual Services & Attachment */}
         {!isParty && (
           <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Vehicle No
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
+                  placeholder="KHI-456"
+                  required
+                  value={formData.plate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, plate: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Model
+                </label>
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
+                  placeholder="Civic-2020"
+                  value={formData.model}
+                  onChange={(e) =>
+                    setFormData({ ...formData, model: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                Region
+              </label>
+              <select
+                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
+                value={formData.region || ""}
+                onChange={(e) => handleIndividualRegionChange(e.target.value)}
+              >
+                <option value="">Select Region</option>
+                {regionOptions.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {formData.region && (
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Region Custom Price (Rs.)
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
+                  value={formData.regionPrice === 0 ? "" : formData.regionPrice}
+                  onChange={(e) =>
+                    handleIndividualRegionPriceChange(e.target.value)
+                  }
+                  placeholder="Region price"
+                />
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Services
@@ -791,23 +860,27 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                               delete updatedPrices[s];
                             } else {
                               updatedServices.push(s);
-                              updatedPrices[s] = {
-                                region: "",
-                                price: "",
-                                customPrice: "",
-                              };
+                              updatedPrices[s] = { price: "" };
                             }
-                            const { total, remaining } = calculateTotalAmount(
+                            const servicesTotal = Object.values(
                               updatedPrices,
-                              commissionAmount,
-                              prev.advancePaid,
+                            ).reduce(
+                              (sum, v) => sum + Number(v?.price || 0),
+                              0,
                             );
+                            const newTotal =
+                              servicesTotal +
+                              (prev.regionPrice || 0) +
+                              (commissionAmount || 0);
                             return {
                               ...prev,
                               serviceType: updatedServices,
                               servicePrices: updatedPrices,
-                              totalAmount: total,
-                              remainingBalance: remaining,
+                              totalAmount: newTotal,
+                              remainingBalance: Math.max(
+                                newTotal - (prev.advancePaid || 0),
+                                0,
+                              ),
                             };
                           });
                         }}
@@ -817,83 +890,17 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
                     {formData.serviceType.includes(s) && (
                       <div className="flex flex-col gap-2 mt-2">
-                        <select
-                          className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none"
-                          value={formData.servicePrices?.[s]?.region || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((prev) => ({
-                              ...prev,
-                              servicePrices: {
-                                ...prev.servicePrices,
-                                [s]: { ...prev.servicePrices[s], region: val },
-                              },
-                            }));
-                          }}
-                        >
-                          <option value="">Select Region</option>
-                          {regionOptions.map((r) => (
-                            <option key={r.value} value={r.value}>
-                              {r.label}
-                            </option>
-                          ))}
-                        </select>
-
                         <input
                           type="number"
-                          placeholder="Price"
+                          placeholder="Service Price"
                           className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
                           value={formData.servicePrices?.[s]?.price || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((prev) => {
-                              const updatedPrices = {
-                                ...prev.servicePrices,
-                                [s]: { ...prev.servicePrices[s], price: val },
-                              };
-                              const { total, remaining } = calculateTotalAmount(
-                                updatedPrices,
-                                commissionAmount,
-                                prev.advancePaid,
-                              );
-                              return {
-                                ...prev,
-                                servicePrices: updatedPrices,
-                                totalAmount: total,
-                                remainingBalance: remaining,
-                              };
-                            });
-                          }}
-                        />
-
-                        <input
-                          type="number"
-                          placeholder="Custom Price"
-                          className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
-                          value={formData.servicePrices?.[s]?.customPrice || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData((prev) => {
-                              const updatedPrices = {
-                                ...prev.servicePrices,
-                                [s]: {
-                                  ...prev.servicePrices[s],
-                                  customPrice: val,
-                                },
-                              };
-                              const { total, remaining } = calculateTotalAmount(
-                                updatedPrices,
-                                commissionAmount,
-                                prev.advancePaid,
-                              );
-                              return {
-                                ...prev,
-                                servicePrices: updatedPrices,
-                                totalAmount: total,
-                                remainingBalance: remaining,
-                              };
-                            });
-                          }}
+                          onChange={(e) =>
+                            handleIndividualServicePriceChange(
+                              s,
+                              e.target.value,
+                            )
+                          }
                         />
                       </div>
                     )}
@@ -902,7 +909,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               </div>
             </div>
 
-            {/* Conversion Details for Individual */}
             {formData.serviceType.includes("Conversion") && (
               <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mb-3">
                 <label className="text-[10px] font-bold text-blue-400 uppercase">
@@ -939,15 +945,19 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   onChange={(e) => {
                     const val = Number(e.target.value);
                     setCommissionAmount(val);
-                    const result = calculateTotalAmount(
+                    const servicesTotal = Object.values(
                       formData.servicePrices,
-                      val,
-                      formData.advancePaid,
-                    );
+                    ).reduce((sum, v) => sum + Number(v?.price || 0), 0);
+                    const newTotal =
+                      servicesTotal + (formData.regionPrice || 0) + val;
                     setFormData((prev) => ({
                       ...prev,
-                      totalAmount: result.total,
-                      remainingBalance: result.remaining,
+                      commissionAmount: val,
+                      totalAmount: newTotal,
+                      remainingBalance: Math.max(
+                        newTotal - (prev.advancePaid || 0),
+                        0,
+                      ),
                     }));
                   }}
                   className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
@@ -995,7 +1005,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               </div>
             </div>
 
-            {/* Individual Token Tax */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1025,7 +1034,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               </div>
             </div>
 
-            {/* Individual Attachment */}
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Attachment
@@ -1088,7 +1096,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </>
         )}
 
-        {/* Party Vehicles */}
         {isParty && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -1116,7 +1123,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         )}
 
-        {/* Individual Remarks */}
         {!isParty && (
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold text-gray-400 uppercase">

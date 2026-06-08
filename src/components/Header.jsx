@@ -53,6 +53,7 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
               </h1>
             </div>
           </motion.div>
+
           {/* Stats + Dark Mode + Logout Right Wrapper */}
           <div className="flex items-center gap-2 md:gap-3">
             {stats.map((stat, index) => (
@@ -61,8 +62,9 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2 + index * 0.1, type: "spring" }}
-                whileHover={{ y: -3, scale: 1.05 }}
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r ${stat.gradient} text-white shadow-lg cursor-pointer`}
+                whileHover={{ y: -2, scale: 1.02 }}
+                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r ${stat.gradient} text-white shadow-lg cursor-pointer min-w-[70px] md:min-w-[100px] justify-center`}
+                title={`${stat.label}: ${stat.value}`}
               >
                 <span className="text-lg">{stat.icon}</span>
                 <div className="hidden sm:block">
@@ -75,19 +77,17 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
               </motion.div>
             ))}
 
+            {/* Logout Button - Fixed */}
             <motion.button
-              whileHover={{ scale: 1.1, x: 2 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={onLogout}
-              className="w-11 h-11 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 flex items-center justify-center transition-all duration-300 shadow-md border border-red-200/30 text-red-600 dark:text-red-400 cursor-pointer"
-              title="Log Out"
+              className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all duration-300 shadow-md border border-red-200/30 text-red-600 dark:text-red-400 cursor-pointer"
+              aria-label="Log out of the application"
             >
-              <span className="text-lg font-bold text-[10px] px-4">
-                Log out
-              </span>
+              <span className="text-xs font-semibold">Log out</span>
             </motion.button>
-          </div>{" "}
-          {/* Right Wrapper Closing */}
+          </div>
         </div>
       </div>
     </motion.header>
