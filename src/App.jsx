@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import Header from "./components/Header";
 import Main from "./components/Main";
 import Footer from "./components/Footer";
@@ -9,47 +9,55 @@ import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const App = () => {
-  const [customer, setCustomer] = useState(() => {
-    const savedData = localStorage.getItem("autokhata_data");
-    return savedData ? JSON.parse(savedData) : [];
-  });
-
+  const [customer, setCustomer] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLoginView, setIsLoginView] = useState(true);
+  const timerRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem("autokhata_data", JSON.stringify(customer));
-  }, [customer]);
+    let authResolved = false;
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    // Minimum 2 seconds loader (guaranteed)
+    const minLoadTime = 2000; // 2 seconds
+    const startTime = Date.now();
 
-  // Firebase Auth Listener: User ka login status track karne ke liye
-  useEffect(() => {
+    // Firebase auth listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      authResolved = true;
+      // Check if minimum time has passed
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= minLoadTime) {
+        setIsLoading(false);
+      } else {
+        // Wait remaining time
+        const remaining = minLoadTime - elapsed;
+        timerRef.current = setTimeout(() => {
+          setIsLoading(false);
+        }, remaining);
+      }
     });
-    return () => unsubscribe();
-  }, []);
+
+    // Cleanup on unmount
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      unsubscribe();
+    };
+  }, []); // Empty dependency array – run only once
 
   const calculateTotalOutstanding = () => {
     let total = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
-        total += item.indRemaining || item.remainingBalance || 0;
+        total += item.remainingBalance || 0;
       } else if (item.type === "party") {
         const vehicles = item.vehicles || [];
-        let partyRemaining = vehicles.reduce(
+        const partyRemaining = vehicles.reduce(
           (sum, v) => sum + (v.vehicleRemaining || 0),
           0,
         );
-        if (partyRemaining === 0) partyRemaining = item.remainingBalance || 0;
         total += partyRemaining;
-      } else {
-        total += item.remainingBalance || 0;
       }
     });
     return total;
@@ -59,17 +67,14 @@ const App = () => {
     let pending = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
-        if ((item.indRemaining || item.remainingBalance || 0) > 0) pending++;
+        if ((item.remainingBalance || 0) > 0) pending++;
       } else if (item.type === "party") {
         const vehicles = item.vehicles || [];
-        let partyRemaining = vehicles.reduce(
+        const partyRemaining = vehicles.reduce(
           (sum, v) => sum + (v.vehicleRemaining || 0),
           0,
         );
-        if (partyRemaining === 0) partyRemaining = item.remainingBalance || 0;
         if (partyRemaining > 0) pending++;
-      } else {
-        if ((item.remainingBalance || 0) > 0) pending++;
       }
     });
     return pending;
@@ -78,7 +83,6 @@ const App = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // alert("Logout Ho Gaya!");
     } catch (error) {
       console.error("Error signing out:", error.message);
     }
@@ -124,7 +128,6 @@ const App = () => {
       {!user ? (
         <div className="flex flex-col items-center justify-center pt-10">
           {isLoginView ? <Login /> : <Signup />}
-
           <button
             onClick={() => setIsLoginView(!isLoginView)}
             className="mt-6 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 cursor-pointer bg-transparent border-none outline-none"
@@ -135,16 +138,14 @@ const App = () => {
           </button>
         </div>
       ) : (
-        /* Agar user login HAI, toh asli Dashboard dikhao */
         <>
-          {/* Temporary Logout Button yahan se saaf kar diya hai */}
           <Header
             totalReceivable={calculateTotalOutstanding()}
             customerCount={customer.length}
             pendingCount={calculatePendingCount()}
-            onLogout={handleLogout} // <--- Prop pass kar diya Header ko
+            onLogout={handleLogout}
           />
-          <Main customer={customer} setCustomer={setCustomer} user={user} />{" "}
+          <Main customer={customer} setCustomer={setCustomer} user={user} />
           <Footer />
         </>
       )}
