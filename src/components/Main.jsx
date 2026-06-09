@@ -206,7 +206,7 @@ const Main = ({ customer, setCustomer, user }) => {
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) {
         console.warn(
-          "Document ID not found. Trying fallback search by partyName + phone...",
+          "Document ID not found. Trying fallback` search by partyName + phone...",
         );
         if (itemData && itemData.partyName && itemData.phone) {
           const q = query(
