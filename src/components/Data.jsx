@@ -11,7 +11,6 @@ const sumVehicleField = (vehicles = [], field) => {
   return vehicles.reduce((sum, v) => sum + (Number(v?.[field]) || 0), 0);
 };
 
-// ---------- IMPROVED: Service price extraction (handles number, string, object) ----------
 const getServicePrice = (servicePrices, serviceName) => {
   if (!servicePrices || typeof servicePrices !== "object") {
     console.warn("servicePrices is missing or invalid", servicePrices);
@@ -56,7 +55,6 @@ const getServicePrice = (servicePrices, serviceName) => {
   return 0;
 };
 
-// ─── Attachment Display ──────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   if (!attachment) return <span className="text-gray-500 text-xs">—</span>;
@@ -140,7 +138,6 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── PRINT FUNCTIONS (unchanged) ─────────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -371,7 +368,6 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (delete button passes item as second argument) ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -442,6 +438,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5">Region & Region Price</th>
               <th className="px-4 py-2.5">Services</th>
               <th className="px-4 py-2.5">Online Payment</th>
+              <th className="px-4 py-2.5">Online Payment Remarks</th>
               <th className="px-4 py-2.5">Attachment</th>
               <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
@@ -454,7 +451,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={12}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
@@ -533,6 +530,9 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                       ? (Number(v?.onlinePayment) || 0).toLocaleString()
                       : "—"}
                   </td>
+                  <td className="px-4 py-3 text-xs text-gray-400 break-words max-w-[200px]">
+                    {v?.onlinePaymentNotes || "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v?.attachment} />
                   </td>
@@ -566,7 +566,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tfoot className="bg-gray-700 border-t-2 border-gray-600">
               <tr className="text-xs font-bold text-gray-200">
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-3 text-right text-gray-300 uppercase"
                 >
                   GRAND TOTAL
@@ -609,7 +609,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
-// ─── Main Data Component (no refresh button) ─────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
