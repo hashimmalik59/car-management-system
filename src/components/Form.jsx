@@ -36,6 +36,7 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
+// For individual (no online payment)
 const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
   const serviceSum = Object.values(prices || {}).reduce(
     (sum, v) =>
@@ -60,19 +61,18 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     );
   };
 
-  // Calculate total based on current values (used for immediate update)
+  // 🟢 NEW: Calculate total = services + regionPrice - onlinePayment
   const computeTotals = (
     servicesTotal,
     regionPrice,
     onlinePayment,
     advance,
   ) => {
-    const total = servicesTotal + regionPrice + onlinePayment;
+    const total = servicesTotal + regionPrice - onlinePayment; // Subtraction
     const remaining = Math.max(total - advance, 0);
     return { total, remaining };
   };
 
-  // Helper to get current advance
   const currentAdvance = Number(vehicle.vehicleAdvance) || 0;
 
   const handleFileChange = (e) => {
@@ -92,7 +92,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const removeAttachment = () => onChange(index, "attachment", null);
 
-  // Region change: reset regionPrice to 0, region becomes new value
   const handleRegionChange = (regionValue) => {
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
     const onlinePayment = Number(vehicle.onlinePayment) || 0;
@@ -110,7 +109,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Region price change
   const handleRegionPriceChange = (price) => {
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
     const onlinePayment = Number(vehicle.onlinePayment) || 0;
@@ -127,7 +125,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Service toggle
   const handleServiceToggle = (service) => {
     let updatedServices = [...vehicle.serviceType];
     let updatedPrices = { ...vehicle.servicePrices };
@@ -154,7 +151,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Service price change
   const handleServicePriceChange = (service, price) => {
     const servicePrice = Number(price) || 0;
     const updatedPrices = {
@@ -176,7 +172,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Online payment toggle
   const handleOnlinePaymentToggle = () => {
     const newEnabled = !vehicle.onlinePaymentEnabled;
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
@@ -194,11 +189,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     );
     onChange(index, "onlinePaymentEnabled", newEnabled);
     onChange(index, "onlinePayment", newOnlinePayment);
+    if (!newEnabled) {
+      onChange(index, "onlinePaymentNotes", "");
+    }
     onChange(index, "vehicleTotal", total);
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Online payment amount change
   const handleOnlinePaymentChange = (price) => {
     const newOnlinePayment = Number(price) || 0;
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
@@ -213,6 +210,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "onlinePayment", newOnlinePayment);
     onChange(index, "vehicleTotal", total);
     onChange(index, "vehicleRemaining", remaining);
+  };
+
+  // New: notes change
+  const handleOnlinePaymentNotesChange = (notes) => {
+    onChange(index, "onlinePaymentNotes", notes);
   };
 
   return (
@@ -331,7 +333,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* Online Payment Section */}
+      {/* Online Payment Section with notes */}
       <div className="flex flex-col gap-2 mt-1">
         <label className="flex items-center gap-2 cursor-pointer text-green-400">
           <input
@@ -343,13 +345,21 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           <span className="text-[11px] font-medium">💳 Online Payment</span>
         </label>
         {vehicle.onlinePaymentEnabled && (
-          <div className="ml-6">
+          <div className="ml-6 space-y-2">
             <input
               type="number"
               placeholder="Online Payment Custom Price (Rs.)"
               className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
               value={vehicle.onlinePayment === 0 ? "" : vehicle.onlinePayment}
               onChange={(e) => handleOnlinePaymentChange(e.target.value)}
+            />
+            {/* Notes field */}
+            <textarea
+              placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
+              className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+              rows="2"
+              value={vehicle.onlinePaymentNotes || ""}
+              onChange={(e) => handleOnlinePaymentNotesChange(e.target.value)}
             />
           </div>
         )}
@@ -531,6 +541,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     bankName: "Cash",
     onlinePaymentEnabled: false,
     onlinePayment: 0,
+    onlinePaymentNotes: "", // New field
   });
 
   const createInitialForm = () => ({
@@ -673,6 +684,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           conversionServiceType: v.conversionServiceType ?? "",
           onlinePaymentEnabled: v.onlinePaymentEnabled ?? false,
           onlinePayment: v.onlinePayment ?? 0,
+          onlinePaymentNotes: v.onlinePaymentNotes ?? "",
         }));
       }
       setFormData(normalized);
