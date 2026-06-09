@@ -12,9 +12,16 @@ const sumVehicleField = (vehicles = [], field) => {
 };
 
 const getServicePrice = (servicePrices, serviceName) => {
-  if (!servicePrices || typeof servicePrices !== "object") return 0;
+  if (!servicePrices || typeof servicePrices !== "object") {
+    console.warn("servicePrices is missing or invalid", servicePrices);
+    return 0;
+  }
   const val = servicePrices[serviceName];
-  if (val === undefined || val === null) return 0;
+  if (val === undefined || val === null) {
+    console.warn(`No price found for service: ${serviceName}`, servicePrices);
+    return 0;
+  }
+
   if (typeof val === "number") return val;
   if (typeof val === "string") {
     const num = Number(val);
@@ -36,9 +43,15 @@ const getServicePrice = (servicePrices, serviceName) => {
     }
     for (let anyKey in val) {
       const num = Number(val[anyKey]);
-      if (!isNaN(num) && val[anyKey] !== null && val[anyKey] !== "") return num;
+      if (!isNaN(num) && val[anyKey] !== null && val[anyKey] !== "") {
+        console.warn(
+          `Using fallback price from key "${anyKey}" for service ${serviceName}`,
+        );
+        return num;
+      }
     }
   }
+  console.warn(`Could not extract price for service ${serviceName}`, val);
   return 0;
 };
 
@@ -56,7 +69,7 @@ const AttachmentDisplay = ({ attachment }) => {
     <>
       <div
         onClick={() => setViewerOpen(true)}
-        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80"
+        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
       >
         {isImage ? (
           <img
@@ -125,24 +138,24 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// PRINT FUNCTIONS (same as yours, no changes)
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
-    <head><title>Receipt - ${item.partyName}</title>
-    <style>
-      body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-      .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-      .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-      .header h1 { margin: 0; font-size: 18px; }
-      .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-      .label { font-weight: bold; width: 150px; }
-      .value { flex: 1; }
-      .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-      .amount { font-size: 14px; font-weight: bold; }
-    </style>
+    <head>
+      <title>Receipt - ${item.partyName}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 18px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+        .label { font-weight: bold; width: 150px; }
+        .value { flex: 1; }
+        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
+        .amount { font-size: 14px; font-weight: bold; }
+      </style>
     </head>
     <body>
       <div class="receipt">
@@ -160,17 +173,17 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="value">${
           Array.isArray(item.serviceType)
             ? item.serviceType
-                .map(
-                  (s) =>
-                    `${s} — Rs. ${getServicePrice(item.servicePrices, s).toLocaleString()}`,
-                )
+                .map((s) => {
+                  const price = getServicePrice(item.servicePrices, s);
+                  return `${s} — Rs. ${price.toLocaleString()}`;
+                })
                 .join("<br/>")
             : "N/A"
         }</span></div>
         <h3>Payment Summary:</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
-        <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -185,25 +198,27 @@ const printPartyReceipt = (item) => {
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
-    <head><title>Receipt - ${item.partyName}</title>
-    <style>
-      body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-      .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-      .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-      .header h1 { margin: 0; font-size: 18px; }
-      .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-      .label { font-weight: bold; width: 150px; }
-      .value { flex: 1; }
-      .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-      .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-      .table th { background-color: #f2f2f2; }
-      .text-right { text-align: right; }
-      .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-    </style>
+    <head>
+      <title>Receipt - ${item.partyName}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+        .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 18px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+        .label { font-weight: bold; width: 150px; }
+        .value { flex: 1; }
+        .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; }
+        .text-right { text-align: right; }
+        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
+      </style>
     </head>
     <body>
       <div class="receipt">
@@ -214,27 +229,44 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <h3>Vehicles Details:</h3>
-        <table class="table"><thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Region</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
-        <tbody>${vehicles
-          .map(
-            (v, idx) => `<tr>
-          <td>${idx + 1}</td>
-          <td>${v.plate || "---"}</td>
-          <td>${v.model || "---"}</td>
-          <td>${v.region || "---"}${v.regionPrice ? ` (Rs. ${Number(v.regionPrice).toLocaleString()})` : ""}</td>
-          <td>${(v.serviceType || []).map((s) => `${s} (Rs. ${getServicePrice(v.servicePrices, s).toLocaleString()})`).join(", ") || "---"}</td>
-          <td>${v.bankName || "Cash"}</td>
-          <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
-          <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
-          <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-        </tr>`,
-          )
-          .join("")}</tbody>
-        <tfoot><tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
-          <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
-          <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
-          <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
-        </tr></tfoot></table>
+        <table class="table">
+          <thead>
+            <tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Region</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr>
+          </thead>
+          <tbody>
+            ${vehicles
+              .map(
+                (v, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${v.plate || "---"}</td>
+                <td>${v.model || "---"}</td>
+                <td>${v.region || "---"}${v.regionPrice ? ` (Rs. ${Number(v.regionPrice).toLocaleString()})` : ""}</td>
+                <td>${
+                  (v.serviceType || [])
+                    .map((s) => {
+                      const price = getServicePrice(v.servicePrices, s);
+                      return `${s} (Rs. ${price.toLocaleString()})`;
+                    })
+                    .join(", ") || "---"
+                }</td>
+                <td>${v.bankName || "Cash"}</td>
+                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+          <tfoot style="background:#f2f2f2;">
+            <tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
+              <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -248,29 +280,32 @@ const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
   const remaining = Number(vehicle.vehicleRemaining || 0);
+
   const servicesHtml = (vehicle.serviceType || [])
-    .map(
-      (s) =>
-        `${s} — Rs. ${getServicePrice(vehicle.servicePrices, s).toLocaleString()}`,
-    )
+    .map((s) => {
+      const price = getServicePrice(vehicle.servicePrices, s);
+      return `${s} — Rs. ${price.toLocaleString()}`;
+    })
     .join("<br/>");
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
-    <head><title>Vehicle Receipt - ${vehicle.plate}</title>
-    <style>
-      body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-      .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-      .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-      .header h1 { margin: 0; font-size: 18px; }
-      .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-      .label { font-weight: bold; width: 150px; }
-      .value { flex: 1; }
-      .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-      .amount { font-size: 14px; font-weight: bold; }
-      .service-box { background: #f9f9f9; padding: 10px; margin: 10px 0; border-radius: 5px; }
-    </style>
+    <head>
+      <title>Vehicle Receipt - ${vehicle.plate}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 18px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
+        .label { font-weight: bold; width: 150px; }
+        .value { flex: 1; }
+        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
+        .amount { font-size: 14px; font-weight: bold; }
+        .service-box { background: #f9f9f9; padding: 10px; margin: 10px 0; border-radius: 5px; }
+      </style>
     </head>
     <body>
       <div class="receipt">
@@ -279,11 +314,13 @@ const printVehicleReceipt = (vehicle, partyData) => {
           <p>Vehicle Individual Receipt (Party Account)</p>
           <p>Date: ${new Date().toLocaleDateString()}</p>
         </div>
+
         <div class="info-row"><span class="label">Party Name:</span><span class="value">${partyData.partyName || "N/A"}</span></div>
         <div class="info-row"><span class="label">Party Phone:</span><span class="value">${partyData.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN / Reg No:</span><span class="value">${partyData.ntn || "N/A"}</span></div>
+        
         <div style="margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 8px;">
-          <h3>Vehicle Details</h3>
+          <h3 style="margin-top: 0;">Vehicle Details</h3>
           <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${vehicle.plate || "N/A"}</span></div>
           <div class="info-row"><span class="label">Model:</span><span class="value">${vehicle.model || "N/A"}</span></div>
           <div class="info-row"><span class="label">Region:</span><span class="value">${vehicle.region || "N/A"}</span></div>
@@ -291,17 +328,38 @@ const printVehicleReceipt = (vehicle, partyData) => {
           ${vehicle.tokenTaxFrom ? `<div class="info-row"><span class="label">Token Tax From:</span><span class="value">${vehicle.tokenTaxFrom}</span></div>` : ""}
           ${vehicle.tokenTaxTo ? `<div class="info-row"><span class="label">Token Tax To:</span><span class="value">${vehicle.tokenTaxTo}</span></div>` : ""}
         </div>
-        <div class="service-box"><h3>Services</h3><div class="info-row"><span class="value">${servicesHtml || "No services selected"}</span></div></div>
-        ${vehicle.conversionServiceType ? `<div class="service-box" style="background:#eef2ff;"><h3>Conversion Details</h3><div>${vehicle.conversionServiceType}</div></div>` : ""}
+
+        <div class="service-box">
+          <h3>Services</h3>
+          <div class="info-row"><span class="value">${servicesHtml || "No services selected"}</span></div>
+        </div>
+
+        ${
+          vehicle.conversionServiceType
+            ? `
+          <div class="service-box" style="background: #eef2ff;">
+            <h3>Conversion Details</h3>
+            <div>${vehicle.conversionServiceType}</div>
+          </div>
+        `
+            : ""
+        }
+
         <h3>Payment Summary</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${total.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "red" : "green"}">Rs. ${remaining.toLocaleString()}</span></div>
+        
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
+        
         ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
-        <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
+
+        <div class="footer">
+          <p>Thank you for choosing Iqra Motor Insurance</p>
+          <p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p>
+        </div>
       </div>
       <script>window.print();</script>
     </body>
@@ -310,10 +368,10 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (with notes column) ──────────────────────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
+
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
@@ -396,12 +454,15 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   colSpan={12}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
-                  No vehicles recorded.
+                  No vehicles recorded.a
                 </td>
               </tr>
             ) : (
               vehicles.map((v, idx) => (
-                <tr key={idx} className="text-sm hover:bg-gray-700/50">
+                <tr
+                  key={idx}
+                  className="text-sm hover:bg-gray-700/50 transition-colors"
+                >
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">
                     {idx + 1}
                   </td>
@@ -439,17 +500,17 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {(v?.serviceType || []).map((s, si) => (
+                      {(v?.serviceType || []).map((serviceName, si) => (
                         <div
                           key={si}
                           className="bg-gray-700 text-gray-200 text-[9px] px-2 py-1 rounded font-bold"
                         >
-                          <div className="uppercase">{s}</div>
+                          <div className="uppercase">{serviceName}</div>
                           <div className="text-[8px] text-gray-400 mt-1">
                             Rs.{" "}
                             {getServicePrice(
                               v?.servicePrices,
-                              s,
+                              serviceName,
                             ).toLocaleString()}
                           </div>
                         </div>
@@ -474,6 +535,16 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v?.attachment} />
+                    {v?.remarks && (
+                      <div className="mt-1 text-[9px] text-gray-400 break-words max-w-[180px]">
+                        <span className="font-semibold text-gray-500">
+                          Remarks:
+                        </span>{" "}
+                        {typeof v.remarks === "string"
+                          ? v.remarks
+                          : v.remarks.text || v.remarks}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="text-[9px] bg-gray-700 text-gray-200 px-2 py-1 rounded font-bold border border-gray-600">
@@ -560,8 +631,10 @@ const Data = ({
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
     if (!Array.isArray(customerData)) return [];
+
     let filtered = customerData.filter((item) => {
       if (!item || item.type !== activeTab) return false;
+
       if (search === "pending" || search === "clear") {
         if (item.type === "individual") {
           const bal = Number(item.remainingBalance || 0);
@@ -570,15 +643,17 @@ const Data = ({
         if (item.type === "party") {
           const vehicles = item.vehicles || [];
           if (vehicles.length === 0) return false;
-          if (search === "pending")
+          if (search === "pending") {
             return vehicles.some((v) => Number(v?.vehicleRemaining || 0) > 0);
-          else
+          } else {
             return vehicles.every(
               (v) => Number(v?.vehicleRemaining || 0) === 0,
             );
+          }
         }
         return false;
       }
+
       let matchesSearch = false;
       if (item.type === "party") {
         const vehicleSearch = (item.vehicles || []).some(
@@ -603,7 +678,13 @@ const Data = ({
       }
       return matchesSearch;
     });
-    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    filtered.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    });
+
     return filtered;
   }, [customerData, searchTerm, activeTab]);
 
@@ -631,6 +712,7 @@ const Data = ({
           </p>
         </div>
       </div>
+
       <div className="relative w-full">
         <motion.input
           initial={{ opacity: 0, x: 20 }}
@@ -638,17 +720,22 @@ const Data = ({
           transition={{ delay: 0.2 }}
           type="search"
           placeholder="Search Name, Phone, Plate, Service..."
-          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
       <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("individual")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "individual" ? "bg-gray-800 shadow text-blue-400" : "text-gray-400 hover:text-gray-200"}`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+            activeTab === "individual"
+              ? "bg-gray-800 shadow text-blue-400"
+              : "text-gray-400 hover:text-gray-200"
+          }`}
         >
           Individual Ledger
         </motion.button>
@@ -656,11 +743,17 @@ const Data = ({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           onClick={() => setActiveTab("party")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${activeTab === "party" ? "bg-gray-800 shadow text-orange-400" : "text-gray-400 hover:text-gray-200"}`}
+          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+            activeTab === "party"
+              ? "bg-gray-800 shadow text-orange-400"
+              : "text-gray-400 hover:text-gray-200"
+          }`}
         >
           Party / Business
         </motion.button>
       </div>
+
+      {/* INDIVIDUAL TABLE */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -705,17 +798,17 @@ const Data = ({
                         <div className="flex flex-wrap gap-1 mb-2">
                           {Array.isArray(item.serviceType) &&
                           item.serviceType.length > 0 ? (
-                            item.serviceType.map((s, idx) => {
+                            item.serviceType.map((serviceName, idx) => {
                               const price = getServicePrice(
                                 item.servicePrices,
-                                s,
+                                serviceName,
                               );
                               return (
                                 <div
                                   key={idx}
                                   className="bg-gray-700 text-blue-300 text-[9px] px-2 py-1 rounded font-bold"
                                 >
-                                  <div className="uppercase">{s}</div>
+                                  <div className="uppercase">{serviceName}</div>
                                   <div className="text-[8px] text-gray-400 mt-1">
                                     Rs. {price.toLocaleString()}
                                   </div>
@@ -863,6 +956,8 @@ const Data = ({
           </div>
         </div>
       )}
+
+      {/* PARTY LEDGER BLOCKS */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (
