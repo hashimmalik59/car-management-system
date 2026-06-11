@@ -53,7 +53,6 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
 };
 
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
-  // Helper to get total of all service prices (object values with servicePrice)
   const getServicesTotal = (prices) => {
     return Object.values(prices || {}).reduce(
       (sum, val) => sum + (Number(val?.servicePrice) || 0),
@@ -61,14 +60,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     );
   };
 
-  // 🟢 NEW: Calculate total = services + regionPrice - onlinePayment
   const computeTotals = (
     servicesTotal,
     regionPrice,
     onlinePayment,
     advance,
   ) => {
-    const total = servicesTotal + regionPrice - onlinePayment; // Subtraction
+    const total = servicesTotal + regionPrice - onlinePayment;
     const remaining = Math.max(total - advance, 0);
     return { total, remaining };
   };
@@ -212,7 +210,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // New: notes change
   const handleOnlinePaymentNotesChange = (notes) => {
     onChange(index, "onlinePaymentNotes", notes);
   };
@@ -333,7 +330,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         </div>
       </div>
 
-      {/* Online Payment Section with notes */}
       <div className="flex flex-col gap-2 mt-1">
         <label className="flex items-center gap-2 cursor-pointer text-green-400">
           <input
@@ -353,7 +349,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
               value={vehicle.onlinePayment === 0 ? "" : vehicle.onlinePayment}
               onChange={(e) => handleOnlinePaymentChange(e.target.value)}
             />
-            {/* Notes field */}
             <textarea
               placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
               className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
@@ -541,7 +536,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     bankName: "Cash",
     onlinePaymentEnabled: false,
     onlinePayment: 0,
-    onlinePaymentNotes: "", // New field
+    onlinePaymentNotes: "",
   });
 
   const createInitialForm = () => ({
@@ -1218,7 +1213,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
         {isParty && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Vehicles ({formData.vehicles.length})
               </label>
@@ -1230,16 +1225,19 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 + Add Vehicle
               </button>
             </div>
-            {formData.vehicles.map((vehicle, idx) => (
-              <VehicleCard
-                key={vehicle.id || idx}
-                index={idx}
-                vehicle={vehicle}
-                onChange={handleVehicleChange}
-                onRemove={removeVehicle}
-                canRemove={formData.vehicles.length > 1}
-              />
-            ))}
+            {/* 🔥 Scrollable vehicle cards container */}
+            <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
+              {formData.vehicles.map((vehicle, idx) => (
+                <VehicleCard
+                  key={vehicle.id || idx}
+                  index={idx}
+                  vehicle={vehicle}
+                  onChange={handleVehicleChange}
+                  onRemove={removeVehicle}
+                  canRemove={formData.vehicles.length > 1}
+                />
+              ))}
+            </div>
           </div>
         )}
 
