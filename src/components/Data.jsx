@@ -138,6 +138,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
+// ─── INDIVIDUAL RECEIPT (with simple remarks) ──────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -184,6 +185,11 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
+        ${
+          item.remarks
+            ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
+            : ""
+        }
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -192,12 +198,38 @@ const printIndividualReceipt = (item) => {
   `);
   printWindow.document.close();
 };
-
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+
+  // 🔍 Debug: Log the whole item to see what's inside
+  console.log("Party item for print:", item);
+
+  // 🔥 Try to extract remarks from multiple possible keys
+  let overallRemark = "";
+  if (item.remarks) {
+    overallRemark =
+      typeof item.remarks === "string"
+        ? item.remarks
+        : item.remarks.text || item.remarks;
+  } else if (item.remark) {
+    overallRemark =
+      typeof item.remark === "string"
+        ? item.remark
+        : item.remark.text || item.remark;
+  } else if (item.notes) {
+    overallRemark =
+      typeof item.notes === "string"
+        ? item.notes
+        : item.notes.text || item.notes;
+  } else if (item.partyRemarks) {
+    overallRemark =
+      typeof item.partyRemarks === "string"
+        ? item.partyRemarks
+        : item.partyRemarks.text || item.partyRemarks;
+  }
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -207,7 +239,7 @@ const printPartyReceipt = (item) => {
       <title>Receipt - ${item.partyName}</title>
       <style>
         body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-        .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        .receipt { max-width: 1200px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
         .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
         .header h1 { margin: 0; font-size: 18px; }
         .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
@@ -218,6 +250,8 @@ const printPartyReceipt = (item) => {
         .table th { background-color: #f2f2f2; }
         .text-right { text-align: right; }
         .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
+        .remarks-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .remarks-section .label { font-weight: bold; }
       </style>
     </head>
     <body>
@@ -231,42 +265,68 @@ const printPartyReceipt = (item) => {
         <h3>Vehicles Details:</h3>
         <table class="table">
           <thead>
-            <tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Region</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Vehicle No</th>
+              <th>Model</th>
+              <th>Services</th>
+              <th>Online Payment</th>
+              <th>Online Payment Remarks</th>
+              <th>Bank</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Advance</th>
+              <th class="text-right">Remaining</th>
+            </tr>
           </thead>
           <tbody>
             ${vehicles
-              .map(
-                (v, idx) => `
-              <tr>
-                <td>${idx + 1}</td>
-                <td>${v.plate || "---"}</td>
-                <td>${v.model || "---"}</td>
-                <td>${v.region || "---"}${v.regionPrice ? ` (Rs. ${Number(v.regionPrice).toLocaleString()})` : ""}</td>
-                <td>${
+              .map((v, idx) => {
+                const servicesHtml =
                   (v.serviceType || [])
                     .map((s) => {
                       const price = getServicePrice(v.servicePrices, s);
                       return `${s} (Rs. ${price.toLocaleString()})`;
                     })
-                    .join(", ") || "---"
-                }</td>
-                <td>${v.bankName || "Cash"}</td>
-                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
-                <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
-                <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-              </tr>
-            `,
-              )
+                    .join(", ") || "---";
+                const onlinePaymentAmount = v.onlinePaymentEnabled
+                  ? (Number(v.onlinePayment) || 0).toLocaleString()
+                  : "—";
+                const onlinePaymentNotes = v.onlinePaymentNotes
+                  ? v.onlinePaymentNotes
+                  : "—";
+                return `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td>${v.plate || "---"}</td>
+                    <td>${v.model || "---"}</td>
+                    <td>${servicesHtml}</td>
+                    <td>${onlinePaymentAmount}</td>
+                    <td>${onlinePaymentNotes}</td>
+                    <td>${v.bankName || "Cash"}</td>
+                    <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                    <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                    <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+                  </tr>
+                  `;
+              })
               .join("")}
           </tbody>
           <tfoot style="background:#f2f2f2;">
-            <tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
+            <tr>
+              <td colspan="7" class="text-right"><strong>GRAND TOTAL</strong></td>
               <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
-            </tr>
+            </td>
           </tfoot>
         </table>
+
+        <!-- 🔥 Overall remarks – will show the extracted text -->
+        <div class="remarks-section">
+          <span class="label">📝 Overall Remarks:</span>
+          <span class="value">${overallRemark || "— No remarks —"}</span>
+        </div>
+
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -287,6 +347,14 @@ const printVehicleReceipt = (vehicle, partyData) => {
       return `${s} — Rs. ${price.toLocaleString()}`;
     })
     .join("<br/>");
+
+  // Online payment details
+  const onlinePaymentAmount = vehicle.onlinePaymentEnabled
+    ? (Number(vehicle.onlinePayment) || 0).toLocaleString()
+    : null;
+  const onlinePaymentNotes = vehicle.onlinePaymentEnabled
+    ? vehicle.onlinePaymentNotes || ""
+    : null;
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -351,6 +419,16 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "red" : "green"}">Rs. ${remaining.toLocaleString()}</span></div>
         
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
+
+        ${
+          onlinePaymentAmount !== null
+            ? `
+          <div class="info-row"><span class="label">Online Payment:</span><span class="value">Rs. ${onlinePaymentAmount}</span></div>
+          <div class="info-row"><span class="label">Online Payment Remarks:</span><span class="value">${onlinePaymentNotes || "—"}</span></div>
+        `
+            : ""
+        }
+
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
         
@@ -368,6 +446,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
+// ─── PARTY LEDGER BLOCK (with overall simple remarks below info bar) ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -429,6 +508,17 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
         )}
       </div>
+
+      {/* 🔥 Overall party remarks (simple) */}
+      {item?.remarks && (
+        <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 text-xs text-gray-300">
+          <span className="font-semibold text-gray-400">Remarks:</span>{" "}
+          {typeof item.remarks === "string"
+            ? item.remarks
+            : item.remarks.text || item.remarks}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="min-w-full text-left border-collapse">
           <thead className="bg-gray-700 border-b border-gray-600">
@@ -454,7 +544,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                   colSpan={12}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
-                  No vehicles recorded.a
+                  No vehicles recorded.
                 </td>
               </tr>
             ) : (
@@ -619,6 +709,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   );
 };
 
+// ─── MAIN DATA COMPONENT (individual table + party blocks) ─────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -753,7 +844,7 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* INDIVIDUAL TABLE */}
+      {/* INDIVIDUAL TABLE (unchanged, already has remarks) */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -957,7 +1048,7 @@ const Data = ({
         </div>
       )}
 
-      {/* PARTY LEDGER BLOCKS */}
+      {/* PARTY LEDGER BLOCKS (with overall remarks) */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (
