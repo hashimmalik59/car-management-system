@@ -102,9 +102,8 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── Print Functions (unchanged) ──────────────────────────
+// ─── Print Functions (individual, party, vehicle) unchanged but using regionPrice ──────────
 const printIndividualReceipt = (item) => {
-  // ... (same as your existing, no changes needed)
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -131,17 +130,20 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${item.plate || "N/A"}</span></div>
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
         <div class="info-row"><span class="value">${
           Array.isArray(item.serviceType)
             ? item.serviceType
-                .map(
-                  (s) =>
-                    `${s} — Rs. ${getIndividualServicePrice(item.servicePrices, s).toLocaleString()}`,
-                )
+                .map((s) => {
+                  const price = getIndividualServicePrice(
+                    item.servicePrices,
+                    s,
+                  );
+                  return `${s} — Rs. ${price.toLocaleString()}`;
+                })
                 .join("<br/>")
             : "N/A"
         }</span></div>
@@ -149,6 +151,11 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
+        ${
+          item.remarks
+            ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
+            : ""
+        }
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -190,28 +197,50 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
-        <div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${(item.cityPrice || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <h3>Vehicles Details:</h3>
-        <table class="table"><thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th><tr></thead>
+        <table class="table"><thead><tr><th>#</th><th>Vehicle No</th><th>Model</th><th>Services</th><th>Online Payment</th><th>Online Payment Remarks</th><th>Bank</th><th class="text-right">Total</th><th class="text-right">Advance</th><th class="text-right">Remaining</th></tr></thead>
         <tbody>${vehicles
-          .map(
-            (v, idx) => `<tr>
-          <td>${idx + 1}</td>
-          <td>${v.plate || "---"}</td>
-          <td>${v.model || "---"}</td>
-          <td>${(v.serviceType || []).map((s) => `${s} (Rs. ${getServicePrice(v.servicePrices, s).toLocaleString()})`).join(", ") || "---"}</td>
-          <td>${v.bankName || "Cash"}</td>
-          <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
-          <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
-          <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-        </tr>`,
-          )
+          .map((v, idx) => {
+            const servicesHtml =
+              (v.serviceType || [])
+                .map(
+                  (s) =>
+                    `${s} (Rs. ${getServicePrice(v.servicePrices, s).toLocaleString()})`,
+                )
+                .join(", ") || "---";
+            const onlinePaymentAmount = v.onlinePaymentEnabled
+              ? (Number(v.onlinePayment) || 0).toLocaleString()
+              : "—";
+            const onlinePaymentNotes = v.onlinePaymentNotes
+              ? v.onlinePaymentNotes
+              : "—";
+            return `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${v.plate || "---"}</td>
+                <td>${v.model || "---"}</td>
+                <td>${servicesHtml}</td>
+                <td class="text-right">${onlinePaymentAmount}</td>
+                <td class="text-right">${onlinePaymentNotes}</td>
+                <td>${v.bankName || "Cash"}</td>
+                <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+              </tr>
+            `;
+          })
           .join("")}</tbody>
-        <tfoot><tr><td colspan="5" class="text-right"><strong>GRAND TOTAL</strong></td>
+        <tfoot><tr><td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
           <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
           <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
           <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
         </tr></tfoot></table>
+        ${
+          item.remarks
+            ? `<div class="info-row" style="margin-top:15px; border-top:1px solid #ccc; padding-top:10px;"><span class="label">Overall Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
+            : ""
+        }
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -264,7 +293,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
           <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${vehicle.plate || "N/A"}</span></div>
           <div class="info-row"><span class="label">Model:</span><span class="value">${vehicle.model || "N/A"}</span></div>
           <div class="info-row"><span class="label">Region:</span><span class="value">${vehicle.region || "N/A"}</span></div>
-          ${vehicle.cityPrice ? `<div class="info-row"><span class="label">City Price:</span><span class="value">Rs. ${Number(vehicle.cityPrice).toLocaleString()}</span></div>` : ""}
+          ${vehicle.regionPrice ? `<div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${Number(vehicle.regionPrice).toLocaleString()}</span></div>` : ""}
           ${vehicle.tokenTaxFrom ? `<div class="info-row"><span class="label">Token Tax From:</span><span class="value">${vehicle.tokenTaxFrom}</span></div>` : ""}
           ${vehicle.tokenTaxTo ? `<div class="info-row"><span class="label">Token Tax To:</span><span class="value">${vehicle.tokenTaxTo}</span></div>` : ""}
         </div>
@@ -275,6 +304,8 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "red" : "green"}">Rs. ${remaining.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
+        ${vehicle.onlinePaymentEnabled ? `<div class="info-row"><span class="label">Online Payment:</span><span class="value">Rs. ${(Number(vehicle.onlinePayment) || 0).toLocaleString()}</span></div>` : ""}
+        ${vehicle.onlinePaymentEnabled && vehicle.onlinePaymentNotes ? `<div class="info-row"><span class="label">Online Payment Remarks:</span><span class="value">${vehicle.onlinePaymentNotes}</span></div>` : ""}
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
         ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
@@ -287,21 +318,22 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (dark theme) with simple remarks below attachment ───
+// Helper to get service price for party vehicles (same as Data.jsx)
+const getServicePrice = (servicePrices, serviceName) => {
+  const pObj = servicePrices?.[serviceName];
+  if (pObj && typeof pObj === "object") {
+    return (Number(pObj.regionPrice) || 0) + (Number(pObj.servicePrice) || 0);
+  }
+  return Number(pObj || 0);
+};
+
+// ─── Party Ledger Block (with region price and online payment details) ───
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
-
-  const getServicePrice = (servicePrices, serviceName) => {
-    const pObj = servicePrices?.[serviceName];
-    if (pObj && typeof pObj === "object") {
-      return (Number(pObj.regionPrice) || 0) + (Number(pObj.servicePrice) || 0);
-    }
-    return Number(pObj || 0);
-  };
 
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg">
@@ -342,7 +374,7 @@ const PartyLedgerBlock = ({ item }) => {
             <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
               <th className="px-4 py-2">#</th>
               <th className="px-4 py-2">Vehicle Details</th>
-              <th className="px-4 py-2">Region & City Price</th>
+              <th className="px-4 py-2">Region & Region Price</th>
               <th className="px-4 py-2">Services</th>
               <th className="px-4 py-2">Online Payment</th>
               <th className="px-4 py-2">Online Payment Remarks</th>
@@ -395,9 +427,9 @@ const PartyLedgerBlock = ({ item }) => {
                         <span className="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-200">
                           📍 {v.region}
                         </span>
-                        {v.cityPrice > 0 && (
+                        {v.regionPrice > 0 && (
                           <div className="text-xs text-gray-400 mt-1">
-                            City: Rs.{Number(v.cityPrice).toLocaleString()}
+                            Price: Rs.{Number(v.regionPrice).toLocaleString()}
                           </div>
                         )}
                       </div>
@@ -429,7 +461,6 @@ const PartyLedgerBlock = ({ item }) => {
                   <td className="px-4 py-2 text-xs text-gray-400 break-words max-w-[200px]">
                     {v.onlinePaymentNotes || "—"}
                   </td>
-                  {/* 🔥 Attachment + simple remarks column */}
                   <td className="px-4 py-2">
                     <AttachmentDisplay attachment={v.attachment} />
                     {v.remarks && (
@@ -508,7 +539,7 @@ const PartyLedgerBlock = ({ item }) => {
   );
 };
 
-// ─── Date Helpers ──────────────────────────────────────────
+// ─── Date Helpers (unchanged) ──────────────────────────────
 const getStartOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -583,7 +614,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report ──────────────────────────────────────────
+// ─── Print Report (enhanced with remarks) ──────────────────────────────
 const printReport = (
   reportType,
   dateRange,
@@ -614,6 +645,8 @@ const printReport = (
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 11px; }
         th { background: #f4f4f4; }
+        .remarks-text { font-size: 11px; color: #555; margin-top: 5px; }
+        .online-payment-remarks { font-size: 10px; color: #666; font-style: italic; }
       </style>
     </head>
     <body>
@@ -630,6 +663,11 @@ const printReport = (
             <div class="text-green">Advance: ${getItemAdvance(item).toLocaleString()}</div>
             <div class="text-red">Remaining: ${getItemRemaining(item).toLocaleString()}</div>
           </div>
+          ${
+            item.remarks
+              ? `<div class="remarks-text"><strong>Remarks:</strong> ${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</div>`
+              : ""
+          }
         </div>`,
               )
               .join("")}`
@@ -642,19 +680,32 @@ const printReport = (
                 (item) => `
         <div class="card">
           <strong>${item.partyName}</strong>
-          <table><thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></tr></thead>
-          <tbody>${(item.vehicles || [])
-            .map(
-              (v) => `
-            <tr>
-              <td>${v.plate}</td>
-              <td>${Number(v.vehicleTotal || 0).toLocaleString()}</td>
-              <td class="text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
-              <td class="text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-            </tr>`,
-            )
-            .join("")}</tbody>
+          <table>
+            <thead>
+              <tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th><th>Online Payment</th><th>Online Payment Remarks</th></tr>
+            </thead>
+            <tbody>
+              ${(item.vehicles || [])
+                .map(
+                  (v) => `
+                <tr>
+                  <td>${v.plate}</td>
+                  <td>${Number(v.vehicleTotal || 0).toLocaleString()}</td>
+                  <td class="text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                  <td class="text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+                  <td>${v.onlinePaymentEnabled ? (Number(v.onlinePayment) || 0).toLocaleString() : "—"}</td>
+                  <td class="online-payment-remarks">${v.onlinePaymentNotes ? v.onlinePaymentNotes : "—"}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
           </table>
+          ${
+            item.remarks
+              ? `<div class="remarks-text" style="margin-top:8px;"><strong>Overall Remarks:</strong> ${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</div>`
+              : ""
+          }
         </div>`,
               )
               .join("")}`
@@ -671,7 +722,7 @@ const printReport = (
   }, 1000);
 };
 
-// ─── Main Reports Component (fixed whitespace + simple remarks) ───────
+// ─── Main Reports Component ────────────────────────────────
 const Reports = ({ customerData = [] }) => {
   const [reportType, setReportType] = useState("daily");
   const [selectedDate, setSelectedDate] = useState(
@@ -984,7 +1035,7 @@ const Reports = ({ customerData = [] }) => {
                         <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
                           <th className="p-3">Customer & ID</th>
                           <th className="p-3">Service & Vehicle</th>
-                          <th className="p-3">Region & City Price</th>
+                          <th className="p-3">Region & Region Price</th>
                           <th className="p-3">Tracking (From/To)</th>
                           <th className="p-3">Commission</th>
                           <th className="p-3">Payment Details</th>
@@ -1044,9 +1095,9 @@ const Reports = ({ customerData = [] }) => {
                                   📍 {item.region}
                                 </span>
                               )}
-                              {item.cityPrice > 0 && (
-                                <div className="text-xs text-gray-400">
-                                  City: Rs.{item.cityPrice.toLocaleString()}
+                              {item.regionPrice > 0 && (
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Price: Rs.{item.regionPrice.toLocaleString()}
                                 </div>
                               )}
                             </td>
@@ -1117,7 +1168,7 @@ const Reports = ({ customerData = [] }) => {
                 </div>
               )}
 
-            {/* Party Records – PartyLedgerBlock */}
+            {/* Party Records */}
             {(activeView === "all" || activeView === "party") &&
               partyData.length > 0 && (
                 <div className="flex flex-col gap-4">
