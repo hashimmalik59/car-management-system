@@ -1225,7 +1225,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 + Add Vehicle
               </button>
             </div>
-            {/* 🔥 Scrollable vehicle cards container */}
             <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
               {formData.vehicles.map((vehicle, idx) => (
                 <VehicleCard
@@ -1258,23 +1257,23 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
         )}
 
-        <div className="sticky bottom-0 bg-gray-800 pt-3 pb-1 mt-4 border-t border-gray-700 z-10">
+        <div className="sticky bottom-0 bg-gray-800 pt-3 pb-1 mt-4 border-t border-gray-700 z-10 flex justify-center items-center">
           <button
             type="submit"
-            className={`w-full font-bold rounded-xl py-4 text-white ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
+            className={`w-64 font-bold rounded-xl py-3 text-white transition-all ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
           >
             {editingData ? "Update Record" : "Save to Khata"}
           </button>
-          {editingData && (
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="text-red-400 text-xs font-bold self-center block mx-auto mt-2 hover:text-red-300"
-            >
-              Cancel Edit
-            </button>
-          )}
         </div>
+        {editingData && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="text-red-400 text-xs font-bold block mx-auto mt-2 hover:text-red-300"
+          >
+            Cancel Edit
+          </button>
+        )}
       </form>
     </div>
   );
