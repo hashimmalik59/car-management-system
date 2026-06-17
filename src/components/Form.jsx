@@ -223,7 +223,13 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         {canRemove && (
           <button
             type="button"
-            onClick={() => onRemove(vehicle.id)}
+            onClick={() => {
+              if (
+                window.confirm("Are you sure you want to remove this vehicle?")
+              ) {
+                onRemove(vehicle.id);
+              }
+            }}
             className="text-red-400 hover:text-red-300 text-xs font-bold"
           >
             ✕ Remove
