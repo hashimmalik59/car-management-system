@@ -764,7 +764,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         Enter Record
       </h1>
       {/* Scrollable content area */}
-      <div className="flex flex-col gap-3 pb-24">
+      <div className="flex flex-col gap-3">
         {/* Tabs */}
         <div className="flex bg-gray-700 p-1 rounded-xl mb-4">
           <button
