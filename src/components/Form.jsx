@@ -760,6 +760,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-gray-800 border border-gray-700 relative">
+      <h1 class="font-semibold text-3xl text-white py-3 border-b border-gray-500">
+        Enter Record
+      </h1>
       {/* Scrollable content area */}
       <div className="flex flex-col gap-3 pb-24">
         {/* Tabs */}
