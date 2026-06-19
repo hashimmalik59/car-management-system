@@ -798,28 +798,56 @@ const Data = ({
       return;
     }
     const item = paymentModal.item;
+    const currentRemaining = Number(item.remainingBalance) || 0;
+
+    // Validate: payment cannot exceed remaining balance
+    if (amount > currentRemaining) {
+      alert(
+        `Payment amount (Rs. ${amount.toLocaleString()}) cannot exceed remaining balance (Rs. ${currentRemaining.toLocaleString()})!`,
+      );
+      return;
+    }
+
     const newPayment = {
       amount,
       date: new Date().toISOString().split("T")[0],
     };
-    const prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
+
+    // Get existing payments or initialize from advancePaid for backward compatibility
+    let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
+
+    // If no payments array but advancePaid exists (old records), create initial payment
+    if (prevPayments.length === 0 && (item.advancePaid || 0) > 0) {
+      prevPayments = [
+        {
+          amount: Number(item.advancePaid),
+          date: item.createdAt
+            ? new Date(item.createdAt).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
+        },
+      ];
+    }
+
     const newPayments = [...prevPayments, newPayment];
     const totalAdvance = newPayments.reduce(
       (sum, p) => sum + Number(p.amount),
       0,
     );
     const newRemaining = Math.max((item.totalAmount || 0) - totalAdvance, 0);
+
     const updatedItem = {
       ...item,
       payments: newPayments,
       advancePaid: totalAdvance,
       remainingBalance: newRemaining,
     };
+
     if (onUpdateCustomer) {
       onUpdateCustomer(updatedItem);
     } else {
       alert("Payment recorded! (onUpdateCustomer prop not provided)");
     }
+
     setPaymentModal({
       open: false,
       item: null,
@@ -1109,7 +1137,7 @@ const Data = ({
                           )}
                         </td>
                         <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
-                          <div className="flex gap-2 justify-end md:justify-center flex-wrap">
+                          <div className="grid grid-cols-2 gap-2 justify-end md:justify-center">
                             <button
                               onClick={() => printIndividualReceipt(item)}
                               className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-[10px] font-bold border border-gray-600"
@@ -1197,10 +1225,68 @@ const Data = ({
               className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
             >
               <h3 className="text-lg font-bold text-white mb-1">Add Payment</h3>
-              <p className="text-[10px] text-gray-400 mb-4">
-                {paymentModal.item.partyName} — Remaining: Rs.{" "}
-                {(paymentModal.item.remainingBalance || 0).toLocaleString()}
+              <p className="text-[10px] text-gray-400 mb-2">
+                {paymentModal.item.partyName}
               </p>
+
+              {/* Remaining Balance Display */}
+              {(() => {
+                const currentRemaining =
+                  Number(paymentModal.item.remainingBalance) || 0;
+                const enteredAmount = Number(paymentModal.amount) || 0;
+                const newRemaining = Math.max(
+                  currentRemaining - enteredAmount,
+                  0,
+                );
+                const isOverPay = enteredAmount > currentRemaining;
+
+                return (
+                  <div className="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-700">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] text-gray-400 uppercase">
+                        Current Remaining
+                      </span>
+                      <span className="text-sm font-bold text-orange-400">
+                        Rs. {currentRemaining.toLocaleString()}
+                      </span>
+                    </div>
+                    {enteredAmount > 0 && (
+                      <>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] text-gray-400 uppercase">
+                            Payment Amount
+                          </span>
+                          <span
+                            className={`text-sm font-bold ${isOverPay ? "text-red-500" : "text-emerald-400"}`}
+                          >
+                            -Rs. {enteredAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="border-t border-gray-700 pt-1 mt-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-gray-400 uppercase">
+                              New Remaining
+                            </span>
+                            <span
+                              className={`text-sm font-bold ${isOverPay ? "text-red-500" : newRemaining === 0 ? "text-green-400" : "text-blue-400"}`}
+                            >
+                              Rs.{" "}
+                              {isOverPay
+                                ? "Overpay!"
+                                : newRemaining.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        {isOverPay && (
+                          <div className="mt-2 text-[10px] text-red-400 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+                            ⚠️ Amount exceeds remaining balance!
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col">
@@ -1238,7 +1324,16 @@ const Data = ({
               <div className="flex gap-2 mt-5">
                 <button
                   onClick={handlePaymentSubmit}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                  disabled={
+                    Number(paymentModal.amount) >
+                    (Number(paymentModal.item.remainingBalance) || 0)
+                  }
+                  className={`flex-1 font-bold py-2.5 rounded-xl text-sm transition-all ${
+                    Number(paymentModal.amount) >
+                    (Number(paymentModal.item.remainingBalance) || 0)
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                  }`}
                 >
                   Save Payment
                 </button>
