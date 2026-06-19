@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
+import SelfStatement from "./SelfStatement";
 import { db } from "../firebase";
 import {
   collection,
@@ -206,7 +207,7 @@ const Main = ({ customer, setCustomer, user }) => {
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) {
         console.warn(
-          "Document ID not found. Trying fallback` search by partyName + phone...",
+          "Document ID not found. Trying fallback search by partyName + phone...",
         );
         if (itemData && itemData.partyName && itemData.phone) {
           const q = query(
@@ -279,6 +280,13 @@ const Main = ({ customer, setCustomer, user }) => {
       color: "emerald",
       desc: "Analytics",
     },
+    {
+      key: "selfStatement",
+      label: "Self Statement",
+      icon: "📒",
+      color: "teal", // 👈 new color
+      desc: "Personal accounting",
+    },
   ];
 
   const getTabColors = (key, isActive) => {
@@ -300,6 +308,13 @@ const Main = ({ customer, setCustomer, user }) => {
           "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30",
         inactive:
           "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600",
+      },
+      teal: {
+        // 👈 new color for Self Statement
+        active:
+          "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30",
+        inactive:
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600",
       },
     };
     return isActive ? colors[key].active : colors[key].inactive;
@@ -405,6 +420,19 @@ const Main = ({ customer, setCustomer, user }) => {
               transition={{ duration: 0.3 }}
             >
               <Reports customerData={customer} />
+            </motion.div>
+          )}
+
+          {mainTab === "selfStatement" && (
+            <motion.div
+              key="selfStatement"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+            >
+              <SelfStatement user={user} />
             </motion.div>
           )}
         </AnimatePresence>
