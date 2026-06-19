@@ -138,7 +138,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── INDIVIDUAL RECEIPT (with simple remarks) ──────────────────────────
+// ─── INDIVIDUAL RECEIPT ──────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -198,37 +198,26 @@ const printIndividualReceipt = (item) => {
   `);
   printWindow.document.close();
 };
+
+// ─── PARTY RECEIPT ──────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+  const onlinePaymentEnabled = item.onlinePaymentEnabled || false;
+  const onlinePayment = onlinePaymentEnabled
+    ? Number(item.onlinePayment || 0)
+    : 0;
+  const adjustedTotal = Math.max(totalAllVehicles - onlinePayment, 0);
+  const adjustedRemaining = Math.max(remainingAllVehicles - onlinePayment, 0);
 
-  // 🔍 Debug: Log the whole item to see what's inside
-  console.log("Party item for print:", item);
-
-  // 🔥 Try to extract remarks from multiple possible keys
   let overallRemark = "";
   if (item.remarks) {
     overallRemark =
       typeof item.remarks === "string"
         ? item.remarks
         : item.remarks.text || item.remarks;
-  } else if (item.remark) {
-    overallRemark =
-      typeof item.remark === "string"
-        ? item.remark
-        : item.remark.text || item.remark;
-  } else if (item.notes) {
-    overallRemark =
-      typeof item.notes === "string"
-        ? item.notes
-        : item.notes.text || item.notes;
-  } else if (item.partyRemarks) {
-    overallRemark =
-      typeof item.partyRemarks === "string"
-        ? item.partyRemarks
-        : item.partyRemarks.text || item.partyRemarks;
   }
 
   const printWindow = window.open("", "_blank");
@@ -270,8 +259,6 @@ const printPartyReceipt = (item) => {
               <th>Vehicle No</th>
               <th>Model</th>
               <th>Services</th>
-              <th>Online Payment</th>
-              <th>Online Payment Remarks</th>
               <th>Bank</th>
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
@@ -288,20 +275,12 @@ const printPartyReceipt = (item) => {
                       return `${s} (Rs. ${price.toLocaleString()})`;
                     })
                     .join(", ") || "---";
-                const onlinePaymentAmount = v.onlinePaymentEnabled
-                  ? (Number(v.onlinePayment) || 0).toLocaleString()
-                  : "—";
-                const onlinePaymentNotes = v.onlinePaymentNotes
-                  ? v.onlinePaymentNotes
-                  : "—";
                 return `
                   <tr>
                     <td>${idx + 1}</td>
                     <td>${v.plate || "---"}</td>
                     <td>${v.model || "---"}</td>
                     <td>${servicesHtml}</td>
-                    <td>${onlinePaymentAmount}</td>
-                    <td>${onlinePaymentNotes}</td>
                     <td>${v.bankName || "Cash"}</td>
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
@@ -313,15 +292,30 @@ const printPartyReceipt = (item) => {
           </tbody>
           <tfoot style="background:#f2f2f2;">
             <tr>
-              <td colspan="7" class="text-right"><strong>GRAND TOTAL</strong></td>
-              <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
+              <td colspan="5" class="text-right"><strong>GRAND TOTAL</strong></td>
+              <td class="text-right"><strong>${adjustedTotal.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
-              <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
-            </td>
+              <td class="text-right"><strong>${adjustedRemaining.toLocaleString()}</strong></td>
+            </tr>
           </tfoot>
         </table>
 
-        <!-- 🔥 Overall remarks – will show the extracted text -->
+        ${
+          onlinePaymentEnabled
+            ? `
+          <div class="info-row" style="margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;">
+            <span class="label">Online Payment:</span>
+            <span class="value">Rs. ${onlinePayment.toLocaleString()}</span>
+          </div>
+          ${
+            item.onlinePaymentNotes
+              ? `<div class="info-row"><span class="label">Online Payment Remarks:</span><span class="value">${item.onlinePaymentNotes}</span></div>`
+              : ""
+          }
+          `
+            : ""
+        }
+
         <div class="remarks-section">
           <span class="label">📝 Overall Remarks:</span>
           <span class="value">${overallRemark || "— No remarks —"}</span>
@@ -336,6 +330,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
+// ─── VEHICLE RECEIPT ──────
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -348,13 +343,11 @@ const printVehicleReceipt = (vehicle, partyData) => {
     })
     .join("<br/>");
 
-  // Online payment details
-  const onlinePaymentAmount = vehicle.onlinePaymentEnabled
-    ? (Number(vehicle.onlinePayment) || 0).toLocaleString()
-    : null;
-  const onlinePaymentNotes = vehicle.onlinePaymentEnabled
-    ? vehicle.onlinePaymentNotes || ""
-    : null;
+  const onlinePaymentEnabled = partyData.onlinePaymentEnabled || false;
+  const onlinePayment = onlinePaymentEnabled
+    ? Number(partyData.onlinePayment || 0)
+    : 0;
+  const onlinePaymentNotes = partyData.onlinePaymentNotes || "";
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -382,13 +375,11 @@ const printVehicleReceipt = (vehicle, partyData) => {
           <p>Vehicle Individual Receipt (Party Account)</p>
           <p>Date: ${new Date().toLocaleDateString()}</p>
         </div>
-
         <div class="info-row"><span class="label">Party Name:</span><span class="value">${partyData.partyName || "N/A"}</span></div>
         <div class="info-row"><span class="label">Party Phone:</span><span class="value">${partyData.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN / Reg No:</span><span class="value">${partyData.ntn || "N/A"}</span></div>
-        
         <div style="margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 8px;">
-          <h3 style="margin-top: 0;">Vehicle Details</h3>
+          <h3>Vehicle Details</h3>
           <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${vehicle.plate || "N/A"}</span></div>
           <div class="info-row"><span class="label">Model:</span><span class="value">${vehicle.model || "N/A"}</span></div>
           <div class="info-row"><span class="label">Region:</span><span class="value">${vehicle.region || "N/A"}</span></div>
@@ -396,48 +387,31 @@ const printVehicleReceipt = (vehicle, partyData) => {
           ${vehicle.tokenTaxFrom ? `<div class="info-row"><span class="label">Token Tax From:</span><span class="value">${vehicle.tokenTaxFrom}</span></div>` : ""}
           ${vehicle.tokenTaxTo ? `<div class="info-row"><span class="label">Token Tax To:</span><span class="value">${vehicle.tokenTaxTo}</span></div>` : ""}
         </div>
-
-        <div class="service-box">
-          <h3>Services</h3>
-          <div class="info-row"><span class="value">${servicesHtml || "No services selected"}</span></div>
-        </div>
-
-        ${
-          vehicle.conversionServiceType
-            ? `
-          <div class="service-box" style="background: #eef2ff;">
-            <h3>Conversion Details</h3>
-            <div>${vehicle.conversionServiceType}</div>
-          </div>
-        `
-            : ""
-        }
-
+        <div class="service-box"><h3>Services</h3><div class="info-row"><span class="value">${servicesHtml || "No services selected"}</span></div></div>
+        ${vehicle.conversionServiceType ? `<div class="service-box" style="background:#eef2ff;"><h3>Conversion Details</h3><div>${vehicle.conversionServiceType}</div></div>` : ""}
         <h3>Payment Summary</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${total.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "red" : "green"}">Rs. ${remaining.toLocaleString()}</span></div>
-        
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
 
         ${
-          onlinePaymentAmount !== null
+          onlinePaymentEnabled
             ? `
-          <div class="info-row"><span class="label">Online Payment:</span><span class="value">Rs. ${onlinePaymentAmount}</span></div>
-          <div class="info-row"><span class="label">Online Payment Remarks:</span><span class="value">${onlinePaymentNotes || "—"}</span></div>
-        `
+          <div class="info-row"><span class="label">Online Payment (Party):</span><span class="value">Rs. ${onlinePayment.toLocaleString()}</span></div>
+          ${
+            onlinePaymentNotes
+              ? `<div class="info-row"><span class="label">Online Payment Remarks:</span><span class="value">${onlinePaymentNotes}</span></div>`
+              : ""
+          }
+          `
             : ""
         }
 
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
-        
         ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
-
-        <div class="footer">
-          <p>Thank you for choosing Iqra Motor Insurance</p>
-          <p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p>
-        </div>
+        <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
     </body>
@@ -446,7 +420,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK (with overall simple remarks below info bar) ──────────
+// ─── PARTY LEDGER BLOCK ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -454,6 +428,14 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+
+  const onlinePaymentEnabled = item?.onlinePaymentEnabled || false;
+  const onlinePayment = onlinePaymentEnabled
+    ? Number(item?.onlinePayment || 0)
+    : 0;
+  const onlinePaymentNotes = item?.onlinePaymentNotes || "";
+  const adjustedTotal = Math.max(totalAllVehicles - onlinePayment, 0);
+  const adjustedRemaining = Math.max(remainingAllVehicles - onlinePayment, 0);
 
   return (
     <motion.div
@@ -509,7 +491,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         )}
       </div>
 
-      {/* 🔥 Overall party remarks (simple) */}
       {item?.remarks && (
         <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 text-xs text-gray-300">
           <span className="font-semibold text-gray-400">Remarks:</span>{" "}
@@ -527,8 +508,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
               <th className="px-4 py-2.5">Vehicle Details</th>
               <th className="px-4 py-2.5">Region & Region Price</th>
               <th className="px-4 py-2.5">Services</th>
-              <th className="px-4 py-2.5">Online Payment</th>
-              <th className="px-4 py-2.5">Online Payment Remarks</th>
               <th className="px-4 py-2.5">Attachment</th>
               <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
@@ -541,7 +520,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={12}
+                  colSpan={10}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
@@ -615,14 +594,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-green-400">
-                    {v?.onlinePaymentEnabled
-                      ? (Number(v?.onlinePayment) || 0).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-400 break-words max-w-[200px]">
-                    {v?.onlinePaymentNotes || "—"}
-                  </td>
                   <td className="px-4 py-3">
                     <AttachmentDisplay attachment={v?.attachment} />
                     {v?.remarks && (
@@ -666,19 +637,19 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             <tfoot className="bg-gray-700 border-t-2 border-gray-600">
               <tr className="text-xs font-bold text-gray-200">
                 <td
-                  colSpan={8}
+                  colSpan={6}
                   className="px-4 py-3 text-right text-gray-300 uppercase"
                 >
                   GRAND TOTAL
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold">
-                  {totalAllVehicles.toLocaleString()}
+                  {adjustedTotal.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-green-400">
                   {advanceAllVehicles.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-red-400">
-                  {remainingAllVehicles.toLocaleString()}
+                  {adjustedRemaining.toLocaleString()}
                 </td>
                 <td className="bg-gray-700"></td>
               </tr>
@@ -686,30 +657,49 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           )}
         </table>
       </div>
-      <div className="bg-gray-900/80 border-t border-gray-700 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-4 text-[10px] text-gray-300">
-          <span>💰 Total: Rs. {totalAllVehicles.toLocaleString()}</span>
-          <span>💵 Advance: Rs. {advanceAllVehicles.toLocaleString()}</span>
-          <span>📊 Remaining: Rs. {remainingAllVehicles.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div
-            className={`text-lg font-mono font-bold ${remainingAllVehicles > 0 ? "text-red-400" : "text-green-400"}`}
-          >
-            {remainingAllVehicles.toLocaleString()}
+
+      <div className="bg-gray-900/80 border-t border-gray-700 px-4 py-3 flex flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-4 text-[10px] text-gray-300">
+            <span>💰 Total: Rs. {adjustedTotal.toLocaleString()}</span>
+            <span>💵 Advance: Rs. {advanceAllVehicles.toLocaleString()}</span>
+            <span>📊 Remaining: Rs. {adjustedRemaining.toLocaleString()}</span>
           </div>
-          <span
-            className={`text-[9px] font-black uppercase px-2 py-1 rounded ${remainingAllVehicles > 0 ? "bg-red-900/50 text-red-300" : "bg-green-900/50 text-green-300"}`}
-          >
-            {remainingAllVehicles > 0 ? "● PENDING" : "● CLEARED"}
-          </span>
+          <div className="flex items-center gap-3">
+            <div
+              className={`text-lg font-mono font-bold ${adjustedRemaining > 0 ? "text-red-400" : "text-green-400"}`}
+            >
+              {adjustedRemaining.toLocaleString()}
+            </div>
+            <span
+              className={`text-[9px] font-black uppercase px-2 py-1 rounded ${adjustedRemaining > 0 ? "bg-red-900/50 text-red-300" : "bg-green-900/50 text-green-300"}`}
+            >
+              {adjustedRemaining > 0 ? "● PENDING" : "● CLEARED"}
+            </span>
+          </div>
         </div>
+        {onlinePaymentEnabled && (
+          <div className="flex flex-wrap gap-4 text-[10px] text-gray-300 border-t border-gray-600 pt-2 mt-1">
+            <span className="text-green-400">
+              💳 Online Payment:{" "}
+              <span className="font-mono text-white">
+                Rs. {onlinePayment.toLocaleString()}
+              </span>
+            </span>
+            {onlinePaymentNotes && (
+              <span className="text-gray-400">
+                📝 Remarks:{" "}
+                <span className="text-gray-300">{onlinePaymentNotes}</span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
 };
 
-// ─── MAIN DATA COMPONENT (individual table + party blocks) ─────────────────
+// ─── MAIN DATA COMPONENT ────────────────────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -811,7 +801,7 @@ const Data = ({
           transition={{ delay: 0.2 }}
           type="search"
           placeholder="Search Name, Phone, Plate, Service..."
-          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400"
+          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -844,7 +834,6 @@ const Data = ({
         </motion.button>
       </div>
 
-      {/* INDIVIDUAL TABLE (unchanged, already has remarks) */}
       {activeTab === "individual" && (
         <div className="overflow-x-auto -mx-4 md:mx-0">
           <div className="inline-block min-w-full align-middle">
@@ -874,6 +863,7 @@ const Data = ({
                       key={item.id}
                       className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-800/50 md:bg-transparent hover:bg-gray-700/50"
                     >
+                      {/* individual row cells – same as before */}
                       <td className="p-2 md:p-4 block md:table-cell">
                         <div className="text-sm font-bold uppercase text-white">
                           {item.partyName || "N/A"}
@@ -1048,7 +1038,6 @@ const Data = ({
         </div>
       )}
 
-      {/* PARTY LEDGER BLOCKS (with overall remarks) */}
       {activeTab === "party" && (
         <div className="flex flex-col gap-5">
           {filteredData.length === 0 ? (

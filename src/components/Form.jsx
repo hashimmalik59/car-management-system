@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 const serviceOptions = [
   "New Registration",
@@ -52,6 +52,7 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
   return { total, remaining };
 };
 
+// ==================== VEHICLE CARD ====================
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getServicesTotal = (prices) => {
     return Object.values(prices || {}).reduce(
@@ -60,13 +61,9 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     );
   };
 
-  const computeTotals = (
-    servicesTotal,
-    regionPrice,
-    onlinePayment,
-    advance,
-  ) => {
-    const total = servicesTotal + regionPrice - onlinePayment;
+  // No online payment subtraction per vehicle
+  const computeTotals = (servicesTotal, regionPrice, advance) => {
+    const total = servicesTotal + regionPrice;
     const remaining = Math.max(total - advance, 0);
     return { total, remaining };
   };
@@ -92,13 +89,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const handleRegionChange = (regionValue) => {
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
-    const onlinePayment = Number(vehicle.onlinePayment) || 0;
     const advance = currentAdvance;
     const newRegionPrice = 0;
     const { total, remaining } = computeTotals(
       servicesTotal,
       newRegionPrice,
-      onlinePayment,
       advance,
     );
     onChange(index, "region", regionValue);
@@ -109,13 +104,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
 
   const handleRegionPriceChange = (price) => {
     const servicesTotal = getServicesTotal(vehicle.servicePrices);
-    const onlinePayment = Number(vehicle.onlinePayment) || 0;
     const advance = currentAdvance;
     const newRegionPrice = Number(price) || 0;
     const { total, remaining } = computeTotals(
       servicesTotal,
       newRegionPrice,
-      onlinePayment,
       advance,
     );
     onChange(index, "regionPrice", newRegionPrice);
@@ -135,12 +128,10 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     }
     const newServicesTotal = getServicesTotal(updatedPrices);
     const regionPrice = Number(vehicle.regionPrice) || 0;
-    const onlinePayment = Number(vehicle.onlinePayment) || 0;
     const advance = currentAdvance;
     const { total, remaining } = computeTotals(
       newServicesTotal,
       regionPrice,
-      onlinePayment,
       advance,
     );
     onChange(index, "serviceType", updatedServices);
@@ -157,61 +148,15 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     };
     const newServicesTotal = getServicesTotal(updatedPrices);
     const regionPrice = Number(vehicle.regionPrice) || 0;
-    const onlinePayment = Number(vehicle.onlinePayment) || 0;
     const advance = currentAdvance;
     const { total, remaining } = computeTotals(
       newServicesTotal,
       regionPrice,
-      onlinePayment,
       advance,
     );
     onChange(index, "servicePrices", updatedPrices);
     onChange(index, "vehicleTotal", total);
     onChange(index, "vehicleRemaining", remaining);
-  };
-
-  const handleOnlinePaymentToggle = () => {
-    const newEnabled = !vehicle.onlinePaymentEnabled;
-    const servicesTotal = getServicesTotal(vehicle.servicePrices);
-    const regionPrice = Number(vehicle.regionPrice) || 0;
-    const advance = currentAdvance;
-    let newOnlinePayment = vehicle.onlinePayment || 0;
-    if (!newEnabled) {
-      newOnlinePayment = 0;
-    }
-    const { total, remaining } = computeTotals(
-      servicesTotal,
-      regionPrice,
-      newOnlinePayment,
-      advance,
-    );
-    onChange(index, "onlinePaymentEnabled", newEnabled);
-    onChange(index, "onlinePayment", newOnlinePayment);
-    if (!newEnabled) {
-      onChange(index, "onlinePaymentNotes", "");
-    }
-    onChange(index, "vehicleTotal", total);
-    onChange(index, "vehicleRemaining", remaining);
-  };
-
-  const handleOnlinePaymentChange = (price) => {
-    const newOnlinePayment = Number(price) || 0;
-    const servicesTotal = getServicesTotal(vehicle.servicePrices);
-    const regionPrice = Number(vehicle.regionPrice) || 0;
-    const advance = currentAdvance;
-    const { total, remaining } = computeTotals(
-      servicesTotal,
-      regionPrice,
-      newOnlinePayment,
-      advance,
-    );
-    onChange(index, "onlinePayment", newOnlinePayment);
-    onChange(index, "vehicleTotal", total);
-    onChange(index, "vehicleRemaining", remaining);
-  };
-
-  const handleOnlinePaymentNotesChange = (notes) => {
-    onChange(index, "onlinePaymentNotes", notes);
   };
 
   return (
@@ -334,36 +279,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="flex flex-col gap-2 mt-1">
-        <label className="flex items-center gap-2 cursor-pointer text-green-400">
-          <input
-            type="checkbox"
-            className="w-4 h-4 accent-green-500"
-            checked={vehicle.onlinePaymentEnabled || false}
-            onChange={handleOnlinePaymentToggle}
-          />
-          <span className="text-[11px] font-medium">💳 Online Payment</span>
-        </label>
-        {vehicle.onlinePaymentEnabled && (
-          <div className="ml-6 space-y-2">
-            <input
-              type="number"
-              placeholder="Online Payment Custom Price (Rs.)"
-              className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
-              value={vehicle.onlinePayment === 0 ? "" : vehicle.onlinePayment}
-              onChange={(e) => handleOnlinePaymentChange(e.target.value)}
-            />
-            <textarea
-              placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
-              className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
-              rows="2"
-              value={vehicle.onlinePaymentNotes || ""}
-              onChange={(e) => handleOnlinePaymentNotesChange(e.target.value)}
-            />
-          </div>
-        )}
       </div>
 
       {vehicle.serviceType.includes("Conversion") && (
@@ -540,9 +455,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     tokenTaxTo: "",
     remarks: "",
     bankName: "Cash",
-    onlinePaymentEnabled: false,
-    onlinePayment: 0,
-    onlinePaymentNotes: "",
   });
 
   const createInitialForm = () => ({
@@ -563,7 +475,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     attachment: null,
     totalAmount: 0,
     advancePaid: 0,
-    remainingBalance: 0,
+    // remainingBalance is now derived, not stored
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -571,11 +483,82 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     tokenTaxFrom: "",
     tokenTaxTo: "",
     remarks: "",
+    onlinePaymentEnabled: false,
+    onlinePayment: 0,
+    onlinePaymentNotes: "",
   });
 
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
 
+  // ─── DERIVE remaining balance ────────────────────────────────
+  const derivedRemainingBalance = useMemo(() => {
+    if (formData.type === "individual") {
+      const total = Number(formData.totalAmount) || 0;
+      const advance = Number(formData.advancePaid) || 0;
+      return Math.max(total - advance, 0);
+    } else {
+      // Party
+      const vehicles = formData.vehicles || [];
+      const sumVehicleRemaining = vehicles.reduce(
+        (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
+        0,
+      );
+      const onlinePayment = Number(formData.onlinePayment) || 0;
+      return Math.max(sumVehicleRemaining - onlinePayment, 0);
+    }
+  }, [
+    formData.type,
+    formData.totalAmount,
+    formData.advancePaid,
+    formData.vehicles,
+    formData.onlinePayment,
+  ]);
+
+  // When editing, populate formData (no need to set remainingBalance)
+  useEffect(() => {
+    if (editingData) {
+      let normalized = { ...editingData };
+      if (editingData?.type === "individual") {
+        setCommissionAmount(Number(editingData.commissionAmount || 0));
+        normalized = {
+          ...normalized,
+          totalAmount: Number(editingData.totalAmount ?? 0),
+          advancePaid: Number(editingData.advancePaid ?? 0),
+          tokenTaxFrom: editingData.tokenTaxFrom ?? "",
+          tokenTaxTo: editingData.tokenTaxTo ?? "",
+          region: editingData.region ?? "",
+          regionPrice: editingData.regionPrice ?? 0,
+          conversionServiceType: editingData.conversionServiceType ?? "",
+        };
+      } else {
+        setCommissionAmount(0);
+        normalized.vehicles = (editingData.vehicles || []).map((v) => ({
+          ...createEmptyVehicle(),
+          ...v,
+          id: v.id || crypto.randomUUID(),
+          vehicleRemaining: Math.max(
+            (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
+            0,
+          ),
+          bankName: v.bankName || "Cash",
+          region: v.region ?? "",
+          regionPrice: v.regionPrice ?? 0,
+          conversionServiceType: v.conversionServiceType ?? "",
+        }));
+        normalized.onlinePaymentEnabled =
+          editingData.onlinePaymentEnabled ?? false;
+        normalized.onlinePayment = editingData.onlinePayment ?? 0;
+        normalized.onlinePaymentNotes = editingData.onlinePaymentNotes ?? "";
+      }
+      setFormData(normalized);
+    } else {
+      setFormData(createInitialForm());
+      setCommissionAmount(0);
+    }
+  }, [editingData]);
+
+  // Individual amount change handlers
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
     if (field === "advancePaid") {
@@ -589,7 +572,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         advancePaid: numValue,
         totalAmount: total,
-        remainingBalance: remaining,
       }));
     }
   };
@@ -606,7 +588,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         region: regionValue,
         regionPrice: 0,
         totalAmount: newTotal,
-        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -624,7 +605,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         regionPrice,
         totalAmount: newTotal,
-        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -646,57 +626,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         servicePrices: updatedPrices,
         totalAmount: newTotal,
-        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
 
-  useEffect(() => {
-    if (editingData) {
-      let normalized = { ...editingData };
-      if (editingData?.type === "individual") {
-        setCommissionAmount(Number(editingData.commissionAmount || 0));
-        const total = Number(editingData.totalAmount ?? 0);
-        const advance = Number(editingData.advancePaid ?? 0);
-        normalized = {
-          ...normalized,
-          totalAmount: total,
-          advancePaid: advance,
-          remainingBalance: Math.max(total - advance, 0),
-          tokenTaxFrom: editingData.tokenTaxFrom ?? "",
-          tokenTaxTo: editingData.tokenTaxTo ?? "",
-          region: editingData.region ?? "",
-          regionPrice: editingData.regionPrice ?? 0,
-          conversionServiceType: editingData.conversionServiceType ?? "",
-        };
-      } else {
-        setCommissionAmount(0);
-        normalized.vehicles = (editingData.vehicles || []).map((v) => ({
-          ...createEmptyVehicle(),
-          ...v,
-          id: v.id || crypto.randomUUID(),
-          vehicleRemaining: Math.max(
-            (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
-            0,
-          ),
-          bankName: v.bankName || "Cash",
-          region: v.region ?? "",
-          regionPrice: v.regionPrice ?? 0,
-          conversionServiceType: v.conversionServiceType ?? "",
-          onlinePaymentEnabled: v.onlinePaymentEnabled ?? false,
-          onlinePayment: v.onlinePayment ?? 0,
-          onlinePaymentNotes: v.onlinePaymentNotes ?? "",
-        }));
-      }
-      setFormData(normalized);
-    } else {
-      setFormData(createInitialForm());
-      setCommissionAmount(0);
-    }
-  }, [editingData]);
-
-  const isParty = formData.type === "party";
-
+  // Party vehicle handlers
   const handleVehicleChange = (idx, field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -723,6 +657,26 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }));
   };
 
+  // Party online payment handlers
+  const handlePartyOnlinePaymentToggle = () => {
+    const newEnabled = !formData.onlinePaymentEnabled;
+    setFormData((prev) => ({
+      ...prev,
+      onlinePaymentEnabled: newEnabled,
+      onlinePayment: newEnabled ? prev.onlinePayment : 0,
+      onlinePaymentNotes: newEnabled ? prev.onlinePaymentNotes : "",
+    }));
+  };
+
+  const handlePartyOnlinePaymentChange = (e) => {
+    const val = Number(e.target.value) || 0;
+    setFormData((prev) => ({ ...prev, onlinePayment: val }));
+  };
+
+  const handlePartyOnlinePaymentNotesChange = (e) => {
+    setFormData((prev) => ({ ...prev, onlinePaymentNotes: e.target.value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -736,15 +690,19 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         (v) => !v.plate?.trim() || v.serviceType.length === 0,
       );
       if (invalid) {
-        alert("Har gaadi ka plate number aur kam az ek service fill karein!");
+        alert(
+          "Har gaadi ka plate number aur kam az kam ek service fill karein!",
+        );
         return;
       }
     }
 
+    // Compute final remaining balance from derived value
     const finalData = {
       ...formData,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
+      remainingBalance: derivedRemainingBalance,
     };
 
     const result = await onAddCustomer(finalData);
@@ -758,12 +716,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   };
 
+  const isParty = formData.type === "party";
+
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-gray-800 border border-gray-700 relative">
-      <h1 class="font-semibold text-3xl text-white py-3 border-b border-gray-500">
+      <h1 className="font-semibold text-3xl text-white py-3 border-b border-gray-500">
         Enter Record
       </h1>
-      {/* Scrollable content area */}
       <div className="flex flex-col gap-3">
         {/* Tabs */}
         <div className="flex bg-gray-700 p-1 rounded-xl mb-4">
@@ -815,6 +774,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             Entry
           </h1>
 
+          {/* Common fields (partyName, phone, etc.) remain same */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               {isParty ? "Business / Party Name" : "Customer Name"}
@@ -896,6 +856,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </div>
           </div>
 
+          {/* Individual section (unchanged) */}
           {!isParty && (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -1010,10 +971,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                                 serviceType: updatedServices,
                                 servicePrices: updatedPrices,
                                 totalAmount: newTotal,
-                                remainingBalance: Math.max(
-                                  newTotal - (prev.advancePaid || 0),
-                                  0,
-                                ),
                               };
                             });
                           }}
@@ -1087,10 +1044,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         ...prev,
                         commissionAmount: val,
                         totalAmount: newTotal,
-                        remainingBalance: Math.max(
-                          newTotal - (prev.advancePaid || 0),
-                          0,
-                        ),
                       }));
                     }}
                     className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
@@ -1128,12 +1081,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   </div>
                 </div>
 
+                {/* Display remaining balance for individual – derived */}
                 <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
                   <span className="text-[10px] font-bold text-gray-300">
                     Remaining Balance
                   </span>
                   <span className="text-base font-bold text-blue-400">
-                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                    Rs. {derivedRemainingBalance.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1229,35 +1183,87 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </>
           )}
 
+          {/* PARTY SECTION: Online Payment and Vehicles */}
           {isParty && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Vehicles ({formData.vehicles.length})
-                </label>
-                <button
-                  type="button"
-                  onClick={addVehicle}
-                  className="text-orange-400 font-bold text-sm hover:text-orange-300"
-                >
-                  + Add Vehicle
-                </button>
-              </div>
-              <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
-                {formData.vehicles.map((vehicle, idx) => (
-                  <VehicleCard
-                    key={vehicle.id || idx}
-                    index={idx}
-                    vehicle={vehicle}
-                    onChange={handleVehicleChange}
-                    onRemove={removeVehicle}
-                    canRemove={formData.vehicles.length > 1}
+            <>
+              {/* Online Payment toggle */}
+              <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
+                <label className="flex items-center gap-2 cursor-pointer text-green-400">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-green-500"
+                    checked={formData.onlinePaymentEnabled || false}
+                    onChange={handlePartyOnlinePaymentToggle}
                   />
-                ))}
+                  <span className="text-[11px] font-medium">
+                    💳 Online Payment (Party)
+                  </span>
+                </label>
+                {formData.onlinePaymentEnabled && (
+                  <div className="ml-6 space-y-2">
+                    <input
+                      type="number"
+                      placeholder="Online Payment Custom Price (Rs.)"
+                      className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+                      value={
+                        formData.onlinePayment === 0
+                          ? ""
+                          : formData.onlinePayment
+                      }
+                      onChange={handlePartyOnlinePaymentChange}
+                    />
+                    <textarea
+                      placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
+                      className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+                      rows="2"
+                      value={formData.onlinePaymentNotes || ""}
+                      onChange={handlePartyOnlinePaymentNotesChange}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* Vehicles */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Vehicles ({formData.vehicles.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addVehicle}
+                    className="text-orange-400 font-bold text-sm hover:text-orange-300"
+                  >
+                    + Add Vehicle
+                  </button>
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
+                  {formData.vehicles.map((vehicle, idx) => (
+                    <VehicleCard
+                      key={vehicle.id || idx}
+                      index={idx}
+                      vehicle={vehicle}
+                      onChange={handleVehicleChange}
+                      onRemove={removeVehicle}
+                      canRemove={formData.vehicles.length > 1}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Party remaining balance – derived */}
+              <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">
+                  Remaining Balance
+                </span>
+                <span className="text-lg font-mono font-bold text-yellow-400">
+                  Rs. {derivedRemainingBalance.toLocaleString()}
+                </span>
+              </div>
+            </>
           )}
 
+          {/* Remarks for all */}
           {!isParty && (
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1274,27 +1280,27 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               />
             </div>
           )}
-        </form>
-      </div>
 
-      {/* Fixed button bar at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 bg-gray-800 border-t border-gray-700 p-4 flex flex-col items-center gap-2">
-        <button
-          type="submit"
-          form="khataForm"
-          className={`w-64 font-bold rounded-xl py-3 text-white transition-all ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
-        >
-          {editingData ? "Update Record" : "Save to Khata"}
-        </button>
-        {editingData && (
-          <button
-            type="button"
-            onClick={onCancelEdit}
-            className="text-red-400 text-xs font-bold hover:text-red-300"
-          >
-            Cancel Edit
-          </button>
-        )}
+          {/* Fixed button bar at bottom */}
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-gray-800 border-t border-gray-700 p-4 flex flex-col items-center gap-2">
+            <button
+              type="submit"
+              form="khataForm"
+              className={`w-64 font-bold rounded-xl py-3 text-white transition-all ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
+            >
+              {editingData ? "Update Record" : "Save to Khata"}
+            </button>
+            {editingData && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="text-red-400 text-xs font-bold hover:text-red-300"
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );
