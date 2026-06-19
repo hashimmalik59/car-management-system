@@ -131,6 +131,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -755,12 +756,14 @@ const printReport = (
                     </div>
                   `
                   : "";
+              const commission = Number(item.commissionAmount) || 0;
               return `
           <div class="card">
             <div class="info-row"><span class="label">Customer:</span><span class="value"><strong>${item.partyName}</strong></span></div>
             <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
             <div class="info-row"><span class="label">Vehicle:</span><span class="value">${item.plate || "N/A"} (${item.model || "N/A"})</span></div>
             <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"} ${item.regionPrice ? `— Rs. ${Number(item.regionPrice).toLocaleString()}` : ""}</span></div>
+            <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${commission.toLocaleString()}</span></div>
             <div class="grid-info">
               <div class="item">Total: Rs. ${getItemTotal(item).toLocaleString()}</div>
               <div class="item text-green">Advance: Rs. ${getItemAdvance(item).toLocaleString()}</div>
