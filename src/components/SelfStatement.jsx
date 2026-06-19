@@ -297,9 +297,9 @@ const SelfStatement = ({ user }) => {
   const filteredEntries = getFilteredEntries();
 
   return (
-    <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl h-[calc(100vh-120px)] overflow-hidden">
+    <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl md:h-[calc(100vh-120px)] md:overflow-hidden">
       {/* LEFT COLUMN: Header + Form + Filter */}
-      <div className="flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto">
+      <div className="flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto max-h-[45vh] md:max-h-none overflow-y-auto">
         {/* Header */}
         <div className="flex flex-col gap-2 border-b border-gray-700 pb-4">
           <div>
@@ -318,8 +318,159 @@ const SelfStatement = ({ user }) => {
           </button>
         </div>
 
+        {error && (
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">
+            ⚠️ {error}
+          </div>
+        )}
+        {/* Form */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-2 md:p-3 shadow">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">
+            {editingId ? "Edit Entry" : "New Entry"}
+          </h3>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3"
+          >
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Date
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Purpose
+              </label>
+              <input
+                type="text"
+                name="purpose"
+                value={form.purpose}
+                onChange={handleChange}
+                placeholder="e.g., Office rent"
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Bank / Method
+              </label>
+              <select
+                name="bank"
+                value={form.bank}
+                onChange={handleChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+              >
+                {bankOptions.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Amount (Rs.)
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                placeholder="Enter amount"
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+                required
+              />
+            </div>
+
+            {/* Type full width */}
+            <div className="sm:col-span-2">
+              <label className="text-[10px] text-gray-400 uppercase">
+                Type
+              </label>
+              <select
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+              >
+                <option value="debit">Debit (Expense)</option>
+                <option value="credit">Credit (Income)</option>
+              </select>
+            </div>
+
+            {/* Sender and Receiver side by side */}
+            <div className="sm:col-span-2 grid grid-cols-2 gap-2 md:gap-3">
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase">
+                  Sender
+                </label>
+                <input
+                  type="text"
+                  name="sender"
+                  value={form.sender}
+                  onChange={handleChange}
+                  placeholder="Who sent?"
+                  className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase">
+                  Receiver
+                </label>
+                <input
+                  type="text"
+                  name="receiver"
+                  value={form.receiver}
+                  onChange={handleChange}
+                  placeholder="Who received?"
+                  className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[10px] text-gray-400 uppercase">
+                Notes (Optional)
+              </label>
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                rows="1"
+                placeholder="Any remarks..."
+                className="w-full bg-gray-700 border border-gray-600 rounded p-1.5 md:p-2 text-white text-sm"
+              />
+            </div>
+
+            <div className="sm:col-span-2 flex gap-2">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition"
+              >
+                {editingId ? "Update Entry" : "Add Entry"}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
         {/* 🟢 Filter Row – now between form and table */}
-        <div className="flex flex-wrap gap-3 items-end bg-gray-800 p-3 rounded-xl border border-gray-700">
+        <div className="flex flex-wrap gap-2 md:gap-3 items-end bg-gray-800 p-2 md:p-3 rounded-xl border border-gray-700">
           <div>
             <label className="text-[10px] text-gray-400 uppercase block">
               From
@@ -365,164 +516,13 @@ const SelfStatement = ({ user }) => {
             Clear All
           </button>
         </div>
-
-        {error && (
-          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">
-            ⚠️ {error}
-          </div>
-        )}
-        {/* Form */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-3 shadow">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">
-            {editingId ? "Edit Entry" : "New Entry"}
-          </h3>
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-          >
-            <div>
-              <label className="text-[10px] text-gray-400 uppercase">
-                Date
-              </label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-400 uppercase">
-                Purpose
-              </label>
-              <input
-                type="text"
-                name="purpose"
-                value={form.purpose}
-                onChange={handleChange}
-                placeholder="e.g., Office rent"
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-400 uppercase">
-                Bank / Method
-              </label>
-              <select
-                name="bank"
-                value={form.bank}
-                onChange={handleChange}
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              >
-                {bankOptions.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-400 uppercase">
-                Amount (Rs.)
-              </label>
-              <input
-                type="number"
-                name="amount"
-                value={form.amount}
-                onChange={handleChange}
-                placeholder="Enter amount"
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-                required
-              />
-            </div>
-
-            {/* Type full width */}
-            <div className="sm:col-span-2">
-              <label className="text-[10px] text-gray-400 uppercase">
-                Type
-              </label>
-              <select
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              >
-                <option value="debit">Debit (Expense)</option>
-                <option value="credit">Credit (Income)</option>
-              </select>
-            </div>
-
-            {/* Sender and Receiver side by side */}
-            <div className="sm:col-span-2 grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-gray-400 uppercase">
-                  Sender
-                </label>
-                <input
-                  type="text"
-                  name="sender"
-                  value={form.sender}
-                  onChange={handleChange}
-                  placeholder="Who sent?"
-                  className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-400 uppercase">
-                  Receiver
-                </label>
-                <input
-                  type="text"
-                  name="receiver"
-                  value={form.receiver}
-                  onChange={handleChange}
-                  placeholder="Who received?"
-                  className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[10px] text-gray-400 uppercase">
-                Notes (Optional)
-              </label>
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                rows="2"
-                placeholder="Any remarks..."
-                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              />
-            </div>
-
-            <div className="sm:col-span-2 flex gap-2">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition"
-              >
-                {editingId ? "Update Entry" : "Add Entry"}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
       </div>
 
       {/* RIGHT COLUMN: Entries Table */}
-      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto">
         {/* Table */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col h-full">
-          <div className="overflow-auto flex-1 max-h-[calc(100vh-180px)]">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col md:h-full">
+          <div className="overflow-auto flex-1">
             <table className="min-w-full text-left border-collapse">
               <thead className="bg-gray-700">
                 <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
