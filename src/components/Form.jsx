@@ -475,7 +475,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     attachment: null,
     totalAmount: 0,
     advancePaid: 0,
-    // remainingBalance is now derived, not stored
+    remainingBalance: 0,
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -491,40 +491,41 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
 
-  // ─── DERIVE remaining balance ────────────────────────────────
-  const derivedRemainingBalance = useMemo(() => {
-    if (formData.type === "individual") {
-      const total = Number(formData.totalAmount) || 0;
-      const advance = Number(formData.advancePaid) || 0;
-      return Math.max(total - advance, 0);
-    } else {
-      // Party
-      const vehicles = formData.vehicles || [];
-      const sumVehicleRemaining = vehicles.reduce(
-        (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
-        0,
-      );
-      const onlinePayment = Number(formData.onlinePayment) || 0;
-      return Math.max(sumVehicleRemaining - onlinePayment, 0);
-    }
-  }, [
-    formData.type,
-    formData.totalAmount,
-    formData.advancePaid,
-    formData.vehicles,
-    formData.onlinePayment,
-  ]);
+  // 🟢 COMPUTE PARTY REMAINING (sum vehicleRemaining - onlinePayment)
+  const partyRemainingBalance = useMemo(() => {
+    if (formData.type !== "party") return 0;
+    const vehicles = formData.vehicles || [];
+    const sumVehicleRemaining = vehicles.reduce(
+      (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
+      0,
+    );
+    const onlinePayment = Number(formData.onlinePayment) || 0;
+    return Math.max(sumVehicleRemaining - onlinePayment, 0);
+  }, [formData.vehicles, formData.onlinePayment, formData.type]);
 
-  // When editing, populate formData (no need to set remainingBalance)
+  // 🟢 UPDATE remainingBalance in formData when partyRemainingBalance changes
+  useEffect(() => {
+    if (formData.type === "party") {
+      setFormData((prev) => ({
+        ...prev,
+        remainingBalance: partyRemainingBalance,
+      }));
+    }
+  }, [partyRemainingBalance, formData.type]);
+
+  // 🟢 When editing, ensure remainingBalance is set correctly for party
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
       if (editingData?.type === "individual") {
         setCommissionAmount(Number(editingData.commissionAmount || 0));
+        const total = Number(editingData.totalAmount ?? 0);
+        const advance = Number(editingData.advancePaid ?? 0);
         normalized = {
           ...normalized,
-          totalAmount: Number(editingData.totalAmount ?? 0),
-          advancePaid: Number(editingData.advancePaid ?? 0),
+          totalAmount: total,
+          advancePaid: advance,
+          remainingBalance: Math.max(total - advance, 0),
           tokenTaxFrom: editingData.tokenTaxFrom ?? "",
           tokenTaxTo: editingData.tokenTaxTo ?? "",
           region: editingData.region ?? "",
@@ -546,10 +547,20 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           regionPrice: v.regionPrice ?? 0,
           conversionServiceType: v.conversionServiceType ?? "",
         }));
+        // Load party-level online payment fields
         normalized.onlinePaymentEnabled =
           editingData.onlinePaymentEnabled ?? false;
         normalized.onlinePayment = editingData.onlinePayment ?? 0;
         normalized.onlinePaymentNotes = editingData.onlinePaymentNotes ?? "";
+        // Recalc remaining balance
+        const sumRemaining = normalized.vehicles.reduce(
+          (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
+          0,
+        );
+        normalized.remainingBalance = Math.max(
+          sumRemaining - (normalized.onlinePayment || 0),
+          0,
+        );
       }
       setFormData(normalized);
     } else {
@@ -558,7 +569,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   }, [editingData]);
 
-  // Individual amount change handlers
+  // Individual amount change handlers (unchanged)
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
     if (field === "advancePaid") {
@@ -572,6 +583,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         advancePaid: numValue,
         totalAmount: total,
+        remainingBalance: remaining,
       }));
     }
   };
@@ -588,6 +600,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         region: regionValue,
         regionPrice: 0,
         totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -605,6 +618,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         regionPrice,
         totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -626,6 +640,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         ...prev,
         servicePrices: updatedPrices,
         totalAmount: newTotal,
+        remainingBalance: Math.max(newTotal - (prev.advancePaid || 0), 0),
       };
     });
   };
@@ -697,12 +712,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       }
     }
 
-    // Compute final remaining balance from derived value
     const finalData = {
       ...formData,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
-      remainingBalance: derivedRemainingBalance,
+      // Ensure remainingBalance is correctly set for party
+      ...(formData.type === "party" && {
+        remainingBalance: partyRemainingBalance,
+      }),
     };
 
     const result = await onAddCustomer(finalData);
@@ -971,6 +988,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                                 serviceType: updatedServices,
                                 servicePrices: updatedPrices,
                                 totalAmount: newTotal,
+                                remainingBalance: Math.max(
+                                  newTotal - (prev.advancePaid || 0),
+                                  0,
+                                ),
                               };
                             });
                           }}
@@ -1044,6 +1065,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         ...prev,
                         commissionAmount: val,
                         totalAmount: newTotal,
+                        remainingBalance: Math.max(
+                          newTotal - (prev.advancePaid || 0),
+                          0,
+                        ),
                       }));
                     }}
                     className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
@@ -1081,13 +1106,12 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   </div>
                 </div>
 
-                {/* Display remaining balance for individual – derived */}
                 <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
                   <span className="text-[10px] font-bold text-gray-300">
                     Remaining Balance
                   </span>
                   <span className="text-base font-bold text-blue-400">
-                    Rs. {derivedRemainingBalance.toLocaleString()}
+                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1249,16 +1273,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                     />
                   ))}
                 </div>
-              </div>
-
-              {/* Party remaining balance – derived */}
-              <div className="p-3 bg-gray-900 rounded-lg text-white flex justify-between items-center shadow-md">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">
-                  Remaining Balance
-                </span>
-                <span className="text-lg font-mono font-bold text-yellow-400">
-                  Rs. {derivedRemainingBalance.toLocaleString()}
-                </span>
               </div>
             </>
           )}
