@@ -26,7 +26,7 @@ const getIndividualServicePrice = (servicePrices, serviceName) => {
   return Number(val || 0);
 };
 
-// ─── Attachment Display (same as Data.jsx) ─────────────────
+// ─── Attachment Display ──────────────────────────────────
 const AttachmentDisplay = ({ attachment }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
@@ -152,6 +152,20 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
         ${
+          item.payments && item.payments.length > 0
+            ? `
+        <h3>Payment History:</h3>
+        ${item.payments
+          .map(
+            (p) => `
+        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:green">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        `,
+          )
+          .join("")}
+        `
+            : ""
+        }
+        ${
           item.remarks
             ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
             : ""
@@ -174,7 +188,7 @@ const getServicePrice = (servicePrices, serviceName) => {
   return Number(pObj || 0);
 };
 
-// ─── PARTY PRINT – no per‑vehicle online payment columns ───
+// ─── PARTY PRINT ──────────────────────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -290,7 +304,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE PRINT – remove online payment lines ──────────
+// ─── VEHICLE PRINT ────────────────────────────────────────
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -357,7 +371,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block (display) – removed per-vehicle online payment columns ───
+// ─── Party Ledger Block ──────────────────────────────────
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -586,7 +600,7 @@ const PartyLedgerBlock = ({ item }) => {
   );
 };
 
-// ─── Date Helpers (unchanged) ──────────────────────────────
+// ─── Date Helpers ──────────────────────────────────────────
 const getStartOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -661,7 +675,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report (daily/weekly/monthly/annual) – styled like receipts ──
+// ─── Print Report (daily/weekly/monthly/annual) ───────────
 const printReport = (
   reportType,
   dateRange,
@@ -703,6 +717,9 @@ const printReport = (
         .online-payment-remarks { font-size: 10px; color: #666; font-style: italic; }
         .grand-total { background: #f2f2f2; font-weight: bold; }
         .party-online { margin-top: 10px; border-top: 1px solid #ddd; padding-top: 8px; }
+        .payment-history { margin-top: 8px; font-size: 10px; border-top: 1px solid #ddd; padding-top: 5px; }
+        .payment-history .ph-row { display: flex; justify-content: space-between; padding: 2px 0; }
+        .payment-history .ph-amount { color: green; font-weight: bold; }
       </style>
     </head>
     <body>
@@ -719,8 +736,26 @@ const printReport = (
             ? `
           <div class="section-title">👤 Individual Records (${individualData.length})</div>
           ${individualData
-            .map(
-              (item) => `
+            .map((item) => {
+              const paymentsHtml =
+                item.payments && item.payments.length > 0
+                  ? `
+                    <div class="payment-history">
+                      <strong>Payment History:</strong>
+                      ${item.payments
+                        .map(
+                          (p) => `
+                        <div class="ph-row">
+                          <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
+                          <span class="ph-amount">+Rs. ${Number(p.amount).toLocaleString()}</span>
+                        </div>
+                      `,
+                        )
+                        .join("")}
+                    </div>
+                  `
+                  : "";
+              return `
           <div class="card">
             <div class="info-row"><span class="label">Customer:</span><span class="value"><strong>${item.partyName}</strong></span></div>
             <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
@@ -731,13 +766,14 @@ const printReport = (
               <div class="item text-green">Advance: Rs. ${getItemAdvance(item).toLocaleString()}</div>
               <div class="item text-red">Remaining: Rs. ${getItemRemaining(item).toLocaleString()}</div>
             </div>
+            ${paymentsHtml}
             ${
               item.remarks
                 ? `<div class="remarks-text"><strong>Remarks:</strong> ${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</div>`
                 : ""
             }
-          </div>`,
-            )
+          </div>`;
+            })
             .join("")}
           `
             : ""
@@ -1237,6 +1273,36 @@ const Reports = ({ customerData = [] }) => {
                                 <div className="text-xs font-bold text-red-400">
                                   Bal: {item.remainingBalance?.toLocaleString()}
                                 </div>
+                                {/* Payment History */}
+                                {item.payments && item.payments.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                    <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">
+                                      Payment History
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      {item.payments.map((p, pi) => (
+                                        <div
+                                          key={pi}
+                                          className="flex justify-between text-[10px]"
+                                        >
+                                          <span className="text-gray-400">
+                                            {new Date(
+                                              p.date,
+                                            ).toLocaleDateString("en-GB", {
+                                              day: "2-digit",
+                                              month: "short",
+                                              year: "numeric",
+                                            })}
+                                          </span>
+                                          <span className="text-green-400 font-mono">
+                                            +Rs.{" "}
+                                            {Number(p.amount).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </td>
                             <td className="p-3">
