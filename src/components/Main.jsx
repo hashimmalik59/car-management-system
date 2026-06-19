@@ -335,7 +335,7 @@ const Main = ({ customer, setCustomer, user }) => {
         className="w-full max-w-4xl mx-auto"
       >
         <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-2xl p-2 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab, index) => (
               <motion.button
                 key={tab.key}
@@ -345,7 +345,7 @@ const Main = ({ customer, setCustomer, user }) => {
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setMainTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 ${getTabColors(tab.color, mainTab === tab.key)}`}
+                className={`w-[calc(50%-4px)] md:flex-1 flex items-center justify-center gap-2 py-2.5 md:gap-2.5 md:py-3.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 ${getTabColors(tab.color, mainTab === tab.key)}`}
               >
                 <motion.span
                   animate={mainTab === tab.key ? { scale: [1, 1.2, 1] } : {}}
