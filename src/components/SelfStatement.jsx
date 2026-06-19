@@ -29,6 +29,7 @@ const SelfStatement = ({ user }) => {
   const [error, setError] = useState(null);
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const bankOptions = [
     "Cash",
@@ -261,6 +262,7 @@ const SelfStatement = ({ user }) => {
 
   const getFilteredEntries = () => {
     let filtered = entries;
+    // Date filter
     if (filterDateFrom) {
       const from = new Date(filterDateFrom);
       from.setHours(0, 0, 0, 0);
@@ -271,6 +273,24 @@ const SelfStatement = ({ user }) => {
       to.setHours(23, 59, 59, 999);
       filtered = filtered.filter((e) => new Date(e.date) <= to);
     }
+    // Search filter
+    if (searchTerm.trim() !== "") {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter((e) => {
+        const purpose = (e.purpose || "").toLowerCase();
+        const bank = (e.bank || "").toLowerCase();
+        const sender = (e.sender || "").toLowerCase();
+        const receiver = (e.receiver || "").toLowerCase();
+        const notes = (e.notes || "").toLowerCase();
+        return (
+          purpose.includes(term) ||
+          bank.includes(term) ||
+          sender.includes(term) ||
+          receiver.includes(term) ||
+          notes.includes(term)
+        );
+      });
+    }
     return filtered;
   };
 
@@ -278,6 +298,7 @@ const SelfStatement = ({ user }) => {
 
   return (
     <div className="w-full flex flex-col gap-6 bg-gray-900 text-gray-100 px-4 md:px-6 py-6 rounded-2xl">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-700 pb-4">
         <div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -301,40 +322,7 @@ const SelfStatement = ({ user }) => {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 items-end bg-gray-800 p-3 rounded-xl border border-gray-700">
-        <div>
-          <label className="text-[10px] text-gray-400 uppercase block">
-            From
-          </label>
-          <input
-            type="date"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] text-gray-400 uppercase block">
-            To
-          </label>
-          <input
-            type="date"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-          />
-        </div>
-        <button
-          onClick={() => {
-            setFilterDateFrom("");
-            setFilterDateTo("");
-          }}
-          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
-        >
-          Clear Filter
-        </button>
-      </div>
-
+      {/* Form */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-4 shadow">
         <h3 className="text-sm font-semibold text-gray-300 mb-3">
           {editingId ? "Edit Entry" : "New Entry"}
@@ -400,7 +388,7 @@ const SelfStatement = ({ user }) => {
             />
           </div>
 
-          {/* 🟢 Type – full width */}
+          {/* Type full width */}
           <div className="sm:col-span-2">
             <label className="text-[10px] text-gray-400 uppercase">Type</label>
             <select
@@ -414,7 +402,7 @@ const SelfStatement = ({ user }) => {
             </select>
           </div>
 
-          {/* 🟢 Sender and Receiver - side by side */}
+          {/* Sender and Receiver side by side */}
           <div className="sm:col-span-2 grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] text-gray-400 uppercase">
@@ -476,6 +464,55 @@ const SelfStatement = ({ user }) => {
         </form>
       </div>
 
+      {/* 🟢 Filter Row – now between form and table */}
+      <div className="flex flex-wrap gap-3 items-end bg-gray-800 p-3 rounded-xl border border-gray-700">
+        <div>
+          <label className="text-[10px] text-gray-400 uppercase block">
+            From
+          </label>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-400 uppercase block">
+            To
+          </label>
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-400 uppercase block">
+            Search
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Purpose, Bank, Sender, Receiver, Notes..."
+            className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white w-40 sm:w-56"
+          />
+        </div>
+        <button
+          onClick={() => {
+            setFilterDateFrom("");
+            setFilterDateTo("");
+            setSearchTerm("");
+          }}
+          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
+        >
+          Clear All
+        </button>
+      </div>
+
+      {/* Table */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left border-collapse">
