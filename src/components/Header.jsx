@@ -31,21 +31,21 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
       className="w-full sticky top-0 z-50 backdrop-blur-2xl bg-white/70 dark:bg-gray-900/70 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg shadow-gray-200/20 dark:shadow-black/30 transition-all duration-500"
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col md:flex-row items-center md:items-center justify-between gap-3">
           {/* Logo */}
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start"
           >
             <motion.div
               animate={{ rotate: [0, -10, 10, -10, 0] }}
               transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-500/30"
+              className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 rounded-2xl flex items-center justify-center text-white text-xl md:text-2xl shadow-lg shadow-blue-500/30"
             >
               🚗
             </motion.div>
             <div>
-              <h1 className="text-xl font-black text-gray-800 dark:text-white tracking-tight">
+              <h1 className="text-base md:text-xl font-black text-gray-800 dark:text-white tracking-tight">
                 IQRA{" "}
                 <span className="text-blue-600 dark:text-blue-400">
                   MOTOR INSURANCE
@@ -55,7 +55,7 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
           </motion.div>
 
           {/* Stats + Dark Mode + Logout Right Wrapper */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3 w-full md:w-auto">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -63,7 +63,7 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2 + index * 0.1, type: "spring" }}
                 whileHover={{ y: -2, scale: 1.02 }}
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-gradient-to-r ${stat.gradient} text-white shadow-lg cursor-pointer min-w-[70px] md:min-w-[100px] justify-center`}
+                className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 rounded-xl bg-gradient-to-r ${stat.gradient} text-white shadow-lg cursor-pointer flex-1 md:flex-none md:min-w-[100px] justify-center max-w-[32%] md:max-w-none`}
                 title={`${stat.label}: ${stat.value}`}
               >
                 <span className="text-lg">{stat.icon}</span>
@@ -82,10 +82,12 @@ const Header = ({ totalReceivable, customerCount, pendingCount, onLogout }) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onLogout}
-              className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all duration-300 shadow-md border border-red-200/30 text-red-600 dark:text-red-400 cursor-pointer"
+              className="px-3 py-1.5 md:px-4 md:py-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all duration-300 shadow-md border border-red-200/30 text-red-600 dark:text-red-400 cursor-pointer flex-1 md:flex-none max-w-[32%] md:max-w-none"
               aria-label="Log out of the application"
             >
-              <span className="text-xs font-semibold">Log out</span>
+              <span className="text-[10px] md:text-xs font-semibold">
+                Log out
+              </span>
             </motion.button>
           </div>
         </div>
