@@ -810,7 +810,7 @@ const Data = ({
 
     const newPayment = {
       amount,
-      date: new Date().toISOString().split("T")[0],
+      date: paymentModal.date, // use the selected date
     };
 
     // Get existing payments or initialize from advancePaid for backward compatibility
@@ -1311,13 +1311,17 @@ const Data = ({
                   <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
                     Date
                   </label>
-                  <div className="rounded-lg p-2.5 border border-gray-600 bg-gray-900 text-gray-300 text-sm">
-                    {new Date().toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </div>
+                  <input
+                    type="date"
+                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                    value={paymentModal.date}
+                    onChange={(e) =>
+                      setPaymentModal((prev) => ({
+                        ...prev,
+                        date: e.target.value,
+                      }))
+                    }
+                  />
                 </div>
               </div>
 
