@@ -297,346 +297,355 @@ const SelfStatement = ({ user }) => {
   const filteredEntries = getFilteredEntries();
 
   return (
-    <div className="w-full flex flex-col gap-6 bg-gray-900 text-gray-100 px-4 md:px-6 py-6 rounded-2xl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-700 pb-4">
-        <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-            Self Statement
-          </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Manage your personal accounting entries
-          </p>
-        </div>
-        <button
-          onClick={handlePrint}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium text-white shadow flex items-center gap-2"
-        >
-          🖨️ Print Statement
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Form */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 p-4 shadow">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">
-          {editingId ? "Edit Entry" : "New Entry"}
-        </h3>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-        >
+    <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl h-[calc(100vh-120px)] overflow-hidden">
+      {/* LEFT COLUMN: Header + Form + Filter */}
+      <div className="flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto">
+        {/* Header */}
+        <div className="flex flex-col gap-2 border-b border-gray-700 pb-4">
           <div>
-            <label className="text-[10px] text-gray-400 uppercase">Date</label>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+              Self Statement
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Manage your personal accounting entries
+            </p>
+          </div>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium text-white shadow flex items-center gap-2 w-fit"
+          >
+            🖨️ Print Statement
+          </button>
+        </div>
+
+        {/* 🟢 Filter Row – now between form and table */}
+        <div className="flex flex-wrap gap-3 items-end bg-gray-800 p-3 rounded-xl border border-gray-700">
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase block">
+              From
+            </label>
             <input
               type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              required
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
             />
           </div>
           <div>
-            <label className="text-[10px] text-gray-400 uppercase">
-              Purpose
+            <label className="text-[10px] text-gray-400 uppercase block">
+              To
+            </label>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase block">
+              Search
             </label>
             <input
               type="text"
-              name="purpose"
-              value={form.purpose}
-              onChange={handleChange}
-              placeholder="e.g., Office rent"
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              required
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Purpose, Bank, Sender, Receiver, Notes..."
+              className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white w-40 sm:w-56"
             />
           </div>
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase">
-              Bank / Method
-            </label>
-            <select
-              name="bank"
-              value={form.bank}
-              onChange={handleChange}
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-            >
-              {bankOptions.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase">
-              Amount (Rs.)
-            </label>
-            <input
-              type="number"
-              name="amount"
-              value={form.amount}
-              onChange={handleChange}
-              placeholder="0"
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-              required
-            />
-          </div>
+          <button
+            onClick={() => {
+              setFilterDateFrom("");
+              setFilterDateTo("");
+              setSearchTerm("");
+            }}
+            className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
+          >
+            Clear All
+          </button>
+        </div>
 
-          {/* Type full width */}
-          <div className="sm:col-span-2">
-            <label className="text-[10px] text-gray-400 uppercase">Type</label>
-            <select
-              name="type"
-              value={form.type}
-              onChange={handleChange}
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-            >
-              <option value="debit">Debit (Expense)</option>
-              <option value="credit">Credit (Income)</option>
-            </select>
+        {error && (
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm">
+            ⚠️ {error}
           </div>
-
-          {/* Sender and Receiver side by side */}
-          <div className="sm:col-span-2 grid grid-cols-2 gap-3">
+        )}
+        {/* Form */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-3 shadow">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">
+            {editingId ? "Edit Entry" : "New Entry"}
+          </h3>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          >
             <div>
               <label className="text-[10px] text-gray-400 uppercase">
-                Sender
+                Date
               </label>
               <input
-                type="text"
-                name="sender"
-                value={form.sender}
+                type="date"
+                name="date"
+                value={form.date}
                 onChange={handleChange}
-                placeholder="Who sent?"
                 className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+                required
               />
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase">
-                Receiver
+                Purpose
               </label>
               <input
                 type="text"
-                name="receiver"
-                value={form.receiver}
+                name="purpose"
+                value={form.purpose}
                 onChange={handleChange}
-                placeholder="Who received?"
+                placeholder="e.g., Office rent"
+                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Bank / Method
+              </label>
+              <select
+                name="bank"
+                value={form.bank}
+                onChange={handleChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+              >
+                {bankOptions.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 uppercase">
+                Amount (Rs.)
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                placeholder="Enter amount"
+                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+                required
+              />
+            </div>
+
+            {/* Type full width */}
+            <div className="sm:col-span-2">
+              <label className="text-[10px] text-gray-400 uppercase">
+                Type
+              </label>
+              <select
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+              >
+                <option value="debit">Debit (Expense)</option>
+                <option value="credit">Credit (Income)</option>
+              </select>
+            </div>
+
+            {/* Sender and Receiver side by side */}
+            <div className="sm:col-span-2 grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase">
+                  Sender
+                </label>
+                <input
+                  type="text"
+                  name="sender"
+                  value={form.sender}
+                  onChange={handleChange}
+                  placeholder="Who sent?"
+                  className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase">
+                  Receiver
+                </label>
+                <input
+                  type="text"
+                  name="receiver"
+                  value={form.receiver}
+                  onChange={handleChange}
+                  placeholder="Who received?"
+                  className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[10px] text-gray-400 uppercase">
+                Notes (Optional)
+              </label>
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                rows="2"
+                placeholder="Any remarks..."
                 className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
               />
             </div>
-          </div>
 
-          <div className="sm:col-span-2">
-            <label className="text-[10px] text-gray-400 uppercase">
-              Notes (Optional)
-            </label>
-            <textarea
-              name="notes"
-              value={form.notes}
-              onChange={handleChange}
-              rows="2"
-              placeholder="Any remarks..."
-              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm"
-            />
-          </div>
-
-          <div className="sm:col-span-2 flex gap-2">
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition"
-            >
-              {editingId ? "Update Entry" : "Add Entry"}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            <div className="sm:col-span-2 flex gap-2">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition"
+              >
+                {editingId ? "Update Entry" : "Add Entry"}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      {/* 🟢 Filter Row – now between form and table */}
-      <div className="flex flex-wrap gap-3 items-end bg-gray-800 p-3 rounded-xl border border-gray-700">
-        <div>
-          <label className="text-[10px] text-gray-400 uppercase block">
-            From
-          </label>
-          <input
-            type="date"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] text-gray-400 uppercase block">
-            To
-          </label>
-          <input
-            type="date"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] text-gray-400 uppercase block">
-            Search
-          </label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Purpose, Bank, Sender, Receiver, Notes..."
-            className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white w-40 sm:w-56"
-          />
-        </div>
-        <button
-          onClick={() => {
-            setFilterDateFrom("");
-            setFilterDateTo("");
-            setSearchTerm("");
-          }}
-          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
-        >
-          Clear All
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left border-collapse">
-            <thead className="bg-gray-700">
-              <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
-                <th className="p-3">Date</th>
-                <th className="p-3">Purpose</th>
-                <th className="p-3">Bank</th>
-                <th className="p-3">From → To</th>
-                <th className="p-3 text-right">Amount</th>
-                <th className="p-3 text-center">Type</th>
-                <th className="p-3">Notes</th>
-                <th className="p-3 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="p-4 text-center text-gray-400">
-                    Loading...
-                  </td>
+      {/* RIGHT COLUMN: Entries Table */}
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+        {/* Table */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col h-full">
+          <div className="overflow-auto flex-1 max-h-[calc(100vh-180px)]">
+            <table className="min-w-full text-left border-collapse">
+              <thead className="bg-gray-700">
+                <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Purpose</th>
+                  <th className="p-3">Bank</th>
+                  <th className="p-3">From → To</th>
+                  <th className="p-3 text-right">Amount</th>
+                  <th className="p-3 text-center">Type</th>
+                  <th className="p-3">Notes</th>
+                  <th className="p-3 text-center">Action</th>
                 </tr>
-              ) : filteredEntries.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-4 text-center text-gray-400">
-                    No entries found.
-                  </td>
-                </tr>
-              ) : (
-                filteredEntries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="hover:bg-gray-700/50 transition"
-                  >
-                    <td className="p-3 text-sm text-gray-200">
-                      {new Date(entry.date).toLocaleDateString()}
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="p-4 text-center text-gray-400">
+                      Loading...
                     </td>
-                    <td className="p-3 text-sm text-gray-200">
-                      {entry.purpose}
+                  </tr>
+                ) : filteredEntries.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="p-4 text-center text-gray-400">
+                      No entries found.
                     </td>
-                    <td className="p-3 text-sm text-gray-200">
-                      {entry.bank || "Cash"}
-                    </td>
-                    <td className="p-3 text-sm text-gray-200">
-                      {entry.sender || "—"} → {entry.receiver || "—"}
-                    </td>
-                    <td
-                      className={`p-3 text-sm font-mono text-right ${entry.type === "debit" ? "text-red-400" : "text-green-400"}`}
+                  </tr>
+                ) : (
+                  filteredEntries.map((entry) => (
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-gray-700/50 transition"
                     >
-                      Rs. {Number(entry.amount).toLocaleString()}
-                    </td>
-                    <td
-                      className={`p-3 text-center text-sm font-semibold ${entry.type === "debit" ? "text-red-400" : "text-green-400"}`}
-                    >
-                      {entry.type === "debit" ? "Debit" : "Credit"}
-                    </td>
-                    <td className="p-3 text-sm text-gray-200">
-                      {entry.notes || "—"}
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          onClick={() => handleEdit(entry)}
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(entry.id)}
-                          className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-medium"
-                        >
-                          Del
-                        </button>
+                      <td className="p-3 text-sm text-gray-200">
+                        {new Date(entry.date).toLocaleDateString()}
+                      </td>
+                      <td className="p-3 text-sm text-gray-200">
+                        {entry.purpose}
+                      </td>
+                      <td className="p-3 text-sm text-gray-200">
+                        {entry.bank || "Cash"}
+                      </td>
+                      <td className="p-3 text-sm text-gray-200">
+                        {entry.sender || "—"} → {entry.receiver || "—"}
+                      </td>
+                      <td
+                        className={`p-3 text-sm font-mono text-right ${entry.type === "debit" ? "text-red-400" : "text-green-400"}`}
+                      >
+                        Rs. {Number(entry.amount).toLocaleString()}
+                      </td>
+                      <td
+                        className={`p-3 text-center text-sm font-semibold ${entry.type === "debit" ? "text-red-400" : "text-green-400"}`}
+                      >
+                        {entry.type === "debit" ? "Debit" : "Credit"}
+                      </td>
+                      <td className="p-3 text-sm text-gray-200">
+                        {entry.notes || "—"}
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleEdit(entry)}
+                            className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(entry.id)}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-medium"
+                          >
+                            Del
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {filteredEntries.length > 0 && (
+                <tfoot className="bg-gray-700 border-t border-gray-600">
+                  <tr>
+                    <td colSpan="8" className="p-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-gray-200">
+                        <div className="flex items-center gap-2">
+                          <span>Total Debit:</span>
+                          <span className="text-red-400">
+                            Rs.{" "}
+                            {filteredEntries
+                              .filter((e) => e.type === "debit")
+                              .reduce((sum, e) => sum + Number(e.amount), 0)
+                              .toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>Total Credit:</span>
+                          <span className="text-green-400">
+                            Rs.{" "}
+                            {filteredEntries
+                              .filter((e) => e.type === "credit")
+                              .reduce((sum, e) => sum + Number(e.amount), 0)
+                              .toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>Net Balance:</span>
+                          <span className="text-yellow-400">
+                            Rs.{" "}
+                            {(
+                              filteredEntries
+                                .filter((e) => e.type === "credit")
+                                .reduce((sum, e) => sum + Number(e.amount), 0) -
+                              filteredEntries
+                                .filter((e) => e.type === "debit")
+                                .reduce((sum, e) => sum + Number(e.amount), 0)
+                            ).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     </td>
                   </tr>
-                ))
+                </tfoot>
               )}
-            </tbody>
-            {filteredEntries.length > 0 && (
-              <tfoot className="bg-gray-700 border-t border-gray-600">
-                <tr>
-                  <td colSpan="8" className="p-2">
-                    <div className="flex items-center justify-between text-xs font-semibold text-gray-200">
-                      <div className="flex items-center gap-2">
-                        <span>Total Debit:</span>
-                        <span className="text-red-400">
-                          Rs.{" "}
-                          {filteredEntries
-                            .filter((e) => e.type === "debit")
-                            .reduce((sum, e) => sum + Number(e.amount), 0)
-                            .toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span>Total Credit:</span>
-                        <span className="text-green-400">
-                          Rs.{" "}
-                          {filteredEntries
-                            .filter((e) => e.type === "credit")
-                            .reduce((sum, e) => sum + Number(e.amount), 0)
-                            .toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span>Net Balance:</span>
-                        <span className="text-yellow-400">
-                          Rs.{" "}
-                          {(
-                            filteredEntries
-                              .filter((e) => e.type === "credit")
-                              .reduce((sum, e) => sum + Number(e.amount), 0) -
-                            filteredEntries
-                              .filter((e) => e.type === "debit")
-                              .reduce((sum, e) => sum + Number(e.amount), 0)
-                          ).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
+            </table>
+          </div>
         </div>
       </div>
     </div>

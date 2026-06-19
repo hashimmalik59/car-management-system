@@ -186,6 +186,20 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
         ${
+          item.payments && item.payments.length > 0
+            ? `
+        <h3>Payment History:</h3>
+        ${item.payments
+          .map(
+            (p, i) => `
+        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:green">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        `,
+          )
+          .join("")}
+        `
+            : ""
+        }
+        ${
           item.remarks
             ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
             : ""
@@ -708,7 +722,15 @@ const Data = ({
   setActiveTab,
   onEdit,
   onDelete,
+  onUpdateCustomer,
 }) => {
+  const [paymentModal, setPaymentModal] = useState({
+    open: false,
+    item: null,
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
+  });
+
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
     if (!Array.isArray(customerData)) return [];
@@ -769,294 +791,476 @@ const Data = ({
     return filtered;
   }, [customerData, searchTerm, activeTab]);
 
+  const handlePaymentSubmit = () => {
+    const amount = Number(paymentModal.amount);
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+    const item = paymentModal.item;
+    const newPayment = {
+      amount,
+      date: new Date().toISOString().split("T")[0],
+    };
+    const prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
+    const newPayments = [...prevPayments, newPayment];
+    const totalAdvance = newPayments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0,
+    );
+    const newRemaining = Math.max((item.totalAmount || 0) - totalAdvance, 0);
+    const updatedItem = {
+      ...item,
+      payments: newPayments,
+      advancePaid: totalAdvance,
+      remainingBalance: newRemaining,
+    };
+    if (onUpdateCustomer) {
+      onUpdateCustomer(updatedItem);
+    } else {
+      alert("Payment recorded! (onUpdateCustomer prop not provided)");
+    }
+    setPaymentModal({
+      open: false,
+      item: null,
+      amount: "",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="shadow-xl w-full rounded-2xl px-4 md:px-6 py-5 flex flex-col gap-5 bg-gray-800 border border-gray-700"
-    >
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-700 pb-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">
-            Customer Ledger
-          </h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-            Viewing:{" "}
-            <span
-              className={
-                activeTab === "individual" ? "text-blue-400" : "text-orange-400"
-              }
-            >
-              {activeTab} Records
-            </span>
-          </p>
+    <>
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="shadow-xl w-full rounded-2xl px-4 md:px-6 py-5 flex flex-col gap-5 bg-gray-800 border border-gray-700"
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-700 pb-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white">
+              Customer Ledger
+            </h1>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+              Viewing:{" "}
+              <span
+                className={
+                  activeTab === "individual"
+                    ? "text-blue-400"
+                    : "text-orange-400"
+                }
+              >
+                {activeTab} Records
+              </span>
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="relative w-full">
-        <motion.input
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          type="search"
-          placeholder="Search Name, Phone, Plate, Service..."
-          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+        <div className="relative w-full">
+          <motion.input
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            type="search"
+            placeholder="Search Name, Phone, Plate, Service..."
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-600 bg-gray-700 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-      <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={() => setActiveTab("individual")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-            activeTab === "individual"
-              ? "bg-gray-800 shadow text-blue-400"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          Individual Ledger
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={() => setActiveTab("party")}
-          className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-            activeTab === "party"
-              ? "bg-gray-800 shadow text-orange-400"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          Party / Business
-        </motion.button>
-      </div>
+        <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setActiveTab("individual")}
+            className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+              activeTab === "individual"
+                ? "bg-gray-800 shadow text-blue-400"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            Individual Ledger
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setActiveTab("party")}
+            className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+              activeTab === "party"
+                ? "bg-gray-800 shadow text-orange-400"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            Party / Business
+          </motion.button>
+        </div>
 
-      {activeTab === "individual" && (
-        <div className="overflow-x-auto -mx-4 md:mx-0">
-          <div className="inline-block min-w-full align-middle">
-            <table className="min-w-full text-left border-collapse">
-              <thead className="hidden md:table-header-group bg-gray-700">
-                <tr className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
-                  <th className="p-4">Customer & ID</th>
-                  <th className="p-4">Service & Vehicle</th>
-                  <th className="p-4">Region & Region Price</th>
-                  <th className="p-4">Tracking (From/To)</th>
-                  <th className="p-4">Commission</th>
-                  <th className="p-4">Payment Details</th>
-                  <th className="p-4">Attachment</th>
-                  <th className="p-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700 block md:table-row-group">
-                {filteredData.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="p-10 text-center text-gray-500">
-                      No individual records found.
-                    </td>
+        {activeTab === "individual" && (
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full text-left border-collapse">
+                <thead className="hidden md:table-header-group bg-gray-700">
+                  <tr className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
+                    <th className="p-4">Customer & ID</th>
+                    <th className="p-4">Service & Vehicle</th>
+                    <th className="p-4">Region & Region Price</th>
+                    <th className="p-4">Tracking (From/To)</th>
+                    <th className="p-4">Commission</th>
+                    <th className="p-4">Payment Details</th>
+                    <th className="p-4">Attachment</th>
+                    <th className="p-4 text-center">Action</th>
                   </tr>
-                ) : (
-                  filteredData.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-800/50 md:bg-transparent hover:bg-gray-700/50"
-                    >
-                      {/* individual row cells – same as before */}
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="text-sm font-bold uppercase text-white">
-                          {item.partyName || "N/A"}
-                        </div>
-                        <div className="text-[10px] text-gray-400 font-mono">
-                          {item.cnic}
-                        </div>
-                        <div className="text-[11px] text-blue-400 font-medium">
-                          {item.phone}
-                        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-700 block md:table-row-group">
+                  {filteredData.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="8"
+                        className="p-10 text-center text-gray-500"
+                      >
+                        No individual records found.
                       </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {Array.isArray(item.serviceType) &&
-                          item.serviceType.length > 0 ? (
-                            item.serviceType.map((serviceName, idx) => {
-                              const price = getServicePrice(
-                                item.servicePrices,
-                                serviceName,
-                              );
-                              return (
-                                <div
-                                  key={idx}
-                                  className="bg-gray-700 text-blue-300 text-[9px] px-2 py-1 rounded font-bold"
-                                >
-                                  <div className="uppercase">{serviceName}</div>
-                                  <div className="text-[8px] text-gray-400 mt-1">
-                                    Rs. {price.toLocaleString()}
+                    </tr>
+                  ) : (
+                    filteredData.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-800/50 md:bg-transparent hover:bg-gray-700/50"
+                      >
+                        <td className="p-2 md:p-4 block md:table-cell">
+                          <div className="text-sm font-bold uppercase text-white">
+                            {item.partyName || "N/A"}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-mono">
+                            {item.cnic}
+                          </div>
+                          <div className="text-[11px] text-blue-400 font-medium">
+                            {item.phone}
+                          </div>
+                        </td>
+                        <td className="p-2 md:p-4 block md:table-cell">
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {Array.isArray(item.serviceType) &&
+                            item.serviceType.length > 0 ? (
+                              item.serviceType.map((serviceName, idx) => {
+                                const price = getServicePrice(
+                                  item.servicePrices,
+                                  serviceName,
+                                );
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="bg-gray-700 text-blue-300 text-[9px] px-2 py-1 rounded font-bold"
+                                  >
+                                    <div className="uppercase">
+                                      {serviceName}
+                                    </div>
+                                    <div className="text-[8px] text-gray-400 mt-1">
+                                      Rs. {price.toLocaleString()}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <span className="text-[11px] text-gray-500">
-                              No services
+                                );
+                              })
+                            ) : (
+                              <span className="text-[11px] text-gray-500">
+                                No services
+                              </span>
+                            )}
+                          </div>
+                          {item.conversionServiceType && (
+                            <div className="bg-gray-700 border border-gray-600 p-1.5 mb-2 rounded text-[10px] text-blue-400 font-bold">
+                              Conversion:{" "}
+                              <span className="font-normal">
+                                {item.conversionServiceType}
+                              </span>
+                            </div>
+                          )}
+                          <div className="text-sm font-semibold text-white">
+                            {item.plate}
+                          </div>
+                          <div className="text-[10px] text-gray-400 italic">
+                            {item.model || "---"}
+                          </div>
+                        </td>
+                        <td className="p-2 md:p-4 block md:table-cell">
+                          {item.region && (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
+                                📍 {item.region}
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-mono">
+                                Rs.{" "}
+                                {(
+                                  Number(item.regionPrice) || 0
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2 md:p-4 block md:table-cell">
+                          <div className="text-[10px] text-gray-300">
+                            <span className="text-gray-500 font-bold">
+                              FROM:
+                            </span>{" "}
+                            {item.receivedBy || "---"}
+                          </div>
+                          <div className="text-[10px] text-orange-400 font-bold">
+                            <span className="text-gray-500">TO:</span>{" "}
+                            {item.handoverTo || "---"}
+                          </div>
+                          {item.tokenTaxFrom && (
+                            <span className="text-[9px] text-indigo-400 font-bold">
+                              Token Tax From: {item.tokenTaxFrom}
                             </span>
                           )}
-                        </div>
-                        {item.conversionServiceType && (
-                          <div className="bg-gray-700 border border-gray-600 p-1.5 mb-2 rounded text-[10px] text-blue-400 font-bold">
-                            Conversion:{" "}
-                            <span className="font-normal">
-                              {item.conversionServiceType}
+                          <br />
+                          {item.tokenTaxTo && (
+                            <span className="text-[9px] text-pink-400 font-bold">
+                              Token Tax To: {item.tokenTaxTo}
                             </span>
-                          </div>
-                        )}
-                        <div className="text-sm font-semibold text-white">
-                          {item.plate}
-                        </div>
-                        <div className="text-[10px] text-gray-400 italic">
-                          {item.model || "---"}
-                        </div>
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        {item.region && (
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-gray-300">
+                          {item.commissionAmount > 0
+                            ? `Rs. ${Number(item.commissionAmount).toLocaleString()}`
+                            : "-"}
+                        </td>
+                        <td className="p-2 md:p-4 block md:table-cell">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
-                              📍 {item.region}
-                            </span>
-                            <span className="text-[10px] text-gray-400 font-mono">
-                              Rs.{" "}
-                              {(Number(item.regionPrice) || 0).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="text-[10px] text-gray-300">
-                          <span className="text-gray-500 font-bold">FROM:</span>{" "}
-                          {item.receivedBy || "---"}
-                        </div>
-                        <div className="text-[10px] text-orange-400 font-bold">
-                          <span className="text-gray-500">TO:</span>{" "}
-                          {item.handoverTo || "---"}
-                        </div>
-                        {item.tokenTaxFrom && (
-                          <span className="text-[9px] text-indigo-400 font-bold">
-                            Token Tax From: {item.tokenTaxFrom}
-                          </span>
-                        )}
-                        <br />
-                        {item.tokenTaxTo && (
-                          <span className="text-[9px] text-pink-400 font-bold">
-                            Token Tax To: {item.tokenTaxTo}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 text-sm text-gray-300">
-                        {item.commissionAmount > 0
-                          ? `Rs. ${Number(item.commissionAmount).toLocaleString()}`
-                          : "-"}
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
-                            <span
-                              className={`text-[8px] font-black uppercase ${(item.remainingBalance || 0) > 0 ? "text-red-400" : "text-green-400"}`}
-                            >
-                              {(item.remainingBalance || 0) > 0
-                                ? "● Pending"
-                                : "● Cleared"}
-                            </span>
-                            <span className="text-[9px] bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded-md font-bold border border-gray-600">
-                              {item.bankName || "Cash"}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-gray-300">
-                            Total: {(item.totalAmount || 0).toLocaleString()}
-                          </div>
-                          <div className="text-[10px] text-green-400 font-medium">
-                            Advance: {(item.advancePaid || 0).toLocaleString()}
-                          </div>
-                          <div className="text-[11px] font-bold text-red-400">
-                            Bal: {(item.remainingBalance || 0).toLocaleString()}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2 md:p-4 block md:table-cell">
-                        <AttachmentDisplay attachment={item.attachment} />
-                        {item.remarks && (
-                          <div className="mt-1 space-y-1">
-                            <div className="text-[10px] text-gray-400 italic break-words">
-                              <span className="font-bold">Remarks:</span>{" "}
-                              {typeof item.remarks === "string"
-                                ? item.remarks
-                                : item.remarks.text || item.remarks}
+                            <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
+                              <span
+                                className={`text-[8px] font-black uppercase ${(item.remainingBalance || 0) > 0 ? "text-red-400" : "text-green-400"}`}
+                              >
+                                {(item.remainingBalance || 0) > 0
+                                  ? "● Pending"
+                                  : "● Cleared"}
+                              </span>
+                              <span className="text-[9px] bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded-md font-bold border border-gray-600">
+                                {item.bankName || "Cash"}
+                              </span>
                             </div>
-                            {item.createdAt && (
-                              <div className="text-[9px] text-gray-500 font-mono">
-                                📅{" "}
-                                {new Date(item.createdAt).toLocaleDateString(
-                                  "en-GB",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
+                            <div className="text-[10px] text-gray-300">
+                              Total: {(item.totalAmount || 0).toLocaleString()}
+                            </div>
+                            <div className="text-[10px] text-green-400 font-medium">
+                              Advance:{" "}
+                              {(item.advancePaid || 0).toLocaleString()}
+                            </div>
+                            <div className="text-[11px] font-bold text-red-400">
+                              Bal:{" "}
+                              {(item.remainingBalance || 0).toLocaleString()}
+                            </div>
+                            {item.payments && item.payments.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">
+                                  Payment History
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  {item.payments.map((p, pi) => (
+                                    <div
+                                      key={pi}
+                                      className="flex justify-between text-[10px]"
+                                    >
+                                      <span className="text-gray-400">
+                                        {new Date(p.date).toLocaleDateString(
+                                          "en-GB",
+                                          {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                          },
+                                        )}
+                                      </span>
+                                      <span className="text-green-400 font-mono">
+                                        +Rs. {Number(p.amount).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
-                        )}
-                      </td>
-                      <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
-                        <div className="flex gap-2 justify-end md:justify-center">
-                          <button
-                            onClick={() => printIndividualReceipt(item)}
-                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-[10px] font-bold border border-gray-600"
-                          >
-                            🖨️ Print
-                          </button>
-                          <button
-                            onClick={() => onEdit(item.id)}
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => onDelete(item.id, item)}
-                            className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold shadow"
-                          >
-                            Del
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "party" && (
-        <div className="flex flex-col gap-5">
-          {filteredData.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 text-sm">
-              No party records found.
+                        </td>
+                        <td className="p-2 md:p-4 block md:table-cell">
+                          <AttachmentDisplay attachment={item.attachment} />
+                          {item.remarks && (
+                            <div className="mt-1 space-y-1">
+                              <div className="text-[10px] text-gray-400 italic break-words">
+                                <span className="font-bold">Remarks:</span>{" "}
+                                {typeof item.remarks === "string"
+                                  ? item.remarks
+                                  : item.remarks.text || item.remarks}
+                              </div>
+                              {item.createdAt && (
+                                <div className="text-[9px] text-gray-500 font-mono">
+                                  📅{" "}
+                                  {new Date(item.createdAt).toLocaleDateString(
+                                    "en-GB",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
+                          <div className="flex gap-2 justify-end md:justify-center flex-wrap">
+                            <button
+                              onClick={() => printIndividualReceipt(item)}
+                              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-[10px] font-bold border border-gray-600"
+                            >
+                              🖨️ Print
+                            </button>
+                            <button
+                              onClick={() =>
+                                setPaymentModal({
+                                  open: true,
+                                  item: item,
+                                  amount: "",
+                                  date: new Date().toISOString().split("T")[0],
+                                })
+                              }
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
+                            >
+                              💰 Pay
+                            </button>
+                            <button
+                              onClick={() => onEdit(item.id)}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => onDelete(item.id, item)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold shadow"
+                            >
+                              Del
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            filteredData.map((item) => (
-              <PartyLedgerBlock
-                key={item.id}
-                item={item}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            ))
-          )}
-        </div>
-      )}
-    </motion.section>
+          </div>
+        )}
+
+        {activeTab === "party" && (
+          <div className="flex flex-col gap-5">
+            {filteredData.length === 0 ? (
+              <div className="p-10 text-center text-gray-500 text-sm">
+                No party records found.
+              </div>
+            ) : (
+              filteredData.map((item) => (
+                <PartyLedgerBlock
+                  key={item.id}
+                  item={item}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </motion.section>
+
+      {/* Payment Modal */}
+      <AnimatePresence>
+        {paymentModal.open && paymentModal.item && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={() =>
+              setPaymentModal({
+                open: false,
+                item: null,
+                amount: "",
+                date: new Date().toISOString().split("T")[0],
+              })
+            }
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <h3 className="text-lg font-bold text-white mb-1">Add Payment</h3>
+              <p className="text-[10px] text-gray-400 mb-4">
+                {paymentModal.item.partyName} — Remaining: Rs.{" "}
+                {(paymentModal.item.remainingBalance || 0).toLocaleString()}
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Amount (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                    placeholder="Enter amount"
+                    value={paymentModal.amount}
+                    onChange={(e) =>
+                      setPaymentModal((prev) => ({
+                        ...prev,
+                        amount: e.target.value,
+                      }))
+                    }
+                    autoFocus
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Date
+                  </label>
+                  <div className="rounded-lg p-2.5 border border-gray-600 bg-gray-900 text-gray-300 text-sm">
+                    {new Date().toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={handlePaymentSubmit}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                >
+                  Save Payment
+                </button>
+                <button
+                  onClick={() =>
+                    setPaymentModal({
+                      open: false,
+                      item: null,
+                      amount: "",
+                      date: new Date().toISOString().split("T")[0],
+                    })
+                  }
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
