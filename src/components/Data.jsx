@@ -168,6 +168,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -935,6 +936,7 @@ const Data = ({
                     <th className="p-4">Region & Region Price</th>
                     <th className="p-4">Tracking (From/To)</th>
                     <th className="p-4">Commission</th>
+                    <th className="p-4">Choice</th> {/* NEW COLUMN */}
                     <th className="p-4">Payment Details</th>
                     <th className="p-4">Attachment</th>
                     <th className="p-4 text-center">Action</th>
@@ -944,7 +946,7 @@ const Data = ({
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="8"
+                        colSpan="9"
                         className="p-10 text-center text-gray-500"
                       >
                         No individual records found.
@@ -1053,6 +1055,11 @@ const Data = ({
                           {item.commissionAmount > 0
                             ? `Rs. ${Number(item.commissionAmount).toLocaleString()}`
                             : "-"}
+                        </td>
+                        <td className="p-4 text-sm text-gray-300">
+                          {item.choice !== undefined && item.choice !== null
+                            ? item.choice
+                            : "—"}
                         </td>
                         <td className="p-2 md:p-4 block md:table-cell">
                           <div className="flex flex-col gap-1">
