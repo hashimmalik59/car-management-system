@@ -214,7 +214,7 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ──────
+// ─── PARTY RECEIPT ────── (Choice added)
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -266,6 +266,9 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
+        <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
+        <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Vehicles Details:</h3>
         <table class="table">
           <thead>
@@ -435,7 +438,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ──────────
+// ─── PARTY LEDGER BLOCK ────────── (Choice added)
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -503,6 +506,10 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         )}
         {item?.tokenTaxTo && (
           <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
+        )}
+        {/* 🟢 Choice added */}
+        {item?.choice !== undefined && item?.choice !== null && (
+          <span className="text-yellow-300">CHOICE: {item.choice}</span>
         )}
       </div>
 
@@ -936,7 +943,7 @@ const Data = ({
                     <th className="p-4">Region & Region Price</th>
                     <th className="p-4">Tracking (From/To)</th>
                     <th className="p-4">Commission</th>
-                    <th className="p-4">Choice</th> {/* NEW COLUMN */}
+                    <th className="p-4">Choice</th>
                     <th className="p-4">Payment Details</th>
                     <th className="p-4">Attachment</th>
                     <th className="p-4 text-center">Action</th>
