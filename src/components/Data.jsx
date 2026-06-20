@@ -214,7 +214,7 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ────── (Choice added)
+// ─── PARTY RECEIPT ──────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -438,7 +438,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ────────── (Choice added)
+// ─── PARTY LEDGER BLOCK ──────────
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -507,7 +507,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         {item?.tokenTaxTo && (
           <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
         )}
-        {/* 🟢 Choice added */}
         {item?.choice !== undefined && item?.choice !== null && (
           <span className="text-yellow-300">CHOICE: {item.choice}</span>
         )}
@@ -736,7 +735,8 @@ const Data = ({
     open: false,
     item: null,
     amount: "",
-    date: new Date().toISOString().split("T")[0],
+    // 🟢 FIX: Use local date instead of UTC
+    date: new Date().toLocaleDateString("en-CA"),
   });
 
   const filteredData = useMemo(() => {
@@ -856,11 +856,12 @@ const Data = ({
       alert("Payment recorded! (onUpdateCustomer prop not provided)");
     }
 
+    // Reset modal with today's local date
     setPaymentModal({
       open: false,
       item: null,
       amount: "",
-      date: new Date().toISOString().split("T")[0],
+      date: new Date().toLocaleDateString("en-CA"),
     });
   };
 
@@ -1164,7 +1165,7 @@ const Data = ({
                                   open: true,
                                   item: item,
                                   amount: "",
-                                  date: new Date().toISOString().split("T")[0],
+                                  date: new Date().toLocaleDateString("en-CA"),
                                 })
                               }
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
@@ -1227,7 +1228,7 @@ const Data = ({
                 open: false,
                 item: null,
                 amount: "",
-                date: new Date().toISOString().split("T")[0],
+                date: new Date().toLocaleDateString("en-CA"),
               })
             }
           >
@@ -1362,7 +1363,7 @@ const Data = ({
                       open: false,
                       item: null,
                       amount: "",
-                      date: new Date().toISOString().split("T")[0],
+                      date: new Date().toLocaleDateString("en-CA"),
                     })
                   }
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"
