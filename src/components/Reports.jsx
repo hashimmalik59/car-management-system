@@ -421,7 +421,6 @@ const PartyLedgerBlock = ({ item }) => {
         {item.tokenTaxTo && (
           <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
         )}
-        {/* 🟢 Choice added */}
         {item.choice !== undefined && item.choice !== null && (
           <span className="text-yellow-300">CHOICE: {item.choice}</span>
         )}
@@ -875,8 +874,9 @@ const printReport = (
 // ─── Main Reports Component ────────────────────────────────
 const Reports = ({ customerData = [] }) => {
   const [reportType, setReportType] = useState("daily");
+  // 🟢 FIX: Use local date string to avoid UTC offset
   const [selectedDate, setSelectedDate] = useState(
-    () => new Date().toISOString().split("T")[0],
+    () => new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD
   );
   const [activeView, setActiveView] = useState("all");
 
@@ -1034,7 +1034,7 @@ const Reports = ({ customerData = [] }) => {
             key={type.key}
             onClick={() => {
               setReportType(type.key);
-              setSelectedDate(new Date().toISOString().split("T")[0]);
+              setSelectedDate(new Date().toLocaleDateString("en-CA"));
             }}
             className={`py-3 rounded-xl font-medium text-sm transition-all ${
               reportType === type.key
@@ -1079,7 +1079,7 @@ const Reports = ({ customerData = [] }) => {
           />
           <button
             onClick={() =>
-              setSelectedDate(new Date().toISOString().split("T")[0])
+              setSelectedDate(new Date().toLocaleDateString("en-CA"))
             }
             className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition"
           >
