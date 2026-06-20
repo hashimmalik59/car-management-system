@@ -132,6 +132,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -757,6 +758,10 @@ const printReport = (
                   `
                   : "";
               const commission = Number(item.commissionAmount) || 0;
+              const choice =
+                item.choice !== undefined && item.choice !== null
+                  ? item.choice
+                  : "—";
               return `
           <div class="card">
             <div class="info-row"><span class="label">Customer:</span><span class="value"><strong>${item.partyName}</strong></span></div>
@@ -764,6 +769,7 @@ const printReport = (
             <div class="info-row"><span class="label">Vehicle:</span><span class="value">${item.plate || "N/A"} (${item.model || "N/A"})</span></div>
             <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"} ${item.regionPrice ? `— Rs. ${Number(item.regionPrice).toLocaleString()}` : ""}</span></div>
             <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${commission.toLocaleString()}</span></div>
+            <div class="info-row"><span class="label">Choice:</span><span class="value">${choice}</span></div>
             <div class="grid-info">
               <div class="item">Total: Rs. ${getItemTotal(item).toLocaleString()}</div>
               <div class="item text-green">Advance: Rs. ${getItemAdvance(item).toLocaleString()}</div>
@@ -1177,6 +1183,7 @@ const Reports = ({ customerData = [] }) => {
                           <th className="p-3">Region & Region Price</th>
                           <th className="p-3">Tracking (From/To)</th>
                           <th className="p-3">Commission</th>
+                          <th className="p-3">Choice</th> {/* NEW COLUMN */}
                           <th className="p-3">Payment Details</th>
                           <th className="p-3">Attachment</th>
                           <th className="p-3 text-center">Action</th>
@@ -1254,6 +1261,11 @@ const Reports = ({ customerData = [] }) => {
                               {item.commissionAmount > 0
                                 ? `Rs. ${item.commissionAmount.toLocaleString()}`
                                 : "-"}
+                            </td>
+                            <td className="p-3 text-sm text-gray-300">
+                              {item.choice !== undefined && item.choice !== null
+                                ? item.choice
+                                : "—"}
                             </td>
                             <td className="p-3">
                               <div className="flex flex-col gap-0.5">
