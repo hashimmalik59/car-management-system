@@ -52,7 +52,7 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
   return { total, remaining };
 };
 
-// ==================== VEHICLE CARD ====================
+// ==================== VEHICLE CARD (Party only – NO Choice field) ====================
 const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
   const getServicesTotal = (prices) => {
     return Object.values(prices || {}).reduce(
@@ -61,7 +61,6 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     );
   };
 
-  // No online payment subtraction per vehicle
   const computeTotals = (servicesTotal, regionPrice, advance) => {
     const total = servicesTotal + regionPrice;
     const remaining = Math.max(total - advance, 0);
@@ -455,6 +454,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     tokenTaxTo: "",
     remarks: "",
     bankName: "Cash",
+    // choice removed from party vehicles
   });
 
   const createInitialForm = () => ({
@@ -476,6 +476,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
+    choice: null, // individual choice – null means empty
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -491,7 +492,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
 
-  // 🟢 COMPUTE PARTY REMAINING (sum vehicleRemaining - onlinePayment)
   const partyRemainingBalance = useMemo(() => {
     if (formData.type !== "party") return 0;
     const vehicles = formData.vehicles || [];
@@ -503,7 +503,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     return Math.max(sumVehicleRemaining - onlinePayment, 0);
   }, [formData.vehicles, formData.onlinePayment, formData.type]);
 
-  // 🟢 UPDATE remainingBalance in formData when partyRemainingBalance changes
   useEffect(() => {
     if (formData.type === "party") {
       setFormData((prev) => ({
@@ -513,7 +512,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   }, [partyRemainingBalance, formData.type]);
 
-  // 🟢 When editing, ensure remainingBalance is set correctly for party
   useEffect(() => {
     if (editingData) {
       let normalized = { ...editingData };
@@ -531,6 +529,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           region: editingData.region ?? "",
           regionPrice: editingData.regionPrice ?? 0,
           conversionServiceType: editingData.conversionServiceType ?? "",
+          choice: editingData.choice !== undefined ? editingData.choice : null,
         };
       } else {
         setCommissionAmount(0);
@@ -547,12 +546,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           regionPrice: v.regionPrice ?? 0,
           conversionServiceType: v.conversionServiceType ?? "",
         }));
-        // Load party-level online payment fields
         normalized.onlinePaymentEnabled =
           editingData.onlinePaymentEnabled ?? false;
         normalized.onlinePayment = editingData.onlinePayment ?? 0;
         normalized.onlinePaymentNotes = editingData.onlinePaymentNotes ?? "";
-        // Recalc remaining balance
         const sumRemaining = normalized.vehicles.reduce(
           (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
           0,
@@ -569,7 +566,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   }, [editingData]);
 
-  // Individual amount change handlers (unchanged)
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
     if (field === "advancePaid") {
@@ -645,7 +641,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
-  // Party vehicle handlers
   const handleVehicleChange = (idx, field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -672,7 +667,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }));
   };
 
-  // Party online payment handlers
   const handlePartyOnlinePaymentToggle = () => {
     const newEnabled = !formData.onlinePaymentEnabled;
     setFormData((prev) => ({
@@ -716,7 +710,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       ...formData,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
-      // Ensure remainingBalance is correctly set for party
       ...(formData.type === "party" && {
         remainingBalance: partyRemainingBalance,
       }),
@@ -791,7 +784,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             Entry
           </h1>
 
-          {/* Common fields (partyName, phone, etc.) remain same */}
+          {/* Common fields */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               {isParty ? "Business / Party Name" : "Customer Name"}
@@ -873,7 +866,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </div>
           </div>
 
-          {/* Individual section (unchanged) */}
+          {/* Individual section */}
           {!isParty && (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -944,6 +937,26 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   />
                 </div>
               )}
+
+              {/* 🟢 INDIVIDUAL CHOICE FIELD – empty by default */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Choice
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter choice number"
+                  value={formData.choice === null ? "" : formData.choice}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      choice:
+                        e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                />
+              </div>
 
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1207,7 +1220,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </>
           )}
 
-          {/* PARTY SECTION: Online Payment and Vehicles */}
+          {/* PARTY SECTION */}
           {isParty && (
             <>
               {/* Online Payment toggle */}
@@ -1295,7 +1308,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </div>
           )}
 
-          {/* Fixed button bar at bottom */}
+          {/* Fixed button bar */}
           <div className="fixed bottom-0 left-0 right-0 z-20 bg-gray-800 border-t border-gray-700 p-4 flex flex-col items-center gap-2">
             <button
               type="submit"
