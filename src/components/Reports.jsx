@@ -810,6 +810,7 @@ const printReport = (
             <div class="info-row"><span class="label">Party:</span><span class="value"><strong>${item.partyName}</strong></span></div>
             <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
             <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
+            <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
             <table>
               <thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></tr></thead>
               <tbody>
