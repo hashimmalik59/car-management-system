@@ -454,7 +454,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     tokenTaxTo: "",
     remarks: "",
     bankName: "Cash",
-    // choice removed from party vehicles
   });
 
   const createInitialForm = () => ({
@@ -476,7 +475,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
-    choice: null, // individual choice – null means empty
+    choice: null, // individual and party choice – null means empty
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -558,6 +557,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           sumRemaining - (normalized.onlinePayment || 0),
           0,
         );
+        // Preserve choice for party as well
+        normalized.choice =
+          editingData.choice !== undefined ? editingData.choice : null;
       }
       setFormData(normalized);
     } else {
@@ -938,7 +940,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 </div>
               )}
 
-              {/* 🟢 INDIVIDUAL CHOICE FIELD – empty by default */}
+              {/* 🟢 INDIVIDUAL CHOICE FIELD */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice
@@ -1258,6 +1260,26 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* 🟢 PARTY CHOICE FIELD – ONE FIELD FOR ENTIRE PARTY */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Choice
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter choice number"
+                  value={formData.choice === null ? "" : formData.choice}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      choice:
+                        e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                />
               </div>
 
               {/* Vehicles */}
