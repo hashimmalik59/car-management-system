@@ -455,6 +455,14 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const adjustedTotal = Math.max(totalAllVehicles - onlinePayment, 0);
   const adjustedRemaining = Math.max(remainingAllVehicles - onlinePayment, 0);
 
+  // 🔥 Theme based on type: Debit = Red, Party = Orange
+  const isDebit = item?.type === "debit";
+  const headerGradient = isDebit
+    ? "from-red-600 to-red-700"
+    : "from-orange-600 to-orange-700";
+  const accentColor = isDebit ? "red" : "orange";
+  const textAccent = isDebit ? "text-red-400" : "text-orange-400";
+
   return (
     <motion.div
       variants={rowVariants}
@@ -463,9 +471,11 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
       transition={{ duration: 0.3 }}
       className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg"
     >
-      <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+      <div
+        className={`bg-gradient-to-r ${headerGradient} px-4 py-2.5 flex items-center justify-between flex-wrap gap-2`}
+      >
         <p className="text-white font-bold text-sm tracking-wide uppercase">
-          {item.type === "debit" ? "DEBIT LEDGER : " : "PARTY LEDGER : "}
+          {isDebit ? "DEBIT LEDGER : " : "PARTY LEDGER : "}
           <span className="text-yellow-300">{item?.partyName || "N/A"}</span>
           {(item?.ntn || item?.phone) && (
             <span className="text-orange-200 font-normal text-xs ml-2">
@@ -738,7 +748,6 @@ const Data = ({
     date: new Date().toLocaleDateString("en-CA"),
   });
 
-  // 🔥 NEW STATE: toggle for showing only Debit entries inside Party tab
   const [showDebitOnly, setShowDebitOnly] = useState(false);
 
   const filteredData = useMemo(() => {
@@ -748,10 +757,8 @@ const Data = ({
     let filtered = customerData.filter((item) => {
       if (!item) return false;
 
-      // 1️⃣ TYPE FILTER
       let typeMatch = false;
       if (activeTab === "party") {
-        // If party tab, show either "party" or "debit" based on toggle
         typeMatch = showDebitOnly
           ? item.type === "debit"
           : item.type === "party";
@@ -760,7 +767,6 @@ const Data = ({
       }
       if (!typeMatch) return false;
 
-      // 2️⃣ SEARCH LOGIC (unchanged)
       if (search === "pending" || search === "clear") {
         if (item.type === "individual") {
           const bal = Number(item.remainingBalance || 0);
@@ -924,7 +930,7 @@ const Data = ({
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 setActiveTab("individual");
-                setShowDebitOnly(false); // Reset filter when switching tabs
+                setShowDebitOnly(false);
               }}
               className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
                 activeTab === "individual"
@@ -939,7 +945,7 @@ const Data = ({
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 setActiveTab("party");
-                setShowDebitOnly(false); // Reset filter to show party by default
+                setShowDebitOnly(false);
               }}
               className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
                 activeTab === "party"
@@ -951,7 +957,7 @@ const Data = ({
             </motion.button>
           </div>
 
-          {/* 🔥 NEW DEBIT TOGGLE BUTTON (only visible when Party tab is active) */}
+          {/* 🔥 DEBIT TOGGLE BUTTON – Red when active */}
           {activeTab === "party" && (
             <button
               onClick={() => setShowDebitOnly(!showDebitOnly)}
