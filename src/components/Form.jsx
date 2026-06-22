@@ -52,8 +52,15 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
   return { total, remaining };
 };
 
-// ==================== VEHICLE CARD (Party only – NO Choice field) ====================
-const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
+// ==================== VEHICLE CARD (with isDebitActive prop) ====================
+const VehicleCard = ({
+  vehicle,
+  index,
+  onChange,
+  onRemove,
+  canRemove,
+  isDebitActive,
+}) => {
   const getServicesTotal = (prices) => {
     return Object.values(prices || {}).reduce(
       (sum, val) => sum + (Number(val?.servicePrice) || 0),
@@ -158,10 +165,18 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
     onChange(index, "vehicleRemaining", remaining);
   };
 
+  // Decide color based on debit mode
+  const accentColor = isDebitActive ? "red" : "orange";
+  const accentText = isDebitActive ? "text-red-400" : "text-orange-400";
+  const accentBorder = isDebitActive ? "border-red-500" : "border-orange-500";
+  const accentBg = isDebitActive ? "bg-red-500" : "bg-orange-500";
+
   return (
     <div className="relative flex flex-col gap-3 p-3 bg-gray-800 border border-gray-700 rounded-xl">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-widest ${accentText}`}
+        >
           Vehicle #{index + 1}
         </span>
         {canRemove && (
@@ -188,7 +203,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
             placeholder="ISL-786"
             required
             value={vehicle.plate}
@@ -201,7 +216,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
             placeholder="Civic-2015"
             value={vehicle.model}
             onChange={(e) => onChange(index, "model", e.target.value)}
@@ -214,7 +229,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           Region
         </label>
         <select
-          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
           value={vehicle.region || ""}
           onChange={(e) => handleRegionChange(e.target.value)}
         >
@@ -234,7 +249,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="number"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
             value={vehicle.regionPrice === 0 ? "" : vehicle.regionPrice}
             onChange={(e) => handleRegionPriceChange(e.target.value)}
             placeholder="Region price"
@@ -255,7 +270,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 accent-orange-500"
+                  className={`w-4 h-4 accent-${accentColor}-500`}
                   checked={vehicle.serviceType.includes(service)}
                   onChange={() => handleServiceToggle(service)}
                 />
@@ -281,8 +296,10 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       </div>
 
       {vehicle.serviceType.includes("Conversion") && (
-        <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2">
-          <label className="text-[10px] font-bold text-orange-400 uppercase">
+        <div
+          className={`flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2`}
+        >
+          <label className={`text-[10px] font-bold uppercase ${accentText}`}>
             Conversion Details (Specify Type)
           </label>
           <input
@@ -293,7 +310,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
             onChange={(e) =>
               onChange(index, "conversionServiceType", e.target.value)
             }
-            className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
           />
         </div>
       )}
@@ -316,7 +333,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="number"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
             value={vehicle.vehicleAdvance || 0}
             onChange={(e) => {
               const advance = Number(e.target.value) || 0;
@@ -333,7 +350,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
         <span className="text-[10px] font-bold text-gray-300">
           Remaining for this Vehicle
         </span>
-        <span className="text-sm font-bold text-orange-400">
+        <span className={`text-sm font-bold ${accentText}`}>
           Rs. {(vehicle.vehicleRemaining || 0).toLocaleString()}
         </span>
       </div>
@@ -345,7 +362,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
             value={vehicle.tokenTaxFrom || ""}
             onChange={(e) => onChange(index, "tokenTaxFrom", e.target.value)}
           />
@@ -356,7 +373,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           </label>
           <input
             type="text"
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
             value={vehicle.tokenTaxTo || ""}
             onChange={(e) => onChange(index, "tokenTaxTo", e.target.value)}
           />
@@ -364,12 +381,14 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
+        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
           Attachment
         </label>
         {!vehicle.attachment ? (
-          <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-orange-500 rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700">
-            <span className="text-orange-400 text-lg">📎</span>
+          <label
+            className={`flex items-center justify-center gap-2 p-3 border-2 border-dashed ${accentBorder} rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700`}
+          >
+            <span className={`text-lg ${accentText}`}>📎</span>
             <span className="text-[11px] text-gray-300">Upload Doc/Image</span>
             <input
               type="file"
@@ -388,7 +407,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
                 className="w-10 h-10 object-cover rounded"
               />
             ) : (
-              <span className="text-2xl">📄</span>
+              <span className={`text-2xl ${accentText}`}>📄</span>
             )}
             <span className="text-[11px] flex-1 truncate text-gray-200">
               {vehicle.attachment.name}
@@ -405,11 +424,11 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
       </div>
 
       <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-orange-400 uppercase">
+        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
           Vehicle Bank Account
         </label>
         <select
-          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500"
+          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
           value={vehicle.bankName || "Cash"}
           onChange={(e) => onChange(index, "bankName", e.target.value)}
         >
@@ -426,7 +445,7 @@ const VehicleCard = ({ vehicle, index, onChange, onRemove, canRemove }) => {
           Remarks
         </label>
         <textarea
-          className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-orange-500 placeholder:text-gray-500"
+          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
           placeholder="Vehicle remarks..."
           value={vehicle.remarks || ""}
           onChange={(e) => onChange(index, "remarks", e.target.value)}
@@ -475,7 +494,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     totalAmount: 0,
     advancePaid: 0,
     remainingBalance: 0,
-    choice: null, // individual and party choice – null means empty
+    choice: null,
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -490,9 +509,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
   const [formData, setFormData] = useState(createInitialForm());
   const [commissionAmount, setCommissionAmount] = useState(0);
+  const [isDebitView, setIsDebitView] = useState(false);
+
+  const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
+  const isDebitActive = isDebitView || formData.type === "debit";
 
   const partyRemainingBalance = useMemo(() => {
-    if (formData.type !== "party") return 0;
+    if (!isPartyOrDebit) return 0;
     const vehicles = formData.vehicles || [];
     const sumVehicleRemaining = vehicles.reduce(
       (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
@@ -500,16 +523,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     );
     const onlinePayment = Number(formData.onlinePayment) || 0;
     return Math.max(sumVehicleRemaining - onlinePayment, 0);
-  }, [formData.vehicles, formData.onlinePayment, formData.type]);
+  }, [formData.vehicles, formData.onlinePayment, isPartyOrDebit]);
 
   useEffect(() => {
-    if (formData.type === "party") {
+    if (isPartyOrDebit) {
       setFormData((prev) => ({
         ...prev,
         remainingBalance: partyRemainingBalance,
       }));
     }
-  }, [partyRemainingBalance, formData.type]);
+  }, [partyRemainingBalance, isPartyOrDebit]);
 
   useEffect(() => {
     if (editingData) {
@@ -530,6 +553,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           conversionServiceType: editingData.conversionServiceType ?? "",
           choice: editingData.choice !== undefined ? editingData.choice : null,
         };
+        setIsDebitView(false);
       } else {
         setCommissionAmount(0);
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
@@ -557,14 +581,19 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           sumRemaining - (normalized.onlinePayment || 0),
           0,
         );
-        // Preserve choice for party as well
         normalized.choice =
           editingData.choice !== undefined ? editingData.choice : null;
+        if (editingData.type === "debit") {
+          setIsDebitView(true);
+        } else {
+          setIsDebitView(false);
+        }
       }
       setFormData(normalized);
     } else {
       setFormData(createInitialForm());
       setCommissionAmount(0);
+      setIsDebitView(false);
     }
   }, [editingData]);
 
@@ -710,9 +739,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
     const finalData = {
       ...formData,
+      type: isDebitView ? "debit" : formData.type,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
-      ...(formData.type === "party" && {
+      ...(isPartyOrDebit && {
         remainingBalance: partyRemainingBalance,
       }),
     };
@@ -722,13 +752,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       alert("Record Saved/Updated Successfully!");
       setFormData(createInitialForm());
       setCommissionAmount(0);
+      setIsDebitView(false);
       if (onCancelEdit) onCancelEdit();
     } else if (result && !result.success) {
       alert("Database Error: " + result.message);
     }
   };
 
-  const isParty = formData.type === "party";
+  const isPartyOnly = formData.type === "party";
 
   return (
     <div className="w-full flex flex-col gap-3 px-4 md:px-6 py-6 shadow-xl rounded-2xl bg-gray-800 border border-gray-700 relative">
@@ -740,15 +771,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         <div className="flex bg-gray-700 p-1 rounded-xl mb-4">
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
               setFormData((prev) => ({
                 ...createInitialForm(),
                 type: "individual",
                 id: prev.id,
-              }))
-            }
+              }));
+              setIsDebitView(false);
+            }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
-              !isParty
+              formData.type === "individual"
                 ? "bg-gray-800 shadow text-blue-400"
                 : "text-gray-400 hover:text-gray-200"
             }`}
@@ -757,15 +789,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </button>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
               setFormData((prev) => ({
                 ...createInitialForm(),
                 type: "party",
                 id: prev.id,
-              }))
-            }
+              }));
+              setIsDebitView(false);
+            }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
-              isParty
+              isPartyOrDebit
                 ? "bg-gray-800 shadow text-orange-400"
                 : "text-gray-400 hover:text-gray-200"
             }`}
@@ -779,22 +812,50 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           onSubmit={handleSubmit}
           className="flex flex-col gap-4"
         >
-          <h1
-            className={`font-bold text-xl ${isParty ? "text-orange-400" : "text-blue-400"}`}
-          >
-            {editingData ? "Update" : "New"} {isParty ? "Party" : "Individual"}{" "}
-            Entry
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1
+              className={`font-bold text-xl ${
+                formData.type === "individual"
+                  ? "text-blue-400"
+                  : isDebitActive
+                    ? "text-red-400"
+                    : "text-orange-400"
+              }`}
+            >
+              {editingData ? "Update" : "New"}{" "}
+              {formData.type === "individual"
+                ? "Individual"
+                : isDebitActive
+                  ? "Debit"
+                  : "Party"}{" "}
+              Entry
+            </h1>
+
+            {/* Toggle button – only for party type */}
+            {isPartyOnly && (
+              <button
+                type="button"
+                onClick={() => setIsDebitView(!isDebitView)}
+                className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                  isDebitView
+                    ? "bg-orange-600 text-white hover:bg-orange-500"
+                    : "bg-red-600 text-white hover:bg-red-500"
+                }`}
+              >
+                {isDebitView ? "← Back to Party" : "Debit"}
+              </button>
+            )}
+          </div>
 
           {/* Common fields */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
-              {isParty ? "Business / Party Name" : "Customer Name"}
+              {isPartyOrDebit ? "Business / Party Name" : "Customer Name"}
             </label>
             <input
               type="text"
               className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500"
-              placeholder={isParty ? "Al-Madina Motors" : "Ali Khan"}
+              placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
               required
               value={formData.partyName}
               onChange={(e) =>
@@ -820,17 +881,17 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </div>
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
-                {isParty ? "NTN / Reg No" : "CNIC"}
+                {isPartyOrDebit ? "NTN / Reg No" : "CNIC"}
               </label>
               <input
                 type="text"
                 className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm placeholder:text-gray-500"
-                placeholder={isParty ? "NTN-786" : "17301-12345678"}
-                value={isParty ? formData.ntn : formData.cnic}
+                placeholder={isPartyOrDebit ? "NTN-786" : "17301-12345678"}
+                value={isPartyOrDebit ? formData.ntn : formData.cnic}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    [isParty ? "ntn" : "cnic"]: e.target.value,
+                    [isPartyOrDebit ? "ntn" : "cnic"]: e.target.value,
                   })
                 }
               />
@@ -869,7 +930,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           </div>
 
           {/* Individual section */}
-          {!isParty && (
+          {formData.type === "individual" && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col">
@@ -940,7 +1001,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 </div>
               )}
 
-              {/* 🟢 INDIVIDUAL CHOICE FIELD */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice
@@ -1219,13 +1279,27 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   </div>
                 )}
               </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Remarks
+                </label>
+                <textarea
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter remarks..."
+                  rows={3}
+                  value={formData.remarks || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, remarks: e.target.value })
+                  }
+                />
+              </div>
             </>
           )}
 
-          {/* PARTY SECTION */}
-          {isParty && (
+          {/* ==================== PARTY / DEBIT SECTION ==================== */}
+          {isPartyOrDebit && (
             <>
-              {/* Online Payment toggle */}
               <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
                 <label className="flex items-center gap-2 cursor-pointer text-green-400">
                   <input
@@ -1262,7 +1336,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 )}
               </div>
 
-              {/* 🟢 PARTY CHOICE FIELD – ONE FIELD FOR ENTIRE PARTY */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice
@@ -1282,16 +1355,20 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 />
               </div>
 
-              {/* Vehicles */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Vehicles ({formData.vehicles.length})
                   </label>
+                  {/* 🔥 "+ Add Vehicle" button – now red when Debit active */}
                   <button
                     type="button"
                     onClick={addVehicle}
-                    className="text-orange-400 font-bold text-sm hover:text-orange-300"
+                    className={`font-bold text-sm transition-colors ${
+                      isDebitActive
+                        ? "text-red-400 hover:text-red-300"
+                        : "text-orange-400 hover:text-orange-300"
+                    }`}
                   >
                     + Add Vehicle
                   </button>
@@ -1305,6 +1382,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                       onChange={handleVehicleChange}
                       onRemove={removeVehicle}
                       canRemove={formData.vehicles.length > 1}
+                      isDebitActive={isDebitActive}
                     />
                   ))}
                 </div>
@@ -1312,30 +1390,18 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             </>
           )}
 
-          {/* Remarks for all */}
-          {!isParty && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Remarks
-              </label>
-              <textarea
-                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                placeholder="Enter remarks..."
-                rows={3}
-                value={formData.remarks || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, remarks: e.target.value })
-                }
-              />
-            </div>
-          )}
-
           {/* Fixed button bar */}
           <div className="fixed bottom-0 left-0 right-0 z-20 bg-gray-800 border-t border-gray-700 p-4 flex flex-col items-center gap-2">
             <button
               type="submit"
               form="khataForm"
-              className={`w-64 font-bold rounded-xl py-3 text-white transition-all ${isParty ? "bg-orange-600 hover:bg-orange-500" : "bg-blue-600 hover:bg-blue-500"}`}
+              className={`w-64 font-bold rounded-xl py-3 text-white transition-all ${
+                isPartyOrDebit
+                  ? isDebitActive
+                    ? "bg-red-600 hover:bg-red-500"
+                    : "bg-orange-600 hover:bg-orange-500"
+                  : "bg-blue-600 hover:bg-blue-500"
+              }`}
             >
               {editingData ? "Update Record" : "Save to Khata"}
             </button>

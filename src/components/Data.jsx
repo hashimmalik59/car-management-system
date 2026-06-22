@@ -465,7 +465,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
     >
       <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
         <p className="text-white font-bold text-sm tracking-wide uppercase">
-          PARTY LEDGER :{" "}
+          {item.type === "debit" ? "DEBIT LEDGER : " : "PARTY LEDGER : "}
           <span className="text-yellow-300">{item?.partyName || "N/A"}</span>
           {(item?.ntn || item?.phone) && (
             <span className="text-orange-200 font-normal text-xs ml-2">
@@ -735,23 +735,38 @@ const Data = ({
     open: false,
     item: null,
     amount: "",
-    // 🟢 FIX: Use local date instead of UTC
     date: new Date().toLocaleDateString("en-CA"),
   });
+
+  // 🔥 NEW STATE: toggle for showing only Debit entries inside Party tab
+  const [showDebitOnly, setShowDebitOnly] = useState(false);
 
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
     if (!Array.isArray(customerData)) return [];
 
     let filtered = customerData.filter((item) => {
-      if (!item || item.type !== activeTab) return false;
+      if (!item) return false;
 
+      // 1️⃣ TYPE FILTER
+      let typeMatch = false;
+      if (activeTab === "party") {
+        // If party tab, show either "party" or "debit" based on toggle
+        typeMatch = showDebitOnly
+          ? item.type === "debit"
+          : item.type === "party";
+      } else {
+        typeMatch = item.type === activeTab;
+      }
+      if (!typeMatch) return false;
+
+      // 2️⃣ SEARCH LOGIC (unchanged)
       if (search === "pending" || search === "clear") {
         if (item.type === "individual") {
           const bal = Number(item.remainingBalance || 0);
           return search === "pending" ? bal > 0 : bal === 0;
         }
-        if (item.type === "party") {
+        if (item.type === "party" || item.type === "debit") {
           const vehicles = item.vehicles || [];
           if (vehicles.length === 0) return false;
           if (search === "pending") {
@@ -766,7 +781,7 @@ const Data = ({
       }
 
       let matchesSearch = false;
-      if (item.type === "party") {
+      if (item.type === "party" || item.type === "debit") {
         const vehicleSearch = (item.vehicles || []).some(
           (v) =>
             v?.plate?.toLowerCase().includes(search) ||
@@ -797,7 +812,7 @@ const Data = ({
     });
 
     return filtered;
-  }, [customerData, searchTerm, activeTab]);
+  }, [customerData, searchTerm, activeTab, showDebitOnly]);
 
   const handlePaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
@@ -808,7 +823,6 @@ const Data = ({
     const item = paymentModal.item;
     const currentRemaining = Number(item.remainingBalance) || 0;
 
-    // Validate: payment cannot exceed remaining balance
     if (amount > currentRemaining) {
       alert(
         `Payment amount (Rs. ${amount.toLocaleString()}) cannot exceed remaining balance (Rs. ${currentRemaining.toLocaleString()})!`,
@@ -818,13 +832,11 @@ const Data = ({
 
     const newPayment = {
       amount,
-      date: paymentModal.date, // use the selected date
+      date: paymentModal.date,
     };
 
-    // Get existing payments or initialize from advancePaid for backward compatibility
     let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
 
-    // If no payments array but advancePaid exists (old records), create initial payment
     if (prevPayments.length === 0 && (item.advancePaid || 0) > 0) {
       prevPayments = [
         {
@@ -856,7 +868,6 @@ const Data = ({
       alert("Payment recorded! (onUpdateCustomer prop not provided)");
     }
 
-    // Reset modal with today's local date
     setPaymentModal({
       open: false,
       item: null,
@@ -906,31 +917,53 @@ const Data = ({
           />
         </div>
 
-        <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setActiveTab("individual")}
-            className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-              activeTab === "individual"
-                ? "bg-gray-800 shadow text-blue-400"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            Individual Ledger
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setActiveTab("party")}
-            className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
-              activeTab === "party"
-                ? "bg-gray-800 shadow text-orange-400"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            Party / Business
-          </motion.button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex bg-gray-700 p-1 rounded-xl w-fit border border-gray-600">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                setActiveTab("individual");
+                setShowDebitOnly(false); // Reset filter when switching tabs
+              }}
+              className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+                activeTab === "individual"
+                  ? "bg-gray-800 shadow text-blue-400"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Individual Ledger
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                setActiveTab("party");
+                setShowDebitOnly(false); // Reset filter to show party by default
+              }}
+              className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
+                activeTab === "party"
+                  ? "bg-gray-800 shadow text-orange-400"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Party / Business
+            </motion.button>
+          </div>
+
+          {/* 🔥 NEW DEBIT TOGGLE BUTTON (only visible when Party tab is active) */}
+          {activeTab === "party" && (
+            <button
+              onClick={() => setShowDebitOnly(!showDebitOnly)}
+              className={`px-4 py-2 rounded-lg font-bold text-[10px] uppercase transition-all border ${
+                showDebitOnly
+                  ? "bg-red-600/20 border-red-500 text-red-400 hover:bg-red-600/30"
+                  : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              {showDebitOnly ? "Party" : "Debit"}
+            </button>
+          )}
         </div>
 
         {activeTab === "individual" && (
@@ -1199,7 +1232,9 @@ const Data = ({
           <div className="flex flex-col gap-5">
             {filteredData.length === 0 ? (
               <div className="p-10 text-center text-gray-500 text-sm">
-                No party records found.
+                {showDebitOnly
+                  ? "No Debit entries found."
+                  : "No party records found."}
               </div>
             ) : (
               filteredData.map((item) => (
@@ -1244,7 +1279,6 @@ const Data = ({
                 {paymentModal.item.partyName}
               </p>
 
-              {/* Remaining Balance Display */}
               {(() => {
                 const currentRemaining =
                   Number(paymentModal.item.remainingBalance) || 0;
