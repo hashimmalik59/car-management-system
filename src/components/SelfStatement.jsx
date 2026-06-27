@@ -28,6 +28,7 @@ const SelfStatement = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mobileView, setMobileView] = useState("form"); // "form" or "ledger"
 
   const bankOptions = [
     "Cash",
@@ -292,8 +293,36 @@ const SelfStatement = ({ user }) => {
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl md:h-[calc(100vh-120px)] md:overflow-hidden">
+      {/* ─── Mobile Toggle Buttons (only visible on small screens) ─── */}
+      <div className="md:hidden flex gap-2 mb-2 flex-shrink-0">
+        <button
+          onClick={() => setMobileView("form")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            mobileView === "form"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Form
+        </button>
+        <button
+          onClick={() => setMobileView("ledger")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            mobileView === "ledger"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Ledger
+        </button>
+      </div>
+
       {/* LEFT COLUMN: Header + Form */}
-      <div className="flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto max-h-[45vh] md:max-h-none overflow-y-auto">
+      <div
+        className={`flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto max-h-[45vh] md:max-h-none overflow-y-auto ${
+          mobileView === "ledger" ? "hidden md:flex" : ""
+        }`}
+      >
         {/* Header */}
         <div className="flex flex-col gap-2 border-b border-gray-700 pb-4">
           <div>
@@ -464,7 +493,11 @@ const SelfStatement = ({ user }) => {
       </div>
 
       {/* RIGHT COLUMN: Search Bar + Scrollable Table + Fixed Footer */}
-      <div className="flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto">
+      <div
+        className={`flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto ${
+          mobileView === "form" ? "hidden md:flex" : ""
+        }`}
+      >
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col md:h-full">
           {/* Search Bar */}
           <div className="p-3 border-b border-gray-700">
