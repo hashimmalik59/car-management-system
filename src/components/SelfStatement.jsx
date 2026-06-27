@@ -115,6 +115,12 @@ const SelfStatement = ({ user }) => {
       }
       resetForm();
       fetchEntries();
+
+      // ✅ Switch to Ledger on mobile after adding entry
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        setMobileView("ledger");
+      }
     } catch (error) {
       console.error("Error saving self statement:", error);
       setError("Failed to save. Check Firestore permissions.");

@@ -74,12 +74,10 @@ const Debit = ({ user }) => {
         ...doc.data(),
       }));
 
-      // ✅ Always use Firebase data if available
       setEntries(data);
       saveToLocalStorage(data);
     } catch (error) {
       console.error("Error fetching debits:", error);
-      // ✅ Fallback to localStorage only if Firebase fails
       loadFromLocalStorage();
     } finally {
       setLoading(false);
@@ -128,6 +126,12 @@ const Debit = ({ user }) => {
       amount: "",
       remarks: "",
     });
+
+    // ✅ Switch to Ledger on mobile after adding entry
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setMobileView("ledger");
+    }
 
     try {
       const docRef = await addDoc(collection(db, "debits"), {
