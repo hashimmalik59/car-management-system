@@ -1100,12 +1100,12 @@ const Data = ({
                         </td>
                         <td className="p-4 text-sm text-gray-300">
                           {item.commissionAmount > 0
-                            ? `Rs. ${Number(item.commissionAmount).toLocaleString()}`
+                            ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
                             : "-"}
                         </td>
                         <td className="p-4 text-sm text-gray-300">
                           {item.choice !== undefined && item.choice !== null
-                            ? item.choice
+                            ? `Rs.${item.choice}`
                             : "—"}
                         </td>
                         <td className="p-2 md:p-4 block md:table-cell">

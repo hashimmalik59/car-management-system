@@ -36,8 +36,14 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
-// For individual (no online payment)
-const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
+// 🔥 CHANGED: Added 'choice' parameter and added it to total
+const calculateTotalAmount = (
+  prices,
+  commission,
+  advance,
+  regionPrice = 0,
+  choice = 0,
+) => {
   const serviceSum = Object.values(prices || {}).reduce(
     (sum, v) =>
       sum +
@@ -47,12 +53,16 @@ const calculateTotalAmount = (prices, commission, advance, regionPrice = 0) => {
       Number(v.customPrice || 0),
     0,
   );
-  const total = serviceSum + Number(commission || 0) + Number(regionPrice || 0);
+  const total =
+    serviceSum +
+    Number(commission || 0) +
+    Number(regionPrice || 0) +
+    Number(choice || 0);
   const remaining = Math.max(total - Number(advance || 0), 0);
   return { total, remaining };
 };
 
-// ==================== VEHICLE CARD (with isDebitActive prop) ====================
+// ==================== VEHICLE CARD ====================
 const VehicleCard = ({
   vehicle,
   index,
@@ -165,11 +175,9 @@ const VehicleCard = ({
     onChange(index, "vehicleRemaining", remaining);
   };
 
-  // Decide color based on debit mode
   const accentColor = isDebitActive ? "red" : "orange";
   const accentText = isDebitActive ? "text-red-400" : "text-orange-400";
   const accentBorder = isDebitActive ? "border-red-500" : "border-orange-500";
-  const accentBg = isDebitActive ? "bg-red-500" : "bg-orange-500";
 
   return (
     <div className="relative flex flex-col gap-3 p-3 bg-gray-800 border border-gray-700 rounded-xl">
@@ -296,9 +304,7 @@ const VehicleCard = ({
       </div>
 
       {vehicle.serviceType.includes("Conversion") && (
-        <div
-          className={`flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2`}
-        >
+        <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mt-2">
           <label className={`text-[10px] font-bold uppercase ${accentText}`}>
             Conversion Details (Specify Type)
           </label>
@@ -514,6 +520,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
   const isDebitActive = isDebitView || formData.type === "debit";
 
+  // 🔥 CHANGED: Added choice to party remaining balance
   const partyRemainingBalance = useMemo(() => {
     if (!isPartyOrDebit) return 0;
     const vehicles = formData.vehicles || [];
@@ -522,8 +529,15 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       0,
     );
     const onlinePayment = Number(formData.onlinePayment) || 0;
-    return Math.max(sumVehicleRemaining - onlinePayment, 0);
-  }, [formData.vehicles, formData.onlinePayment, isPartyOrDebit]);
+    const choiceAmount = Number(formData.choice) || 0;
+    // Remaining = (sum of vehicleRemaining) + choice - onlinePayment
+    return Math.max(sumVehicleRemaining + choiceAmount - onlinePayment, 0);
+  }, [
+    formData.vehicles,
+    formData.onlinePayment,
+    formData.choice,
+    isPartyOrDebit,
+  ]);
 
   useEffect(() => {
     if (isPartyOrDebit) {
@@ -577,8 +591,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
           0,
         );
+        const choiceAmount = Number(editingData.choice) || 0;
         normalized.remainingBalance = Math.max(
-          sumRemaining - (normalized.onlinePayment || 0),
+          sumRemaining + choiceAmount - (normalized.onlinePayment || 0),
           0,
         );
         normalized.choice =
@@ -605,6 +620,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         commissionAmount,
         numValue,
         formData.regionPrice,
+        formData.choice, // 🔥 added choice
       );
       setFormData((prev) => ({
         ...prev,
@@ -621,7 +637,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         (sum, v) => sum + Number(v?.price || 0) + Number(v?.customPrice || 0),
         0,
       );
-      const newTotal = servicesTotal + (prev.commissionAmount || 0);
+      const newTotal =
+        servicesTotal +
+        (prev.commissionAmount || 0) +
+        (Number(prev.choice) || 0); // 🔥 added choice
       return {
         ...prev,
         region: regionValue,
@@ -640,7 +659,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         0,
       );
       const newTotal =
-        servicesTotal + regionPrice + (prev.commissionAmount || 0);
+        servicesTotal +
+        regionPrice +
+        (prev.commissionAmount || 0) +
+        (Number(prev.choice) || 0); // 🔥 added choice
       return {
         ...prev,
         regionPrice,
@@ -662,7 +684,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         0,
       );
       const newTotal =
-        servicesTotal + (prev.regionPrice || 0) + (prev.commissionAmount || 0);
+        servicesTotal +
+        (prev.regionPrice || 0) +
+        (prev.commissionAmount || 0) +
+        (Number(prev.choice) || 0); // 🔥 added choice
       return {
         ...prev,
         servicePrices: updatedPrices,
@@ -831,7 +856,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
               Entry
             </h1>
 
-            {/* Toggle button – only for party type */}
             {isPartyOnly && (
               <button
                 type="button"
@@ -1001,22 +1025,36 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 </div>
               )}
 
+              {/* 🟢 CHOICE FIELD – Individual */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Choice
+                  Choice (Additional Amount)
                 </label>
                 <input
                   type="number"
                   className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter choice number"
+                  placeholder="Enter choice amount"
                   value={formData.choice === null ? "" : formData.choice}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      choice:
-                        e.target.value === "" ? null : Number(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === "" ? null : Number(e.target.value);
+                    setFormData((prev) => {
+                      // Recalculate total and remaining when choice changes
+                      const { total, remaining } = calculateTotalAmount(
+                        prev.servicePrices,
+                        commissionAmount,
+                        prev.advancePaid || 0,
+                        prev.regionPrice || 0,
+                        val || 0,
+                      );
+                      return {
+                        ...prev,
+                        choice: val,
+                        totalAmount: total,
+                        remainingBalance: remaining,
+                      };
+                    });
+                  }}
                 />
               </div>
 
@@ -1057,7 +1095,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                               const newTotal =
                                 servicesTotal +
                                 (prev.regionPrice || 0) +
-                                (commissionAmount || 0);
+                                (commissionAmount || 0) +
+                                (Number(prev.choice) || 0); // 🔥 added choice
                               return {
                                 ...prev,
                                 serviceType: updatedServices,
@@ -1135,7 +1174,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         formData.servicePrices,
                       ).reduce((sum, v) => sum + Number(v?.price || 0), 0);
                       const newTotal =
-                        servicesTotal + (formData.regionPrice || 0) + val;
+                        servicesTotal +
+                        (formData.regionPrice || 0) +
+                        val +
+                        (Number(formData.choice) || 0); // 🔥 added choice
                       setFormData((prev) => ({
                         ...prev,
                         commissionAmount: val,
@@ -1300,6 +1342,42 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           {/* ==================== PARTY / DEBIT SECTION ==================== */}
           {isPartyOrDebit && (
             <>
+              {/* 🟢 CHOICE FIELD – Party/Debit */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Choice (Additional Amount)
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter choice amount"
+                  value={formData.choice === null ? "" : formData.choice}
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === "" ? null : Number(e.target.value);
+                    setFormData((prev) => {
+                      // Recalculate remaining balance when choice changes
+                      const vehicles = prev.vehicles || [];
+                      const sumVehicleRemaining = vehicles.reduce(
+                        (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
+                        0,
+                      );
+                      const onlinePayment = Number(prev.onlinePayment) || 0;
+                      const choiceAmount = val || 0;
+                      const newRemaining = Math.max(
+                        sumVehicleRemaining + choiceAmount - onlinePayment,
+                        0,
+                      );
+                      return {
+                        ...prev,
+                        choice: val,
+                        remainingBalance: newRemaining,
+                      };
+                    });
+                  }}
+                />
+              </div>
+
               <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
                 <label className="flex items-center gap-2 cursor-pointer text-green-400">
                   <input
@@ -1336,31 +1414,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 )}
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Choice
-                </label>
-                <input
-                  type="number"
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter choice number"
-                  value={formData.choice === null ? "" : formData.choice}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      choice:
-                        e.target.value === "" ? null : Number(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Vehicles ({formData.vehicles.length})
                   </label>
-                  {/* 🔥 "+ Add Vehicle" button – now red when Debit active */}
                   <button
                     type="button"
                     onClick={addVehicle}
