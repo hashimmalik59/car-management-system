@@ -27,8 +27,6 @@ const SelfStatement = ({ user }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const bankOptions = [
@@ -190,7 +188,6 @@ const SelfStatement = ({ user }) => {
           <div class="header">
             <h1>IQRA MOTOR INSURANCE</h1>
             <p>SELF STATEMENT</p>
-            <p>Period: ${filterDateFrom || "All"} – ${filterDateTo || "All"}</p>
             <p style="font-size:10px; color:#999;">Generated: ${new Date().toLocaleString()}</p>
           </div>
 
@@ -262,18 +259,7 @@ const SelfStatement = ({ user }) => {
 
   const getFilteredEntries = () => {
     let filtered = entries;
-    // Date filter
-    if (filterDateFrom) {
-      const from = new Date(filterDateFrom);
-      from.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((e) => new Date(e.date) >= from);
-    }
-    if (filterDateTo) {
-      const to = new Date(filterDateTo);
-      to.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((e) => new Date(e.date) <= to);
-    }
-    // Search filter
+    // Search filter (only)
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter((e) => {
@@ -298,7 +284,7 @@ const SelfStatement = ({ user }) => {
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl md:h-[calc(100vh-120px)] md:overflow-hidden">
-      {/* LEFT COLUMN: Header + Form + Filter */}
+      {/* LEFT COLUMN: Header + Form */}
       <div className="flex flex-col gap-4 md:w-[400px] md:shrink-0 md:overflow-y-auto max-h-[45vh] md:max-h-none overflow-y-auto">
         {/* Header */}
         <div className="flex flex-col gap-2 border-b border-gray-700 pb-4">
@@ -323,6 +309,7 @@ const SelfStatement = ({ user }) => {
             ⚠️ {error}
           </div>
         )}
+
         {/* Form */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-2 md:p-3 shadow">
           <h3 className="text-sm font-semibold text-gray-300 mb-3">
@@ -468,60 +455,24 @@ const SelfStatement = ({ user }) => {
             </div>
           </form>
         </div>
+        {/* end of Form */}
+      </div>
 
-        {/* 🟢 Filter Row – now between form and table */}
-        <div className="flex flex-wrap gap-2 md:gap-3 items-end bg-gray-800 p-2 md:p-3 rounded-xl border border-gray-700">
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase block">
-              From
-            </label>
-            <input
-              type="date"
-              value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase block">
-              To
-            </label>
-            <input
-              type="date"
-              value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] text-gray-400 uppercase block">
-              Search
-            </label>
+      {/* RIGHT COLUMN: Search Bar + Table */}
+      <div className="flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col md:h-full">
+          {/* Search Bar – now just above the ledger */}
+          <div className="p-3 border-b border-gray-700">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Purpose, Bank, Sender, Receiver, Notes..."
-              className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white w-40 sm:w-56"
+              placeholder="Search by Purpose, Bank, Sender, Receiver, Notes..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
             />
           </div>
-          <button
-            onClick={() => {
-              setFilterDateFrom("");
-              setFilterDateTo("");
-              setSearchTerm("");
-            }}
-            className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white"
-          >
-            Clear All
-          </button>
-        </div>
-      </div>
 
-      {/* RIGHT COLUMN: Entries Table */}
-      <div className="flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto">
-        {/* Table */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col md:h-full">
+          {/* Table */}
           <div className="overflow-auto flex-1">
             <table className="min-w-full text-left border-collapse">
               <thead className="bg-gray-700">
