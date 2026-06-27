@@ -476,14 +476,14 @@ const SelfStatement = ({ user }) => {
             <div className="sm:col-span-2 flex gap-2">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition w-[50%]"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition w-[75%]"
               >
                 {editingId ? "Update Entry" : "Add Entry"}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition w-[50%]"
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition w-[25%]"
               >
                 Cancel
               </button>

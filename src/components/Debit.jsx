@@ -74,20 +74,12 @@ const Debit = ({ user }) => {
         ...doc.data(),
       }));
 
-      if (data.length > 0) {
-        setEntries(data);
-        saveToLocalStorage(data);
-      } else {
-        const stored = localStorage.getItem("debitEntries");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setEntries(parsed);
-        } else {
-          setEntries([]);
-        }
-      }
+      // ✅ Always use Firebase data if available
+      setEntries(data);
+      saveToLocalStorage(data);
     } catch (error) {
       console.error("Error fetching debits:", error);
+      // ✅ Fallback to localStorage only if Firebase fails
       loadFromLocalStorage();
     } finally {
       setLoading(false);
@@ -620,7 +612,7 @@ const Debit = ({ user }) => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-3 bg-gray-600 text-white rounded-md text-sm font-semibold hover:bg-gray-500 transition-colors"
+                className="px-4 py-3 bg-gray-600 text-white rounded-md text-xsm font-semibold hover:bg-gray-500 transition-colors"
               >
                 Cancel
               </button>
