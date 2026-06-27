@@ -521,6 +521,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
   const isDebitActive = isDebitView || formData.type === "debit";
 
+  // 🔥 partySummary – ab commission bhi add ho raha hai
   const partySummary = useMemo(() => {
     if (!isPartyOrDebit) {
       return {
@@ -553,7 +554,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       ? Number(formData.onlinePayment) || 0
       : 0;
 
-    const grandTotal = totalVehicles + choiceAmount;
+    // 🔥 Commission add kiya
+    const commission = Number(commissionAmount) || 0;
+
+    // 🔥 GrandTotal = Vehicles + Choice + Commission
+    const grandTotal = totalVehicles + choiceAmount + commission;
     const totalAdvance = totalVehiclesAdvance;
     const remainingBalance = Math.max(
       grandTotal - totalAdvance - onlinePayment,
@@ -575,15 +580,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     formData.choice,
     formData.onlinePaymentEnabled,
     formData.onlinePayment,
+    commissionAmount,
     isPartyOrDebit,
   ]);
 
-  // 🔥 Update remainingBalance AND totalAmount in formData
+  // Update remainingBalance AND totalAmount in formData
   useEffect(() => {
     if (isPartyOrDebit) {
       setFormData((prev) => ({
         ...prev,
-        totalAmount: partySummary.grandTotal, // ✅ Choice add ho gayi totalAmount mein
+        totalAmount: partySummary.grandTotal,
         remainingBalance: partySummary.remainingBalance,
       }));
     }
@@ -1375,7 +1381,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           {/* ==================== PARTY / DEBIT SECTION ==================== */}
           {isPartyOrDebit && (
             <>
-              {/* 🟢 CHOICE FIELD – Party/Debit */}
+              {/* CHOICE FIELD – Party/Debit */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice (Additional Amount)

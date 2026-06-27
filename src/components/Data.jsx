@@ -450,7 +450,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ────────── (🔥 Choice added)
+// ─── PARTY LEDGER BLOCK ────────── (🔥 Choice + Commission Display)
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -542,6 +542,12 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         )}
         {item?.choice !== undefined && item?.choice !== null && (
           <span className="text-yellow-300">CHOICE: Rs. {item.choice}</span>
+        )}
+        {/* 🔥 COMMISSION DISPLAY */}
+        {item?.commissionAmount > 0 && (
+          <span className="text-yellow-300">
+            💰 Commission: Rs. {item.commissionAmount}
+          </span>
         )}
       </div>
 
