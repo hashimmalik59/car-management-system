@@ -79,7 +79,6 @@ const Debit = ({ user }) => {
     } catch (error) {
       console.error("Error fetching debits:", error);
       setError("Failed to load entries. Please check Firestore permissions.");
-      // Fallback to localStorage
       loadFromLocalStorage();
     } finally {
       setLoading(false);
@@ -94,7 +93,7 @@ const Debit = ({ user }) => {
     }
   }, [user]);
 
-  // ─── ADD (optimistic + Firebase) ────────────────────────────
+  // ─── ADD ──────────────────────────────────────────────────────
   const addEntry = async (e) => {
     e.preventDefault();
     if (!formData.partyName || !formData.amount || !formData.purpose) {
@@ -110,15 +109,12 @@ const Debit = ({ user }) => {
       createdAt: new Date().toISOString(),
     };
 
-    // Temporary ID for optimistic update
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticEntry = { ...newEntry, id: tempId };
 
-    // 1. Optimistic update
     setEntries((prev) => [optimisticEntry, ...prev]);
     saveToLocalStorage([optimisticEntry, ...entries]);
 
-    // 2. Reset form
     setFormData({
       partyName: "",
       phone: "",
@@ -131,19 +127,16 @@ const Debit = ({ user }) => {
       remarks: "",
     });
 
-    // 3. Firebase add
     try {
       const docRef = await addDoc(collection(db, "debits"), {
         ...newEntry,
         userId: user.uid,
       });
-      // Replace temp ID with real ID
       setEntries((prev) =>
         prev.map((item) =>
           item.id === tempId ? { ...item, id: docRef.id } : item,
         ),
       );
-      // Update localStorage
       const updated = entries.map((item) =>
         item.id === tempId ? { ...item, id: docRef.id } : item,
       );
@@ -151,11 +144,10 @@ const Debit = ({ user }) => {
     } catch (error) {
       console.error("Error adding to Firestore:", error);
       setError("Failed to save entry to cloud. Data is saved locally.");
-      // Keep optimistic entry; it will be synced later or the user can retry.
     }
   };
 
-  // ─── DELETE (optimistic + Firebase) ──────────────────────────
+  // ─── DELETE ──────────────────────────────────────────────────
   const deleteEntry = async (id) => {
     if (!window.confirm("Delete this debit entry?")) return;
 
@@ -163,7 +155,6 @@ const Debit = ({ user }) => {
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
     saveToLocalStorage(entries.filter((entry) => entry.id !== id));
 
-    // If it's a temp ID (not yet synced), just remove from local
     if (id.startsWith("temp_")) {
       return;
     }
@@ -175,7 +166,6 @@ const Debit = ({ user }) => {
       setError("Delete failed. Reverting...");
       setEntries(previousEntries);
       saveToLocalStorage(previousEntries);
-      // Fallback: try to find by partyName+phone and delete
       const item = previousEntries.find((e) => e.id === id);
       if (item && item.partyName && item.phone) {
         try {
@@ -198,7 +188,7 @@ const Debit = ({ user }) => {
     }
   };
 
-  // ─── EDIT (optimistic + Firebase) ────────────────────────────
+  // ─── EDIT ────────────────────────────────────────────────────
   const startEdit = (entry) => {
     setEditingId(entry.id);
     setEditData(entry);
@@ -218,7 +208,6 @@ const Debit = ({ user }) => {
     setEditingId(null);
     setEditData({});
 
-    // If it's a temp ID, don't update Firebase
     if (id.startsWith("temp_")) return;
 
     try {
@@ -228,7 +217,6 @@ const Debit = ({ user }) => {
       setError("Update failed. Reverting...");
       setEntries(previousEntries);
       saveToLocalStorage(previousEntries);
-      // Fallback: try to find by partyName+phone
       if (updatedEntry.partyName && updatedEntry.phone) {
         try {
           const q = query(
@@ -241,7 +229,6 @@ const Debit = ({ user }) => {
           if (!snapshot.empty) {
             const realDoc = snapshot.docs[0];
             await updateDoc(doc(db, "debits", realDoc.id), updatedEntry);
-            // Replace local ID with real ID
             setEntries((prev) =>
               prev.map((entry) =>
                 entry.id === id ? { ...entry, id: realDoc.id } : entry,
@@ -261,7 +248,7 @@ const Debit = ({ user }) => {
     setEditData({});
   };
 
-  // ─── SEARCH / FILTER (only Name, Phone, CNIC) ──────────────
+  // ─── SEARCH / FILTER ─────────────────────────────────────────
   const filteredEntries = entries.filter((entry) => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
@@ -444,9 +431,9 @@ const Debit = ({ user }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-5 p-4 bg-gray-900 rounded-2xl">
-      {/* LEFT – Form */}
-      <div className="flex-1 min-w-[280px]">
+    <div className="flex flex-col md:flex-row gap-5 p-4 bg-gray-900 rounded-2xl h-[calc(100vh-200px)] md:h-[calc(100vh-100px)] overflow-hidden">
+      {/* LEFT – Form (Scrollable) */}
+      <div className="flex-1 min-w-[280px] overflow-y-auto pr-1 custom-scroll">
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700">
           <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
             Debit Entry
@@ -517,7 +504,6 @@ const Debit = ({ user }) => {
               />
             </div>
 
-            {/* ─── Receive From / Handover To ───────────────── */}
             <div className="mb-3.5">
               <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
                 Receive From / Handover To
@@ -586,7 +572,6 @@ const Debit = ({ user }) => {
               />
             </div>
 
-            {/* ─── Remarks / Notes ───────────────────────────── */}
             <div className="mb-3.5">
               <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
                 Remarks / Notes
@@ -621,10 +606,10 @@ const Debit = ({ user }) => {
         </div>
       </div>
 
-      {/* RIGHT – Ledger with Search & CRUD */}
-      <div className="flex-[2] min-w-[300px]">
-        <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 h-full">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+      {/* RIGHT – Ledger with Search & CRUD (Entries list scrolls) */}
+      <div className="flex-[2] min-w-[300px] flex flex-col overflow-hidden">
+        <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 flex-1 flex flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-bold text-white">Debit Ledger</h2>
               <button
@@ -652,7 +637,7 @@ const Debit = ({ user }) => {
             </div>
           </div>
 
-          <div className="relative mb-4 flex gap-2">
+          <div className="relative mb-4 flex gap-2 flex-shrink-0">
             <input
               type="text"
               placeholder="Search by Name, Phone, or CNIC..."
@@ -662,8 +647,8 @@ const Debit = ({ user }) => {
             />
           </div>
 
-          {/* Entries List */}
-          <div className="max-h-[500px] overflow-y-auto pr-1 custom-scroll">
+          {/* Entries List – scrollable */}
+          <div className="flex-1 overflow-y-auto pr-1 custom-scroll">
             {loading && entries.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-lg">
                 Loading...

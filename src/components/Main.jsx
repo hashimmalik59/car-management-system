@@ -4,7 +4,7 @@ import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
 import SelfStatement from "./SelfStatement";
-import Debit from "./Debit"; // ✅ Import Debit component
+import Debit from "./Debit";
 import { db } from "../firebase";
 import {
   collection,
@@ -304,7 +304,6 @@ const Main = ({ customer, setCustomer, user }) => {
     setMainTab("ledger");
   };
 
-  // ✅ Updated tabs array – added Debit as the 5th tab
   const tabs = [
     {
       key: "form",
@@ -343,7 +342,6 @@ const Main = ({ customer, setCustomer, user }) => {
     },
   ];
 
-  // ✅ Added "red" color configuration
   const getTabColors = (key, isActive) => {
     const colors = {
       blue: {
@@ -395,7 +393,7 @@ const Main = ({ customer, setCustomer, user }) => {
         className="w-full max-w-4xl mx-auto"
       >
         <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-2xl p-2 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col md:flex-row md:flex-wrap gap-2">
             {tabs.map((tab, index) => (
               <motion.button
                 key={tab.key}
@@ -405,7 +403,14 @@ const Main = ({ customer, setCustomer, user }) => {
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setMainTab(tab.key)}
-                className={`w-[calc(50%-4px)] md:flex-1 flex items-center justify-center gap-2 md:gap-2.5 py-3 md:py-3.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 ${getTabColors(tab.color, mainTab === tab.key)}`}
+                className={`
+                  w-full md:flex-1 
+                  flex items-center justify-center gap-2 md:gap-2.5 
+                  py-3 md:py-3.5 
+                  rounded-xl font-bold text-xs md:text-sm 
+                  transition-all duration-300 
+                  ${getTabColors(tab.color, mainTab === tab.key)}
+                `}
               >
                 <motion.span
                   animate={mainTab === tab.key ? { scale: [1, 1.2, 1] } : {}}
@@ -417,7 +422,11 @@ const Main = ({ customer, setCustomer, user }) => {
                 <div className="flex flex-col items-start">
                   <span className="leading-none">{tab.label}</span>
                   <span
-                    className={`text-[8px] font-medium leading-none mt-0.5 ${mainTab === tab.key ? "text-white/70" : "text-gray-400 dark:text-gray-500"}`}
+                    className={`text-[8px] font-medium leading-none mt-0.5 ${
+                      mainTab === tab.key
+                        ? "text-white/70"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
                   >
                     {tab.desc}
                   </span>
@@ -497,7 +506,6 @@ const Main = ({ customer, setCustomer, user }) => {
             </motion.div>
           )}
 
-          {/* ✅ New Debit tab render */}
           {mainTab === "debit" && (
             <motion.div
               key="debit"
@@ -507,7 +515,7 @@ const Main = ({ customer, setCustomer, user }) => {
               exit="exit"
               transition={{ duration: 0.3 }}
             >
-              <Debit />
+              <Debit user={user} />
             </motion.div>
           )}
         </AnimatePresence>
