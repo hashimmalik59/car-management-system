@@ -1,0 +1,491 @@
+import React, { useState } from "react";
+
+const Debit = () => {
+  const [entries, setEntries] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("all"); // new state for field filter
+
+  const [formData, setFormData] = useState({
+    partyName: "",
+    phone: "",
+    cnic: "",
+    date: "",
+    sender: "",
+    receiver: "",
+    purpose: "",
+    amount: "",
+  });
+
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
+
+  // ─── ADD ──────────────────────────────────────────────────────
+  const addEntry = (e) => {
+    e.preventDefault();
+    if (!formData.partyName || !formData.amount || !formData.purpose) {
+      alert("Party Name, Purpose and Amount are required!");
+      return;
+    }
+    const newEntry = {
+      id: Date.now(),
+      ...formData,
+      amount: parseFloat(formData.amount),
+      category: "debit",
+      createdAt: new Date().toISOString(),
+    };
+    setEntries([newEntry, ...entries]);
+    setFormData({
+      partyName: "",
+      phone: "",
+      cnic: "",
+      date: "",
+      sender: "",
+      receiver: "",
+      purpose: "",
+      amount: "",
+    });
+  };
+
+  // ─── DELETE ──────────────────────────────────────────────────
+  const deleteEntry = (id) => {
+    if (window.confirm("Delete this debit entry?")) {
+      setEntries(entries.filter((entry) => entry.id !== id));
+    }
+  };
+
+  // ─── EDIT ────────────────────────────────────────────────────
+  const startEdit = (entry) => {
+    setEditingId(entry.id);
+    setEditData(entry);
+  };
+
+  const saveEdit = (id) => {
+    setEntries(
+      entries.map((entry) =>
+        entry.id === id
+          ? { ...entry, ...editData, amount: parseFloat(editData.amount) }
+          : entry,
+      ),
+    );
+    setEditingId(null);
+    setEditData({});
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
+  // ─── SEARCH / FILTER ─────────────────────────────────────────
+  const filteredEntries = entries.filter((entry) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+
+    const fieldMap = {
+      all: [
+        entry.partyName,
+        entry.phone,
+        entry.cnic,
+        entry.sender,
+        entry.receiver,
+        entry.purpose,
+        entry.amount,
+      ],
+      partyName: [entry.partyName],
+      phone: [entry.phone],
+      cnic: [entry.cnic],
+      purpose: [entry.purpose],
+      sender: [entry.sender],
+      receiver: [entry.receiver],
+      amount: [entry.amount],
+    };
+
+    const fields = fieldMap[searchField] || fieldMap.all;
+    return fields.some((field) =>
+      String(field || "")
+        .toLowerCase()
+        .includes(term),
+    );
+  });
+
+  // ─── STATISTICS ──────────────────────────────────────────────
+  const totalEntries = entries.length;
+  const uniqueParties = new Set(entries.map((e) => e.partyName)).size;
+  const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  // ─── RESET FORM ─────────────────────────────────────────────
+  const resetForm = () => {
+    setFormData({
+      partyName: "",
+      phone: "",
+      cnic: "",
+      date: "",
+      sender: "",
+      receiver: "",
+      purpose: "",
+      amount: "",
+    });
+    setEditingId(null);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row gap-5 p-4 bg-gray-900 rounded-2xl">
+      {/* LEFT – Form */}
+      <div className="flex-1 min-w-[280px]">
+        <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700">
+          <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
+            Debit Entry
+          </h2>
+          <form onSubmit={addEntry}>
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Party / Name *
+              </label>
+              <input
+                type="text"
+                placeholder="Enter party or name"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.partyName}
+                onChange={(e) =>
+                  setFormData({ ...formData, partyName: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Phone Number
+              </label>
+              <input
+                type="text"
+                placeholder="Enter phone number"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+              />
+            </div>
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                CNIC
+              </label>
+              <input
+                type="text"
+                placeholder="Enter CNIC number"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.cnic}
+                onChange={(e) =>
+                  setFormData({ ...formData, cnic: e.target.value })
+                }
+              />
+            </div>
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Date
+              </label>
+              <input
+                type="date"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.date}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+              />
+            </div>
+
+            {/* ─── Receive From / Handover To ───────────────── */}
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Receive From / Handover To
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
+                    Receive From
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Received from"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.sender}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sender: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
+                    Handover To
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Handed over"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.receiver}
+                    onChange={(e) =>
+                      setFormData({ ...formData, receiver: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Purpose *
+              </label>
+              <input
+                type="text"
+                placeholder="Enter purpose"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.purpose}
+                onChange={(e) =>
+                  setFormData({ ...formData, purpose: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Amount (PKR) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Enter amount"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                type="submit"
+                className="flex-1 py-3 bg-red-600 text-white rounded-md text-base font-semibold hover:bg-red-700 transition-colors"
+              >
+                {editingId ? "Update Debit" : "Add Debit"}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-3 bg-gray-600 text-white rounded-md text-sm font-semibold hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* RIGHT – Ledger with Search & CRUD */}
+      <div className="flex-[2] min-w-[300px]">
+        <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 h-full">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-2xl font-bold text-white">Debit Ledger</h2>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span className="bg-gray-700 px-3 py-1 rounded-full text-gray-300 border border-gray-600">
+                📋 {totalEntries} entries
+              </span>
+              <span className="bg-red-900/50 px-3 py-1 rounded-full text-red-300 border border-red-700">
+                👥 Qardaar: {uniqueParties}
+              </span>
+              <span className="bg-yellow-900/50 px-3 py-1 rounded-full text-yellow-300 border border-yellow-700">
+                💰 Baqayajat: Rs. {totalAmount.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* 🔍 Search with Field Dropdown */}
+          <div className="relative mb-4 flex gap-2">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="flex-1 p-2.5 pl-4 pr-10 border-2 border-gray-600 rounded-lg text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              className="p-2.5 border-2 border-gray-600 rounded-lg text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500"
+            >
+              <option value="all">All Fields</option>
+              <option value="partyName">Name</option>
+              <option value="phone">Phone</option>
+              <option value="cnic">CNIC</option>
+              <option value="purpose">Purpose</option>
+              <option value="sender">Receive From</option>
+              <option value="receiver">Handover To</option>
+              <option value="amount">Amount</option>
+            </select>
+          </div>
+
+          {/* Entries List */}
+          <div className="max-h-[500px] overflow-y-auto pr-1 custom-scroll">
+            {filteredEntries.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-lg">
+                No debit entries found.
+              </div>
+            ) : (
+              filteredEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="bg-gray-700/50 p-3.5 mb-3 rounded-lg border-l-4 border-red-500 hover:bg-gray-700 transition-colors"
+                >
+                  {editingId === entry.id ? (
+                    // ─── EDIT MODE ──────────────────────
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={editData.partyName || ""}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            partyName: e.target.value,
+                          })
+                        }
+                        placeholder="Party/Name"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
+                      <input
+                        type="text"
+                        value={editData.phone || ""}
+                        onChange={(e) =>
+                          setEditData({ ...editData, phone: e.target.value })
+                        }
+                        placeholder="Phone"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
+                      <input
+                        type="text"
+                        value={editData.cnic || ""}
+                        onChange={(e) =>
+                          setEditData({ ...editData, cnic: e.target.value })
+                        }
+                        placeholder="CNIC"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={editData.sender || ""}
+                          onChange={(e) =>
+                            setEditData({ ...editData, sender: e.target.value })
+                          }
+                          placeholder="Receive From"
+                          className="flex-1 p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                        />
+                        <input
+                          type="text"
+                          value={editData.receiver || ""}
+                          onChange={(e) =>
+                            setEditData({
+                              ...editData,
+                              receiver: e.target.value,
+                            })
+                          }
+                          placeholder="Handover To"
+                          className="flex-1 p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={editData.purpose || ""}
+                        onChange={(e) =>
+                          setEditData({ ...editData, purpose: e.target.value })
+                        }
+                        placeholder="Purpose"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editData.amount || ""}
+                        onChange={(e) =>
+                          setEditData({ ...editData, amount: e.target.value })
+                        }
+                        placeholder="Amount"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          onClick={() => saveEdit(entry.id)}
+                          className="px-4 py-1.5 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-1.5 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // ─── VIEW MODE ──────────────────────
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-white">
+                            {entry.partyName}
+                          </h4>
+                          <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                            {entry.phone && <span>📞 {entry.phone}</span>}
+                            {entry.cnic && <span>🪪 {entry.cnic}</span>}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
+                            {entry.sender && (
+                              <span>Receive From: {entry.sender}</span>
+                            )}
+                            {entry.sender && entry.receiver && " | "}
+                            {entry.receiver && (
+                              <span>Handover To: {entry.receiver}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-900/60 text-red-300 border border-red-700">
+                          Debit
+                        </span>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-300 flex flex-wrap gap-x-4 gap-y-1">
+                        <span>
+                          Amount:{" "}
+                          <span className="font-medium text-red-400">
+                            -PKR {entry.amount}
+                          </span>
+                        </span>
+                        {entry.purpose && <span>Purpose: {entry.purpose}</span>}
+                        {entry.date && <span>Date: {entry.date}</span>}
+                      </div>
+                      <div className="flex gap-2 mt-2.5">
+                        <button
+                          onClick={() => startEdit(entry)}
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => deleteEntry(entry.id)}
+                          className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Debit;

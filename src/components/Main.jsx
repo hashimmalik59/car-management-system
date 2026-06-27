@@ -4,6 +4,7 @@ import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
 import SelfStatement from "./SelfStatement";
+import Debit from "./Debit"; // ✅ Import Debit component
 import { db } from "../firebase";
 import {
   collection,
@@ -69,12 +70,10 @@ const Main = ({ customer, setCustomer, user }) => {
       return;
     }
 
-    // Optimistic local update
     setCustomer((prev) =>
       prev.map((c) => (c.id === recordId ? { ...updatedRecord } : c)),
     );
 
-    // Prepare clean data for Firestore
     const updateData = { ...updatedRecord };
     if (updateData.attachment?.file) delete updateData.attachment.file;
     if (updateData.type === "party" && updateData.vehicles) {
@@ -91,7 +90,6 @@ const Main = ({ customer, setCustomer, user }) => {
       console.log("Record updated directly:", recordId);
     } catch (error) {
       console.error("Direct update error:", error);
-      // Fallback search
       if (updatedRecord.partyName && updatedRecord.phone) {
         try {
           const q = query(
@@ -119,7 +117,6 @@ const Main = ({ customer, setCustomer, user }) => {
   }
 
   async function handleCustomer(newCustomer) {
-    // --- Sanitization ---
     let sanitizedCustomer = { ...newCustomer };
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
@@ -144,13 +141,11 @@ const Main = ({ customer, setCustomer, user }) => {
       };
     }
 
-    // ---------- EDITING (optimistic with fallback) ----------
     if (editingCustomer) {
       const previousCustomers = [...customer];
       const editingId = editingCustomer.id;
       const editingData = { ...sanitizedCustomer };
 
-      // 1. Optimistic local update
       setCustomer((prev) =>
         prev.map((c) =>
           c.id === editingId ? { ...editingData, id: editingId } : c,
@@ -159,7 +154,6 @@ const Main = ({ customer, setCustomer, user }) => {
       setEditingCustomer(null);
       setMainTab("ledger");
 
-      // 2. Prepare clean data for Firestore
       const updateData = { ...editingData };
       if (updateData.attachment?.file) delete updateData.attachment.file;
       if (updateData.type === "party" && updateData.vehicles) {
@@ -170,14 +164,12 @@ const Main = ({ customer, setCustomer, user }) => {
         });
       }
 
-      // 3. Background update with fallback search
       try {
         const docRef = doc(db, "customers", editingId);
         await updateDoc(docRef, updateData);
         console.log("Edit saved to Firestore");
       } catch (error) {
         console.error("Edit save error:", error);
-        // Fallback: if not-found, search by partyName + phone
         if (
           error.code === "not-found" &&
           editingData.partyName &&
@@ -196,7 +188,6 @@ const Main = ({ customer, setCustomer, user }) => {
               const realDoc = snapshot.docs[0];
               const realId = realDoc.id;
               await updateDoc(doc(db, "customers", realId), updateData);
-              // Replace local ID with real one
               setCustomer((prev) =>
                 prev.map((c) =>
                   c.id === editingId ? { ...c, id: realId } : c,
@@ -209,14 +200,12 @@ const Main = ({ customer, setCustomer, user }) => {
             console.error("Fallback edit failed:", fbErr);
           }
         }
-        // Rollback UI on complete failure
         setCustomer(previousCustomers);
         alert("Save failed: " + error.message);
       }
       return;
     }
 
-    // ---------- ADDING (optimistic) ----------
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const customerWithTime = {
       ...sanitizedCustomer,
@@ -315,6 +304,7 @@ const Main = ({ customer, setCustomer, user }) => {
     setMainTab("ledger");
   };
 
+  // ✅ Updated tabs array – added Debit as the 5th tab
   const tabs = [
     {
       key: "form",
@@ -341,11 +331,19 @@ const Main = ({ customer, setCustomer, user }) => {
       key: "selfStatement",
       label: "Self Statement",
       icon: "📒",
-      color: "teal", // 👈 new color
+      color: "teal",
       desc: "Personal accounting",
+    },
+    {
+      key: "debit",
+      label: "Debit",
+      icon: "💳",
+      color: "red",
+      desc: "Debit entries",
     },
   ];
 
+  // ✅ Added "red" color configuration
   const getTabColors = (key, isActive) => {
     const colors = {
       blue: {
@@ -367,11 +365,16 @@ const Main = ({ customer, setCustomer, user }) => {
           "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600",
       },
       teal: {
-        // 👈 new color for Self Statement
         active:
           "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30",
         inactive:
           "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600",
+      },
+      red: {
+        active:
+          "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30",
+        inactive:
+          "bg-white/50 dark:bg-gray-800/50 backdrop-blur text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600",
       },
     };
     return isActive ? colors[key].active : colors[key].inactive;
@@ -491,6 +494,20 @@ const Main = ({ customer, setCustomer, user }) => {
               transition={{ duration: 0.3 }}
             >
               <SelfStatement user={user} />
+            </motion.div>
+          )}
+
+          {/* ✅ New Debit tab render */}
+          {mainTab === "debit" && (
+            <motion.div
+              key="debit"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+            >
+              <Debit />
             </motion.div>
           )}
         </AnimatePresence>
