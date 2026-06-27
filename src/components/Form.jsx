@@ -9,6 +9,7 @@ const serviceOptions = [
   "Fitness Renewal",
   "Fresh Fitness",
   "Token Tax",
+  "Online",
 ];
 
 const bankOptions = [
@@ -36,7 +37,7 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
-// 🔥 CHANGED: Added 'choice' parameter and added it to total
+// For individual (no online payment)
 const calculateTotalAmount = (
   prices,
   commission,
@@ -520,33 +521,73 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
   const isDebitActive = isDebitView || formData.type === "debit";
 
-  // 🔥 CHANGED: Added choice to party remaining balance
-  const partyRemainingBalance = useMemo(() => {
-    if (!isPartyOrDebit) return 0;
+  const partySummary = useMemo(() => {
+    if (!isPartyOrDebit) {
+      return {
+        totalVehicles: 0,
+        totalVehiclesAdvance: 0,
+        totalVehiclesRemaining: 0,
+        choiceAmount: 0,
+        onlinePayment: 0,
+        grandTotal: 0,
+        totalAdvance: 0,
+        remainingBalance: 0,
+      };
+    }
+
     const vehicles = formData.vehicles || [];
-    const sumVehicleRemaining = vehicles.reduce(
+    const totalVehicles = vehicles.reduce(
+      (sum, v) => sum + (Number(v.vehicleTotal) || 0),
+      0,
+    );
+    const totalVehiclesAdvance = vehicles.reduce(
+      (sum, v) => sum + (Number(v.vehicleAdvance) || 0),
+      0,
+    );
+    const totalVehiclesRemaining = vehicles.reduce(
       (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
       0,
     );
-    const onlinePayment = Number(formData.onlinePayment) || 0;
     const choiceAmount = Number(formData.choice) || 0;
-    // Remaining = (sum of vehicleRemaining) + choice - onlinePayment
-    return Math.max(sumVehicleRemaining + choiceAmount - onlinePayment, 0);
+    const onlinePayment = formData.onlinePaymentEnabled
+      ? Number(formData.onlinePayment) || 0
+      : 0;
+
+    const grandTotal = totalVehicles + choiceAmount;
+    const totalAdvance = totalVehiclesAdvance;
+    const remainingBalance = Math.max(
+      grandTotal - totalAdvance - onlinePayment,
+      0,
+    );
+
+    return {
+      totalVehicles,
+      totalVehiclesAdvance,
+      totalVehiclesRemaining,
+      choiceAmount,
+      onlinePayment,
+      grandTotal,
+      totalAdvance,
+      remainingBalance,
+    };
   }, [
     formData.vehicles,
-    formData.onlinePayment,
     formData.choice,
+    formData.onlinePaymentEnabled,
+    formData.onlinePayment,
     isPartyOrDebit,
   ]);
 
+  // 🔥 Update remainingBalance AND totalAmount in formData
   useEffect(() => {
     if (isPartyOrDebit) {
       setFormData((prev) => ({
         ...prev,
-        remainingBalance: partyRemainingBalance,
+        totalAmount: partySummary.grandTotal, // ✅ Choice add ho gayi totalAmount mein
+        remainingBalance: partySummary.remainingBalance,
       }));
     }
-  }, [partyRemainingBalance, isPartyOrDebit]);
+  }, [partySummary, isPartyOrDebit]);
 
   useEffect(() => {
     if (editingData) {
@@ -587,15 +628,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           editingData.onlinePaymentEnabled ?? false;
         normalized.onlinePayment = editingData.onlinePayment ?? 0;
         normalized.onlinePaymentNotes = editingData.onlinePaymentNotes ?? "";
-        const sumRemaining = normalized.vehicles.reduce(
-          (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
-          0,
-        );
-        const choiceAmount = Number(editingData.choice) || 0;
-        normalized.remainingBalance = Math.max(
-          sumRemaining + choiceAmount - (normalized.onlinePayment || 0),
-          0,
-        );
         normalized.choice =
           editingData.choice !== undefined ? editingData.choice : null;
         if (editingData.type === "debit") {
@@ -620,7 +652,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         commissionAmount,
         numValue,
         formData.regionPrice,
-        formData.choice, // 🔥 added choice
+        formData.choice,
       );
       setFormData((prev) => ({
         ...prev,
@@ -640,7 +672,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       const newTotal =
         servicesTotal +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0); // 🔥 added choice
+        (Number(prev.choice) || 0);
       return {
         ...prev,
         region: regionValue,
@@ -662,7 +694,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         servicesTotal +
         regionPrice +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0); // 🔥 added choice
+        (Number(prev.choice) || 0);
       return {
         ...prev,
         regionPrice,
@@ -687,7 +719,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         servicesTotal +
         (prev.regionPrice || 0) +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0); // 🔥 added choice
+        (Number(prev.choice) || 0);
       return {
         ...prev,
         servicePrices: updatedPrices,
@@ -768,7 +800,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
       ...(isPartyOrDebit && {
-        remainingBalance: partyRemainingBalance,
+        remainingBalance: partySummary.remainingBalance,
       }),
     };
 
@@ -1025,7 +1057,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                 </div>
               )}
 
-              {/* 🟢 CHOICE FIELD – Individual */}
+              {/* CHOICE FIELD – Individual */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice (Additional Amount)
@@ -1039,7 +1071,6 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                     const val =
                       e.target.value === "" ? null : Number(e.target.value);
                     setFormData((prev) => {
-                      // Recalculate total and remaining when choice changes
                       const { total, remaining } = calculateTotalAmount(
                         prev.servicePrices,
                         commissionAmount,
@@ -1063,74 +1094,76 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   Services
                 </label>
                 <div className="grid grid-cols-2 gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700">
-                  {serviceOptions.map((s) => (
-                    <div
-                      key={s}
-                      className="flex flex-col bg-gray-800 rounded-md p-2"
-                    >
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 accent-blue-500"
-                          checked={formData.serviceType.includes(s)}
-                          onChange={() => {
-                            setFormData((prev) => {
-                              let updatedServices = [...prev.serviceType];
-                              let updatedPrices = { ...prev.servicePrices };
-                              if (updatedServices.includes(s)) {
-                                updatedServices = updatedServices.filter(
-                                  (x) => x !== s,
-                                );
-                                delete updatedPrices[s];
-                              } else {
-                                updatedServices.push(s);
-                                updatedPrices[s] = { price: "" };
-                              }
-                              const servicesTotal = Object.values(
-                                updatedPrices,
-                              ).reduce(
-                                (sum, v) => sum + Number(v?.price || 0),
-                                0,
-                              );
-                              const newTotal =
-                                servicesTotal +
-                                (prev.regionPrice || 0) +
-                                (commissionAmount || 0) +
-                                (Number(prev.choice) || 0); // 🔥 added choice
-                              return {
-                                ...prev,
-                                serviceType: updatedServices,
-                                servicePrices: updatedPrices,
-                                totalAmount: newTotal,
-                                remainingBalance: Math.max(
-                                  newTotal - (prev.advancePaid || 0),
-                                  0,
-                                ),
-                              };
-                            });
-                          }}
-                        />
-                        <span className="text-[11px] text-gray-200">{s}</span>
-                      </label>
-
-                      {formData.serviceType.includes(s) && (
-                        <div className="flex flex-col gap-2 mt-2">
+                  {serviceOptions
+                    .filter((s) => s !== "Online")
+                    .map((s) => (
+                      <div
+                        key={s}
+                        className="flex flex-col bg-gray-800 rounded-md p-2"
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer">
                           <input
-                            type="number"
-                            placeholder="Service Price"
-                            className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
-                            value={formData.servicePrices?.[s]?.price || ""}
-                            onChange={(e) =>
-                              handleIndividualServicePriceChange(
-                                s,
-                                e.target.value,
-                              )
-                            }
+                            type="checkbox"
+                            className="w-4 h-4 accent-blue-500"
+                            checked={formData.serviceType.includes(s)}
+                            onChange={() => {
+                              setFormData((prev) => {
+                                let updatedServices = [...prev.serviceType];
+                                let updatedPrices = { ...prev.servicePrices };
+                                if (updatedServices.includes(s)) {
+                                  updatedServices = updatedServices.filter(
+                                    (x) => x !== s,
+                                  );
+                                  delete updatedPrices[s];
+                                } else {
+                                  updatedServices.push(s);
+                                  updatedPrices[s] = { price: "" };
+                                }
+                                const servicesTotal = Object.values(
+                                  updatedPrices,
+                                ).reduce(
+                                  (sum, v) => sum + Number(v?.price || 0),
+                                  0,
+                                );
+                                const newTotal =
+                                  servicesTotal +
+                                  (prev.regionPrice || 0) +
+                                  (commissionAmount || 0) +
+                                  (Number(prev.choice) || 0);
+                                return {
+                                  ...prev,
+                                  serviceType: updatedServices,
+                                  servicePrices: updatedPrices,
+                                  totalAmount: newTotal,
+                                  remainingBalance: Math.max(
+                                    newTotal - (prev.advancePaid || 0),
+                                    0,
+                                  ),
+                                };
+                              });
+                            }}
                           />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                          <span className="text-[11px] text-gray-200">{s}</span>
+                        </label>
+
+                        {formData.serviceType.includes(s) && (
+                          <div className="flex flex-col gap-2 mt-2">
+                            <input
+                              type="number"
+                              placeholder="Service Price"
+                              className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500"
+                              value={formData.servicePrices?.[s]?.price || ""}
+                              onChange={(e) =>
+                                handleIndividualServicePriceChange(
+                                  s,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -1177,7 +1210,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                         servicesTotal +
                         (formData.regionPrice || 0) +
                         val +
-                        (Number(formData.choice) || 0); // 🔥 added choice
+                        (Number(formData.choice) || 0);
                       setFormData((prev) => ({
                         ...prev,
                         commissionAmount: val,
@@ -1355,25 +1388,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
                   onChange={(e) => {
                     const val =
                       e.target.value === "" ? null : Number(e.target.value);
-                    setFormData((prev) => {
-                      // Recalculate remaining balance when choice changes
-                      const vehicles = prev.vehicles || [];
-                      const sumVehicleRemaining = vehicles.reduce(
-                        (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
-                        0,
-                      );
-                      const onlinePayment = Number(prev.onlinePayment) || 0;
-                      const choiceAmount = val || 0;
-                      const newRemaining = Math.max(
-                        sumVehicleRemaining + choiceAmount - onlinePayment,
-                        0,
-                      );
-                      return {
-                        ...prev,
-                        choice: val,
-                        remainingBalance: newRemaining,
-                      };
-                    });
+                    setFormData((prev) => ({
+                      ...prev,
+                      choice: val,
+                    }));
                   }}
                 />
               </div>

@@ -214,18 +214,30 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ──────
+// ─── PARTY RECEIPT ────── (🔥 Choice added)
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+
+  // 🔥 Choice amount add kiya
+  const choiceAmount = Number(item?.choice) || 0;
+
   const onlinePaymentEnabled = item.onlinePaymentEnabled || false;
   const onlinePayment = onlinePaymentEnabled
     ? Number(item.onlinePayment || 0)
     : 0;
-  const adjustedTotal = Math.max(totalAllVehicles - onlinePayment, 0);
-  const adjustedRemaining = Math.max(remainingAllVehicles - onlinePayment, 0);
+
+  // 🔥 AdjustedTotal = TotalVehicles + Choice - OnlinePayment
+  const adjustedTotal = Math.max(
+    totalAllVehicles + choiceAmount - onlinePayment,
+    0,
+  );
+  const adjustedRemaining = Math.max(
+    remainingAllVehicles + choiceAmount - onlinePayment,
+    0,
+  );
 
   let overallRemark = "";
   if (item.remarks) {
@@ -266,7 +278,7 @@ const printPartyReceipt = (item) => {
         <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
-        <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
+        <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? `Rs. ${item.choice}` : "—"}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Vehicles Details:</h3>
@@ -438,7 +450,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ──────────
+// ─── PARTY LEDGER BLOCK ────────── (🔥 Choice added)
 const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -447,15 +459,26 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
 
+  // 🔥 Choice amount add kiya
+  const choiceAmount = Number(item?.choice) || 0;
+
   const onlinePaymentEnabled = item?.onlinePaymentEnabled || false;
   const onlinePayment = onlinePaymentEnabled
     ? Number(item?.onlinePayment || 0)
     : 0;
   const onlinePaymentNotes = item?.onlinePaymentNotes || "";
-  const adjustedTotal = Math.max(totalAllVehicles - onlinePayment, 0);
-  const adjustedRemaining = Math.max(remainingAllVehicles - onlinePayment, 0);
 
-  // 🔥 Theme based on type: Debit = Red, Party = Orange
+  // 🔥 AdjustedTotal = TotalVehicles + Choice - OnlinePayment
+  const adjustedTotal = Math.max(
+    totalAllVehicles + choiceAmount - onlinePayment,
+    0,
+  );
+  const adjustedRemaining = Math.max(
+    remainingAllVehicles + choiceAmount - onlinePayment,
+    0,
+  );
+
+  // Theme based on type: Debit = Red, Party = Orange
   const isDebit = item?.type === "debit";
   const headerGradient = isDebit
     ? "from-red-600 to-red-700"
@@ -518,7 +541,7 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           <span className="text-pink-400">TAX TO: {item.tokenTaxTo}</span>
         )}
         {item?.choice !== undefined && item?.choice !== null && (
-          <span className="text-yellow-300">CHOICE: {item.choice}</span>
+          <span className="text-yellow-300">CHOICE: Rs. {item.choice}</span>
         )}
       </div>
 
@@ -957,7 +980,7 @@ const Data = ({
             </motion.button>
           </div>
 
-          {/* 🔥 DEBIT TOGGLE BUTTON – Red when active */}
+          {/* DEBIT TOGGLE BUTTON – Red when active */}
           {activeTab === "party" && (
             <button
               onClick={() => setShowDebitOnly(!showDebitOnly)}
