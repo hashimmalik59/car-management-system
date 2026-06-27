@@ -259,7 +259,6 @@ const SelfStatement = ({ user }) => {
 
   const getFilteredEntries = () => {
     let filtered = entries;
-    // Search filter (only)
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter((e) => {
@@ -281,6 +280,15 @@ const SelfStatement = ({ user }) => {
   };
 
   const filteredEntries = getFilteredEntries();
+
+  // ─── Totals ──────────────────────────────────────────────
+  const totalDebit = filteredEntries
+    .filter((e) => e.type === "debit")
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalCredit = filteredEntries
+    .filter((e) => e.type === "credit")
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+  const netBalance = totalCredit - totalDebit;
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-4 bg-gray-900 text-gray-100 px-4 md:px-6 py-4 rounded-2xl md:h-[calc(100vh-120px)] md:overflow-hidden">
@@ -378,7 +386,6 @@ const SelfStatement = ({ user }) => {
               />
             </div>
 
-            {/* Type full width */}
             <div className="sm:col-span-2">
               <label className="text-[10px] text-gray-400 uppercase">
                 Type
@@ -394,7 +401,6 @@ const SelfStatement = ({ user }) => {
               </select>
             </div>
 
-            {/* Sender and Receiver side by side */}
             <div className="sm:col-span-2 grid grid-cols-2 gap-2 md:gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase">
@@ -441,27 +447,26 @@ const SelfStatement = ({ user }) => {
             <div className="sm:col-span-2 flex gap-2">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-medium shadow transition w-[50%]"
               >
                 {editingId ? "Update Entry" : "Add Entry"}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition"
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-white text-sm font-medium transition w-[50%]"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-        {/* end of Form */}
       </div>
 
-      {/* RIGHT COLUMN: Search Bar + Table */}
+      {/* RIGHT COLUMN: Search Bar + Scrollable Table + Fixed Footer */}
       <div className="flex-1 min-w-0 overflow-hidden flex flex-col h-[50vh] md:h-auto">
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col md:h-full">
-          {/* Search Bar – now just above the ledger */}
+          {/* Search Bar */}
           <div className="p-3 border-b border-gray-700">
             <input
               type="text"
@@ -472,10 +477,10 @@ const SelfStatement = ({ user }) => {
             />
           </div>
 
-          {/* Table */}
+          {/* Scrollable Table Body */}
           <div className="overflow-auto flex-1">
             <table className="min-w-full text-left border-collapse">
-              <thead className="bg-gray-700">
+              <thead className="bg-gray-700 sticky top-0 z-10">
                 <tr className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
                   <th className="p-3">Date</th>
                   <th className="p-3">Purpose</th>
@@ -551,52 +556,32 @@ const SelfStatement = ({ user }) => {
                   ))
                 )}
               </tbody>
-              {filteredEntries.length > 0 && (
-                <tfoot className="bg-gray-700 border-t border-gray-600">
-                  <tr>
-                    <td colSpan="8" className="p-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-gray-200">
-                        <div className="flex items-center gap-2">
-                          <span>Total Debit:</span>
-                          <span className="text-red-400">
-                            Rs.{" "}
-                            {filteredEntries
-                              .filter((e) => e.type === "debit")
-                              .reduce((sum, e) => sum + Number(e.amount), 0)
-                              .toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>Total Credit:</span>
-                          <span className="text-green-400">
-                            Rs.{" "}
-                            {filteredEntries
-                              .filter((e) => e.type === "credit")
-                              .reduce((sum, e) => sum + Number(e.amount), 0)
-                              .toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>Net Balance:</span>
-                          <span className="text-yellow-400">
-                            Rs.{" "}
-                            {(
-                              filteredEntries
-                                .filter((e) => e.type === "credit")
-                                .reduce((sum, e) => sum + Number(e.amount), 0) -
-                              filteredEntries
-                                .filter((e) => e.type === "debit")
-                                .reduce((sum, e) => sum + Number(e.amount), 0)
-                            ).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
             </table>
           </div>
+
+          {/* Fixed Footer – always visible */}
+          {filteredEntries.length > 0 && (
+            <div className="border-t border-gray-700 bg-gray-700/80 backdrop-blur-sm p-2 flex items-center justify-between text-xs font-semibold text-gray-200 sticky bottom-0">
+              <div className="flex items-center gap-2">
+                <span>Total Debit:</span>
+                <span className="text-red-400">
+                  Rs. {totalDebit.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Total Credit:</span>
+                <span className="text-green-400">
+                  Rs. {totalCredit.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Net Balance:</span>
+                <span className="text-yellow-400">
+                  Rs. {netBalance.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,9 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
-const Debit = () => {
+const Debit = ({ user }) => {
   const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("all"); // new state for field filter
+  const [searchField, setSearchField] = useState("all");
 
   const [formData, setFormData] = useState({
     partyName: "",
@@ -14,26 +28,97 @@ const Debit = () => {
     receiver: "",
     purpose: "",
     amount: "",
+    remarks: "",
   });
 
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
-  // ─── ADD ──────────────────────────────────────────────────────
-  const addEntry = (e) => {
+  // ─── LOCAL STORAGE HELPERS ────────────────────────────────
+  const loadFromLocalStorage = () => {
+    try {
+      const stored = localStorage.getItem("debitEntries");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setEntries(parsed);
+      }
+    } catch (e) {
+      console.warn("Failed to load from localStorage", e);
+    }
+  };
+
+  const saveToLocalStorage = (data) => {
+    try {
+      localStorage.setItem("debitEntries", JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to save to localStorage", e);
+    }
+  };
+
+  // ─── FIREBASE FETCH ─────────────────────────────────────────
+  const fetchEntries = async () => {
+    if (!user) {
+      loadFromLocalStorage();
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const q = query(
+        collection(db, "debits"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setEntries(data);
+      saveToLocalStorage(data);
+    } catch (error) {
+      console.error("Error fetching debits:", error);
+      setError("Failed to load entries. Please check Firestore permissions.");
+      // Fallback to localStorage
+      loadFromLocalStorage();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchEntries();
+    } else {
+      loadFromLocalStorage();
+    }
+  }, [user]);
+
+  // ─── ADD (optimistic + Firebase) ────────────────────────────
+  const addEntry = async (e) => {
     e.preventDefault();
     if (!formData.partyName || !formData.amount || !formData.purpose) {
       alert("Party Name, Purpose and Amount are required!");
       return;
     }
+
     const newEntry = {
-      id: Date.now(),
       ...formData,
       amount: parseFloat(formData.amount),
       category: "debit",
+      userId: user?.uid || "local",
       createdAt: new Date().toISOString(),
     };
-    setEntries([newEntry, ...entries]);
+
+    // Temporary ID for optimistic update
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+    const optimisticEntry = { ...newEntry, id: tempId };
+
+    // 1. Optimistic update
+    setEntries((prev) => [optimisticEntry, ...prev]);
+    saveToLocalStorage([optimisticEntry, ...entries]);
+
+    // 2. Reset form
     setFormData({
       partyName: "",
       phone: "",
@@ -43,32 +128,132 @@ const Debit = () => {
       receiver: "",
       purpose: "",
       amount: "",
+      remarks: "",
     });
-  };
 
-  // ─── DELETE ──────────────────────────────────────────────────
-  const deleteEntry = (id) => {
-    if (window.confirm("Delete this debit entry?")) {
-      setEntries(entries.filter((entry) => entry.id !== id));
+    // 3. Firebase add
+    try {
+      const docRef = await addDoc(collection(db, "debits"), {
+        ...newEntry,
+        userId: user.uid,
+      });
+      // Replace temp ID with real ID
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.id === tempId ? { ...item, id: docRef.id } : item,
+        ),
+      );
+      // Update localStorage
+      const updated = entries.map((item) =>
+        item.id === tempId ? { ...item, id: docRef.id } : item,
+      );
+      saveToLocalStorage(updated);
+    } catch (error) {
+      console.error("Error adding to Firestore:", error);
+      setError("Failed to save entry to cloud. Data is saved locally.");
+      // Keep optimistic entry; it will be synced later or the user can retry.
     }
   };
 
-  // ─── EDIT ────────────────────────────────────────────────────
+  // ─── DELETE (optimistic + Firebase) ──────────────────────────
+  const deleteEntry = async (id) => {
+    if (!window.confirm("Delete this debit entry?")) return;
+
+    const previousEntries = [...entries];
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    saveToLocalStorage(entries.filter((entry) => entry.id !== id));
+
+    // If it's a temp ID (not yet synced), just remove from local
+    if (id.startsWith("temp_")) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "debits", id));
+    } catch (error) {
+      console.error("Error deleting from Firestore:", error);
+      setError("Delete failed. Reverting...");
+      setEntries(previousEntries);
+      saveToLocalStorage(previousEntries);
+      // Fallback: try to find by partyName+phone and delete
+      const item = previousEntries.find((e) => e.id === id);
+      if (item && item.partyName && item.phone) {
+        try {
+          const q = query(
+            collection(db, "debits"),
+            where("userId", "==", user.uid),
+            where("partyName", "==", item.partyName),
+            where("phone", "==", item.phone),
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const realDoc = snapshot.docs[0];
+            await deleteDoc(doc(db, "debits", realDoc.id));
+            setError(null);
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback delete failed:", fallbackErr);
+        }
+      }
+    }
+  };
+
+  // ─── EDIT (optimistic + Firebase) ────────────────────────────
   const startEdit = (entry) => {
     setEditingId(entry.id);
     setEditData(entry);
   };
 
-  const saveEdit = (id) => {
-    setEntries(
-      entries.map((entry) =>
-        entry.id === id
-          ? { ...entry, ...editData, amount: parseFloat(editData.amount) }
-          : entry,
-      ),
+  const saveEdit = async (id) => {
+    const updatedEntry = {
+      ...editData,
+      amount: parseFloat(editData.amount),
+    };
+    const previousEntries = [...entries];
+    setEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...updatedEntry, id } : entry)),
     );
+    saveToLocalStorage(entries);
+
     setEditingId(null);
     setEditData({});
+
+    // If it's a temp ID, don't update Firebase
+    if (id.startsWith("temp_")) return;
+
+    try {
+      await updateDoc(doc(db, "debits", id), updatedEntry);
+    } catch (error) {
+      console.error("Error updating Firestore:", error);
+      setError("Update failed. Reverting...");
+      setEntries(previousEntries);
+      saveToLocalStorage(previousEntries);
+      // Fallback: try to find by partyName+phone
+      if (updatedEntry.partyName && updatedEntry.phone) {
+        try {
+          const q = query(
+            collection(db, "debits"),
+            where("userId", "==", user.uid),
+            where("partyName", "==", updatedEntry.partyName),
+            where("phone", "==", updatedEntry.phone),
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const realDoc = snapshot.docs[0];
+            await updateDoc(doc(db, "debits", realDoc.id), updatedEntry);
+            // Replace local ID with real ID
+            setEntries((prev) =>
+              prev.map((entry) =>
+                entry.id === id ? { ...entry, id: realDoc.id } : entry,
+              ),
+            );
+            setError(null);
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback update failed:", fallbackErr);
+        }
+      }
+    }
   };
 
   const cancelEdit = () => {
@@ -76,28 +261,16 @@ const Debit = () => {
     setEditData({});
   };
 
-  // ─── SEARCH / FILTER ─────────────────────────────────────────
+  // ─── SEARCH / FILTER (only Name, Phone, CNIC) ──────────────
   const filteredEntries = entries.filter((entry) => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
 
     const fieldMap = {
-      all: [
-        entry.partyName,
-        entry.phone,
-        entry.cnic,
-        entry.sender,
-        entry.receiver,
-        entry.purpose,
-        entry.amount,
-      ],
+      all: [entry.partyName, entry.phone, entry.cnic],
       partyName: [entry.partyName],
       phone: [entry.phone],
       cnic: [entry.cnic],
-      purpose: [entry.purpose],
-      sender: [entry.sender],
-      receiver: [entry.receiver],
-      amount: [entry.amount],
     };
 
     const fields = fieldMap[searchField] || fieldMap.all;
@@ -124,8 +297,150 @@ const Debit = () => {
       receiver: "",
       purpose: "",
       amount: "",
+      remarks: "",
     });
     setEditingId(null);
+  };
+
+  // ─── PRINT ALL ──────────────────────────────────────────────
+  const handlePrintAll = () => {
+    const printWindow = window.open("", "_blank");
+    const totalDebit = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Debit Ledger Report</title>
+        <style>
+          body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; background: white; }
+          .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .header p { margin: 5px 0; color: #555; }
+          .section-title { margin: 20px 0 10px; font-size: 16px; border-left: 4px solid #c0392b; padding-left: 10px; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 11px; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .text-red { color: #c0392b; }
+          .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <h1>DEBIT LEDGER</h1>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+          </div>
+
+          <div class="section-title">📋 All Debit Entries (${entries.length})</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Party Name</th>
+                <th>Phone</th>
+                <th>CNIC</th>
+                <th>Receive From</th>
+                <th>Handover To</th>
+                <th>Purpose</th>
+                <th class="text-right">Amount</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries
+                .map(
+                  (e) => `
+                <tr>
+                  <td>${e.date || "—"}</td>
+                  <td>${e.partyName}</td>
+                  <td>${e.phone || "—"}</td>
+                  <td>${e.cnic || "—"}</td>
+                  <td>${e.sender || "—"}</td>
+                  <td>${e.receiver || "—"}</td>
+                  <td>${e.purpose}</td>
+                  <td class="text-right text-red">Rs. ${Number(e.amount).toLocaleString()}</td>
+                  <td>${e.remarks || "—"}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="7" class="text-right"><strong>Total Debit</strong></td>
+                <td class="text-right text-red"><strong>Rs. ${totalDebit.toLocaleString()}</strong></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="footer">
+            <p>Total Entries: ${entries.length} | Unique Parties: ${uniqueParties}</p>
+            <p>Thank you for using Iqra Motor Insurance</p>
+          </div>
+        </div>
+        <script>window.print();</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // ─── PRINT SINGLE ENTRY ─────────────────────────────────────
+  const handlePrintSingle = (entry) => {
+    const printWindow = window.open("", "_blank");
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Debit Entry Receipt</title>
+        <style>
+          body { font-family: 'Courier New', monospace; padding: 20px; font-size: 14px; background: white; }
+          .receipt { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .header h1 { margin: 0; font-size: 22px; }
+          .header p { margin: 5px 0; color: #555; }
+          .details { margin: 10px 0; }
+          .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; }
+          .label { font-weight: bold; color: #333; }
+          .value { color: #222; }
+          .amount { font-size: 18px; color: #c0392b; font-weight: bold; }
+          .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <h1>DEBIT RECEIPT</h1>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+          </div>
+
+          <div class="details">
+            <div class="row"><span class="label">Party / Name</span><span class="value">${entry.partyName}</span></div>
+            <div class="row"><span class="label">Phone</span><span class="value">${entry.phone || "—"}</span></div>
+            <div class="row"><span class="label">CNIC</span><span class="value">${entry.cnic || "—"}</span></div>
+            <div class="row"><span class="label">Date</span><span class="value">${entry.date || "—"}</span></div>
+            <div class="row"><span class="label">Receive From</span><span class="value">${entry.sender || "—"}</span></div>
+            <div class="row"><span class="label">Handover To</span><span class="value">${entry.receiver || "—"}</span></div>
+            <div class="row"><span class="label">Purpose</span><span class="value">${entry.purpose}</span></div>
+            <div class="row"><span class="label">Amount</span><span class="value amount">Rs. ${Number(entry.amount).toLocaleString()}</span></div>
+            <div class="row"><span class="label">Remarks</span><span class="value">${entry.remarks || "—"}</span></div>
+          </div>
+
+          <div class="footer">
+            <p>Thank you for using Iqra Motor Insurance</p>
+          </div>
+        </div>
+        <script>window.print();</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -136,6 +451,14 @@ const Debit = () => {
           <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
             Debit Entry
           </h2>
+          {error && (
+            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm mb-3">
+              ⚠️ {error}
+              <button className="ml-2 underline" onClick={() => fetchEntries()}>
+                Retry
+              </button>
+            </div>
+          )}
           <form onSubmit={addEntry}>
             <div className="mb-3.5">
               <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
@@ -262,6 +585,23 @@ const Debit = () => {
                 required
               />
             </div>
+
+            {/* ─── Remarks / Notes ───────────────────────────── */}
+            <div className="mb-3.5">
+              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                Remarks / Notes
+              </label>
+              <textarea
+                placeholder="Any additional remarks..."
+                rows="2"
+                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50 resize-none"
+                value={formData.remarks}
+                onChange={(e) =>
+                  setFormData({ ...formData, remarks: e.target.value })
+                }
+              />
+            </div>
+
             <div className="flex gap-2 mt-2">
               <button
                 type="submit"
@@ -285,48 +625,50 @@ const Debit = () => {
       <div className="flex-[2] min-w-[300px]">
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 h-full">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2 className="text-2xl font-bold text-white">Debit Ledger</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-white">Debit Ledger</h2>
+              <button
+                onClick={handlePrintAll}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg flex items-center gap-1 transition"
+              >
+                🖨️ Print All
+              </button>
+              {loading && (
+                <span className="text-xs text-gray-400 animate-pulse">
+                  Syncing...
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <span className="bg-gray-700 px-3 py-1 rounded-full text-gray-300 border border-gray-600">
-                📋 {totalEntries} entries
+                📋 Entries: {totalEntries}
               </span>
               <span className="bg-red-900/50 px-3 py-1 rounded-full text-red-300 border border-red-700">
-                👥 Qardaar: {uniqueParties}
+                👥 Pending: {uniqueParties}
               </span>
               <span className="bg-yellow-900/50 px-3 py-1 rounded-full text-yellow-300 border border-yellow-700">
-                💰 Baqayajat: Rs. {totalAmount.toLocaleString()}
+                💰 Remaining: Rs. {totalAmount.toLocaleString()}
               </span>
             </div>
           </div>
 
-          {/* 🔍 Search with Field Dropdown */}
           <div className="relative mb-4 flex gap-2">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search by Name, Phone, or CNIC..."
               className="flex-1 p-2.5 pl-4 pr-10 border-2 border-gray-600 rounded-lg text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-              className="p-2.5 border-2 border-gray-600 rounded-lg text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500"
-            >
-              <option value="all">All Fields</option>
-              <option value="partyName">Name</option>
-              <option value="phone">Phone</option>
-              <option value="cnic">CNIC</option>
-              <option value="purpose">Purpose</option>
-              <option value="sender">Receive From</option>
-              <option value="receiver">Handover To</option>
-              <option value="amount">Amount</option>
-            </select>
           </div>
 
           {/* Entries List */}
           <div className="max-h-[500px] overflow-y-auto pr-1 custom-scroll">
-            {filteredEntries.length === 0 ? (
+            {loading && entries.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-lg">
+                Loading...
+              </div>
+            ) : filteredEntries.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-lg">
                 No debit entries found.
               </div>
@@ -411,6 +753,15 @@ const Debit = () => {
                         placeholder="Amount"
                         className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
                       />
+                      <textarea
+                        value={editData.remarks || ""}
+                        onChange={(e) =>
+                          setEditData({ ...editData, remarks: e.target.value })
+                        }
+                        placeholder="Remarks"
+                        rows="1"
+                        className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                      />
                       <div className="flex gap-2 mt-1">
                         <button
                           onClick={() => saveEdit(entry.id)}
@@ -461,19 +812,30 @@ const Debit = () => {
                         </span>
                         {entry.purpose && <span>Purpose: {entry.purpose}</span>}
                         {entry.date && <span>Date: {entry.date}</span>}
+                        {entry.remarks && (
+                          <span className="text-gray-400 text-xs italic">
+                            📝 {entry.remarks}
+                          </span>
+                        )}
                       </div>
                       <div className="flex gap-2 mt-2.5">
                         <button
                           onClick={() => startEdit(entry)}
                           className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                         >
-                          ✏️ Edit
+                          Edit
                         </button>
                         <button
                           onClick={() => deleteEntry(entry.id)}
                           className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
                         >
-                          🗑️ Delete
+                          Del
+                        </button>
+                        <button
+                          onClick={() => handlePrintSingle(entry)}
+                          className="px-3 py-1 bg-teal-600 text-white text-xs rounded hover:bg-teal-700"
+                        >
+                          Print
                         </button>
                       </div>
                     </div>
