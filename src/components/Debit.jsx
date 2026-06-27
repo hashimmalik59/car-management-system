@@ -15,10 +15,9 @@ import { db } from "../firebase";
 const Debit = ({ user }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("all");
-  const [mobileView, setMobileView] = useState("form"); // "form" or "ledger"
+  const [mobileView, setMobileView] = useState("form");
 
   const [formData, setFormData] = useState({
     partyName: "",
@@ -63,7 +62,6 @@ const Debit = ({ user }) => {
       return;
     }
     setLoading(true);
-    setError(null);
     try {
       const q = query(
         collection(db, "debits"),
@@ -75,11 +73,21 @@ const Debit = ({ user }) => {
         id: doc.id,
         ...doc.data(),
       }));
-      setEntries(data);
-      saveToLocalStorage(data);
+
+      if (data.length > 0) {
+        setEntries(data);
+        saveToLocalStorage(data);
+      } else {
+        const stored = localStorage.getItem("debitEntries");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setEntries(parsed);
+        } else {
+          setEntries([]);
+        }
+      }
     } catch (error) {
       console.error("Error fetching debits:", error);
-      setError("Failed to load entries. Please check Firestore permissions.");
       loadFromLocalStorage();
     } finally {
       setLoading(false);
@@ -113,8 +121,9 @@ const Debit = ({ user }) => {
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimisticEntry = { ...newEntry, id: tempId };
 
-    setEntries((prev) => [optimisticEntry, ...prev]);
-    saveToLocalStorage([optimisticEntry, ...entries]);
+    const updatedEntries = [optimisticEntry, ...entries];
+    setEntries(updatedEntries);
+    saveToLocalStorage(updatedEntries);
 
     setFormData({
       partyName: "",
@@ -133,18 +142,13 @@ const Debit = ({ user }) => {
         ...newEntry,
         userId: user.uid,
       });
-      setEntries((prev) =>
-        prev.map((item) =>
-          item.id === tempId ? { ...item, id: docRef.id } : item,
-        ),
-      );
-      const updated = entries.map((item) =>
+      const finalEntries = updatedEntries.map((item) =>
         item.id === tempId ? { ...item, id: docRef.id } : item,
       );
-      saveToLocalStorage(updated);
+      setEntries(finalEntries);
+      saveToLocalStorage(finalEntries);
     } catch (error) {
       console.error("Error adding to Firestore:", error);
-      setError("Failed to save entry to cloud. Data is saved locally.");
     }
   };
 
@@ -153,8 +157,9 @@ const Debit = ({ user }) => {
     if (!window.confirm("Delete this debit entry?")) return;
 
     const previousEntries = [...entries];
-    setEntries((prev) => prev.filter((entry) => entry.id !== id));
-    saveToLocalStorage(entries.filter((entry) => entry.id !== id));
+    const filteredEntries = entries.filter((entry) => entry.id !== id);
+    setEntries(filteredEntries);
+    saveToLocalStorage(filteredEntries);
 
     if (id.startsWith("temp_")) {
       return;
@@ -164,7 +169,6 @@ const Debit = ({ user }) => {
       await deleteDoc(doc(db, "debits", id));
     } catch (error) {
       console.error("Error deleting from Firestore:", error);
-      setError("Delete failed. Reverting...");
       setEntries(previousEntries);
       saveToLocalStorage(previousEntries);
       const item = previousEntries.find((e) => e.id === id);
@@ -180,7 +184,6 @@ const Debit = ({ user }) => {
           if (!snapshot.empty) {
             const realDoc = snapshot.docs[0];
             await deleteDoc(doc(db, "debits", realDoc.id));
-            setError(null);
           }
         } catch (fallbackErr) {
           console.error("Fallback delete failed:", fallbackErr);
@@ -201,10 +204,11 @@ const Debit = ({ user }) => {
       amount: parseFloat(editData.amount),
     };
     const previousEntries = [...entries];
-    setEntries((prev) =>
-      prev.map((entry) => (entry.id === id ? { ...updatedEntry, id } : entry)),
+    const updatedEntries = entries.map((entry) =>
+      entry.id === id ? { ...updatedEntry, id } : entry,
     );
-    saveToLocalStorage(entries);
+    setEntries(updatedEntries);
+    saveToLocalStorage(updatedEntries);
 
     setEditingId(null);
     setEditData({});
@@ -215,7 +219,6 @@ const Debit = ({ user }) => {
       await updateDoc(doc(db, "debits", id), updatedEntry);
     } catch (error) {
       console.error("Error updating Firestore:", error);
-      setError("Update failed. Reverting...");
       setEntries(previousEntries);
       saveToLocalStorage(previousEntries);
       if (updatedEntry.partyName && updatedEntry.phone) {
@@ -230,12 +233,11 @@ const Debit = ({ user }) => {
           if (!snapshot.empty) {
             const realDoc = snapshot.docs[0];
             await updateDoc(doc(db, "debits", realDoc.id), updatedEntry);
-            setEntries((prev) =>
-              prev.map((entry) =>
-                entry.id === id ? { ...entry, id: realDoc.id } : entry,
-              ),
+            const finalEntries = entries.map((entry) =>
+              entry.id === id ? { ...entry, id: realDoc.id } : entry,
             );
-            setError(null);
+            setEntries(finalEntries);
+            saveToLocalStorage(finalEntries);
           }
         } catch (fallbackErr) {
           console.error("Fallback update failed:", fallbackErr);
@@ -433,7 +435,7 @@ const Debit = ({ user }) => {
 
   return (
     <div className="flex flex-col md:flex-row gap-5 p-4 bg-gray-900 rounded-2xl h-[calc(100vh-200px)] md:h-[calc(100vh-100px)] overflow-hidden">
-      {/* ─── Mobile Toggle Buttons (only visible on small screens) ─── */}
+      {/* ─── Mobile Toggle Buttons ─── */}
       <div className="md:hidden flex gap-2 mb-2 flex-shrink-0">
         <button
           onClick={() => setMobileView("form")}
@@ -457,7 +459,7 @@ const Debit = ({ user }) => {
         </button>
       </div>
 
-      {/* ─── LEFT – Form (hidden on mobile when ledger is active) ─── */}
+      {/* ─── LEFT – Form ─── */}
       <div
         className={`flex-1 min-w-[280px] overflow-y-auto pr-1 custom-scroll ${
           mobileView === "ledger" ? "hidden md:block" : ""
@@ -467,14 +469,6 @@ const Debit = ({ user }) => {
           <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
             Debit Entry
           </h2>
-          {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded-lg text-sm mb-3">
-              ⚠️ {error}
-              <button className="ml-2 underline" onClick={() => fetchEntries()}>
-                Retry
-              </button>
-            </div>
-          )}
           <form onSubmit={addEntry}>
             <div className="mb-3.5">
               <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
@@ -635,7 +629,7 @@ const Debit = ({ user }) => {
         </div>
       </div>
 
-      {/* ─── RIGHT – Ledger (hidden on mobile when form is active) ─── */}
+      {/* ─── RIGHT – Ledger ─── */}
       <div
         className={`flex-[2] min-w-[300px] flex flex-col overflow-hidden ${
           mobileView === "form" ? "hidden md:flex" : ""
