@@ -18,6 +18,7 @@ const Debit = ({ user }) => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("all");
+  const [mobileView, setMobileView] = useState("form"); // "form" or "ledger"
 
   const [formData, setFormData] = useState({
     partyName: "",
@@ -432,8 +433,36 @@ const Debit = ({ user }) => {
 
   return (
     <div className="flex flex-col md:flex-row gap-5 p-4 bg-gray-900 rounded-2xl h-[calc(100vh-200px)] md:h-[calc(100vh-100px)] overflow-hidden">
-      {/* LEFT – Form (Scrollable) */}
-      <div className="flex-1 min-w-[280px] overflow-y-auto pr-1 custom-scroll">
+      {/* ─── Mobile Toggle Buttons (only visible on small screens) ─── */}
+      <div className="md:hidden flex gap-2 mb-2 flex-shrink-0">
+        <button
+          onClick={() => setMobileView("form")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            mobileView === "form"
+              ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Debit
+        </button>
+        <button
+          onClick={() => setMobileView("ledger")}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            mobileView === "ledger"
+              ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Ledger
+        </button>
+      </div>
+
+      {/* ─── LEFT – Form (hidden on mobile when ledger is active) ─── */}
+      <div
+        className={`flex-1 min-w-[280px] overflow-y-auto pr-1 custom-scroll ${
+          mobileView === "ledger" ? "hidden md:block" : ""
+        }`}
+      >
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700">
           <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
             Debit Entry
@@ -606,8 +635,12 @@ const Debit = ({ user }) => {
         </div>
       </div>
 
-      {/* RIGHT – Ledger with Search & CRUD (Entries list scrolls) */}
-      <div className="flex-[2] min-w-[300px] flex flex-col overflow-hidden">
+      {/* ─── RIGHT – Ledger (hidden on mobile when form is active) ─── */}
+      <div
+        className={`flex-[2] min-w-[300px] flex flex-col overflow-hidden ${
+          mobileView === "form" ? "hidden md:flex" : ""
+        }`}
+      >
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 flex-1 flex flex-col overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -647,7 +680,6 @@ const Debit = ({ user }) => {
             />
           </div>
 
-          {/* Entries List – scrollable */}
           <div className="flex-1 overflow-y-auto pr-1 custom-scroll">
             {loading && entries.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-lg">
@@ -664,7 +696,6 @@ const Debit = ({ user }) => {
                   className="bg-gray-700/50 p-3.5 mb-3 rounded-lg border-l-4 border-red-500 hover:bg-gray-700 transition-colors"
                 >
                   {editingId === entry.id ? (
-                    // ─── EDIT MODE ──────────────────────
                     <div className="flex flex-col gap-2">
                       <input
                         type="text"
@@ -763,7 +794,6 @@ const Debit = ({ user }) => {
                       </div>
                     </div>
                   ) : (
-                    // ─── VIEW MODE ──────────────────────
                     <div>
                       <div className="flex justify-between items-start">
                         <div>
