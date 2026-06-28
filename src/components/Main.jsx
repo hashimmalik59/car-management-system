@@ -117,6 +117,14 @@ const Main = ({ customer, setCustomer, user }) => {
   }
 
   async function handleCustomer(newCustomer) {
+    // ─── DETECT IF THIS IS A DEBIT ENTRY ───
+    const isDebitEntry =
+      newCustomer.type === "debit" ||
+      (newCustomer.type === "party" && newCustomer.isDebitView === true) ||
+      (editingCustomer &&
+        (editingCustomer.type === "debit" ||
+          editingCustomer.isDebitView === true));
+
     let sanitizedCustomer = { ...newCustomer };
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
@@ -144,38 +152,104 @@ const Main = ({ customer, setCustomer, user }) => {
     if (editingCustomer) {
       const previousCustomers = [...customer];
       const editingId = editingCustomer.id;
+
+      // ✅ FIX: Remove all problematic fields
       const editingData = { ...sanitizedCustomer };
+
+      // Remove attachment completely
+      delete editingData.attachment;
+
+      // Remove file from vehicles
+      if (editingData.type === "party" && editingData.vehicles) {
+        editingData.vehicles = editingData.vehicles.map((v) => {
+          const clean = { ...v };
+          delete clean.attachment;
+          return clean;
+        });
+      }
+
+      // ✅ IMPORTANT: Use the REAL ID from Firebase, not the local one
+      // Find the actual document in Firebase by searching
+      let realDocId = editingId;
+
+      // If ID starts with "temp_", we need to find the real one
+      if (editingId.startsWith("temp_")) {
+        // Search by partyName and phone
+        if (editingData.partyName && editingData.phone) {
+          try {
+            const q = query(
+              collection(db, "customers"),
+              where("userId", "==", user.uid),
+              where("partyName", "==", editingData.partyName),
+              where("phone", "==", editingData.phone),
+            );
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+              realDocId = snapshot.docs[0].id;
+            }
+          } catch (e) {
+            console.error("Search failed:", e);
+          }
+        }
+      } else {
+        // Verify the ID exists in Firebase
+        try {
+          const docRef = doc(db, "customers", editingId);
+          const docSnap = await getDoc(docRef);
+          if (!docSnap.exists()) {
+            // ID doesn't exist in Firebase, try to find by partyName + phone
+            if (editingData.partyName && editingData.phone) {
+              const q = query(
+                collection(db, "customers"),
+                where("userId", "==", user.uid),
+                where("partyName", "==", editingData.partyName),
+                where("phone", "==", editingData.phone),
+              );
+              const snapshot = await getDocs(q);
+              if (!snapshot.empty) {
+                realDocId = snapshot.docs[0].id;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Verification failed:", e);
+        }
+      }
 
       setCustomer((prev) =>
         prev.map((c) =>
-          c.id === editingId ? { ...editingData, id: editingId } : c,
+          c.id === editingId ? { ...editingData, id: realDocId } : c,
         ),
       );
       setEditingCustomer(null);
-      setMainTab("ledger");
+
+      // ✅ Auto-switch to Ledger with Party tab for debit entries
+      if (isDebitEntry) {
+        setMainTab("ledger");
+        setDataActiveTab("party");
+      } else {
+        setMainTab("ledger");
+      }
 
       const updateData = { ...editingData };
-      if (updateData.attachment?.file) delete updateData.attachment.file;
+      delete updateData.attachment;
       if (updateData.type === "party" && updateData.vehicles) {
         updateData.vehicles = updateData.vehicles.map((v) => {
           const clean = { ...v };
-          if (clean.attachment?.file) delete clean.attachment.file;
+          delete clean.attachment;
           return clean;
         });
       }
 
       try {
-        const docRef = doc(db, "customers", editingId);
+        const docRef = doc(db, "customers", realDocId);
         await updateDoc(docRef, updateData);
-        console.log("Edit saved to Firestore");
+        console.log("Edit saved to Firestore with ID:", realDocId);
       } catch (error) {
         console.error("Edit save error:", error);
-        if (
-          error.code === "not-found" &&
-          editingData.partyName &&
-          editingData.phone
-        ) {
-          console.log("Fallback: searching by partyName + phone");
+
+        // Last resort: try fallback search
+        if (editingData.partyName && editingData.phone) {
           try {
             const q = query(
               collection(db, "customers"),
@@ -193,7 +267,7 @@ const Main = ({ customer, setCustomer, user }) => {
                   c.id === editingId ? { ...c, id: realId } : c,
                 ),
               );
-              console.log("Fallback edit successful");
+              console.log("Fallback edit successful with ID:", realId);
               return;
             }
           } catch (fbErr) {
@@ -214,7 +288,14 @@ const Main = ({ customer, setCustomer, user }) => {
     };
     const newCustomerWithId = { ...customerWithTime, id: tempId };
     setCustomer((prev) => [newCustomerWithId, ...prev]);
-    setMainTab("ledger");
+
+    // ✅ Auto-switch to Ledger with Party tab for debit entries
+    if (isDebitEntry) {
+      setMainTab("ledger");
+      setDataActiveTab("party");
+    } else {
+      setMainTab("ledger");
+    }
 
     try {
       const cloudData = JSON.parse(JSON.stringify(customerWithTime));
@@ -289,10 +370,16 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   };
 
+  // ─── ✅ FIXED: Edit Handler for Debit Entries ───
   const handleEdit = (idToEdit) => {
     const target = customer.find((c) => c.id === idToEdit);
     if (target) {
-      setEditingCustomer({ ...target });
+      // ✅ Agar Debit entry hai toh isDebitView flag set karo
+      const editData = {
+        ...target,
+        isDebitView: target.type === "debit" || target.isDebitView === true,
+      };
+      setEditingCustomer(editData);
       setMainTab("form");
     } else {
       console.error("Customer not found for edit:", idToEdit);

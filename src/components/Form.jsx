@@ -805,6 +805,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       type: isDebitView ? "debit" : formData.type,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
+      isDebitView: isDebitView, // ✅ YEH LINE ADD KARO
       ...(isPartyOrDebit && {
         remainingBalance: partySummary.remainingBalance,
       }),
