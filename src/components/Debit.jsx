@@ -92,7 +92,30 @@ const Debit = ({ user }) => {
     }
   }, [user]);
 
-  // ─── ADD ──────────────────────────────────────────────────────
+  // ─── UPDATE DEBIT ENTRY ─────────────────────────────────────
+  const updateDebitEntry = async (id, updatedData) => {
+    try {
+      // Update state
+      const updatedEntries = entries.map((e) =>
+        e.id === id ? updatedData : e,
+      );
+      setEntries(updatedEntries);
+      saveToLocalStorage(updatedEntries);
+
+      // Update Firebase
+      if (user) {
+        const docRef = doc(db, "debits", id);
+        await updateDoc(docRef, updatedData);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Update error:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ─── ADD ENTRY (WITH BALANCE CHECK + HISTORY) ─────────────
   const addEntry = async (e) => {
     e.preventDefault();
     if (!formData.partyName || !formData.amount || !formData.purpose) {
@@ -108,8 +131,94 @@ const Debit = ({ user }) => {
       createdAt: new Date().toISOString(),
     };
 
+    // 🔥 CHECK: Kya yeh party pehle se exist karti hai?
+    const existingEntry = entries.find(
+      (e) => e.partyName === newEntry.partyName,
+    );
+
+    if (existingEntry) {
+      // 🔥 PARTY EXISTS — Balance check + Update
+      const currentBalance = Number(existingEntry.amount);
+      const debitAmount = Number(newEntry.amount);
+
+      // ❌ Balance check
+      if (debitAmount > currentBalance) {
+        alert(
+          `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
+        );
+        return; // 🛑 Transaction BLOCK
+      }
+
+      // ✅ New balance calculate
+      const newBalance = currentBalance - debitAmount;
+
+      // 📜 History entry create with DATE + AMOUNT
+      const historyEntry = {
+        id: `h_${Date.now()}`,
+        date: newEntry.date || new Date().toISOString().split("T")[0],
+        type: "debit",
+        amount: debitAmount,
+        balance: newBalance,
+        purpose: newEntry.purpose,
+        remarks: newEntry.remarks || "",
+      };
+
+      // 🔄 Update existing entry
+      const updatedEntry = {
+        ...existingEntry,
+        amount: newBalance,
+        history: [...(existingEntry.history || []), historyEntry],
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 💾 Save update
+      const result = await updateDebitEntry(existingEntry.id, updatedEntry);
+
+      if (result.success) {
+        alert(
+          `✅ Kaam record ho gaya!\n\n📅 Date: ${historyEntry.date}\n💰 Deducted: Rs. ${debitAmount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}`,
+        );
+
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+          setMobileView("ledger");
+        }
+      } else {
+        alert("❌ Error updating: " + result.error);
+      }
+
+      setFormData({
+        partyName: "",
+        phone: "",
+        cnic: "",
+        date: "",
+        sender: "",
+        receiver: "",
+        purpose: "",
+        amount: "",
+        remarks: "",
+      });
+      return;
+    }
+
+    // 🔥 NEW PARTY — Direct add with initial history
+    const initialHistory = {
+      id: `h_${Date.now()}`,
+      date: newEntry.date || new Date().toISOString().split("T")[0],
+      type: "initial",
+      amount: newEntry.amount,
+      balance: newEntry.amount,
+      purpose: "Initial Debit Entry",
+      remarks: newEntry.remarks || "",
+    };
+
+    const finalEntry = {
+      ...newEntry,
+      history: [initialHistory],
+    };
+
     const tempId = `temp_${Date.now()}_${Math.random()}`;
-    const optimisticEntry = { ...newEntry, id: tempId };
+    const optimisticEntry = { ...finalEntry, id: tempId };
 
     const updatedEntries = [optimisticEntry, ...entries];
     setEntries(updatedEntries);
@@ -127,7 +236,6 @@ const Debit = ({ user }) => {
       remarks: "",
     });
 
-    // ✅ Switch to Ledger on mobile after adding entry
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
       setMobileView("ledger");
@@ -135,7 +243,7 @@ const Debit = ({ user }) => {
 
     try {
       const docRef = await addDoc(collection(db, "debits"), {
-        ...newEntry,
+        ...finalEntry,
         userId: user.uid,
       });
       const finalEntries = updatedEntries.map((item) =>
@@ -143,8 +251,12 @@ const Debit = ({ user }) => {
       );
       setEntries(finalEntries);
       saveToLocalStorage(finalEntries);
+      alert(
+        `✅ New qarzdaar added!\n\n👤 ${finalEntry.partyName}\n💰 Amount: Rs. ${finalEntry.amount.toLocaleString()}`,
+      );
     } catch (error) {
       console.error("Error adding to Firestore:", error);
+      alert("❌ Error saving: " + error.message);
     }
   };
 
@@ -348,7 +460,9 @@ const Debit = ({ user }) => {
                   <td>${e.sender || "—"}</td>
                   <td>${e.receiver || "—"}</td>
                   <td>${e.purpose}</td>
-                  <td class="text-right text-red">Rs. ${Number(e.amount).toLocaleString()}</td>
+                  <td class="text-right text-red">Rs. ${Number(
+                    e.amount,
+                  ).toLocaleString()}</td>
                   <td>${e.remarks || "—"}</td>
                 </tr>
               `,
@@ -376,9 +490,16 @@ const Debit = ({ user }) => {
     printWindow.document.close();
   };
 
-  // ─── PRINT SINGLE ENTRY ─────────────────────────────────────
+  // ─── PRINT SINGLE ENTRY (WITH HISTORY) ─────────────────────
   const handlePrintSingle = (entry) => {
     const printWindow = window.open("", "_blank");
+
+    const history = entry.history || [];
+    const totalDebits = history
+      .filter((h) => h.type === "debit")
+      .reduce((sum, h) => sum + h.amount, 0);
+    const initialAmount =
+      history.find((h) => h.type === "initial")?.amount || 0;
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -387,7 +508,7 @@ const Debit = ({ user }) => {
         <title>Debit Entry Receipt</title>
         <style>
           body { font-family: 'Courier New', monospace; padding: 20px; font-size: 14px; background: white; }
-          .receipt { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
+          .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
           .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
           .header h1 { margin: 0; font-size: 22px; }
           .header p { margin: 5px 0; color: #555; }
@@ -396,13 +517,21 @@ const Debit = ({ user }) => {
           .label { font-weight: bold; color: #333; }
           .value { color: #222; }
           .amount { font-size: 18px; color: #c0392b; font-weight: bold; }
+          .history-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; }
+          .history-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ddd; font-size: 12px; }
+          .history-date { color: #666; }
+          .history-debit { color: #c0392b; font-weight: bold; }
+          .history-credit { color: #27ae60; font-weight: bold; }
+          .history-balance { color: #333; font-weight: bold; }
+          .summary { margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; font-size: 14px; }
           .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
         </style>
       </head>
       <body>
         <div class="receipt">
           <div class="header">
-            <h1>DEBIT RECEIPT</h1>
+            <h1>DEBIT STATEMENT</h1>
+            <p>${entry.partyName}</p>
             <p>Generated: ${new Date().toLocaleString()}</p>
           </div>
 
@@ -414,8 +543,44 @@ const Debit = ({ user }) => {
             <div class="row"><span class="label">Receive From</span><span class="value">${entry.sender || "—"}</span></div>
             <div class="row"><span class="label">Handover To</span><span class="value">${entry.receiver || "—"}</span></div>
             <div class="row"><span class="label">Purpose</span><span class="value">${entry.purpose}</span></div>
-            <div class="row"><span class="label">Amount</span><span class="value amount">Rs. ${Number(entry.amount).toLocaleString()}</span></div>
+            <div class="row"><span class="label">Current Balance</span><span class="value amount">Rs. ${Number(
+              entry.amount,
+            ).toLocaleString()}</span></div>
             <div class="row"><span class="label">Remarks</span><span class="value">${entry.remarks || "—"}</span></div>
+          </div>
+
+          <div class="history-section">
+            <h3>📜 Transaction History</h3>
+            ${history
+              .map(
+                (h) => `
+              <div class="history-item">
+                <div>
+                  <span class="history-date">📅 ${h.date || "—"}</span>
+                  <span>${h.purpose || "—"}</span>
+                </div>
+                <div>
+                  ${
+                    h.type === "initial"
+                      ? `<span class="history-credit">+Rs. ${h.amount?.toLocaleString()}</span>`
+                      : `<span class="history-debit">-Rs. ${h.amount?.toLocaleString()}</span>`
+                  }
+                  <span class="history-balance">Bal: Rs. ${h.balance?.toLocaleString()}</span>
+                </div>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+
+          <div class="summary">
+            <div>Initial Amount: Rs. ${initialAmount.toLocaleString()}</div>
+            <div>Total Deducted: Rs. ${totalDebits.toLocaleString()}</div>
+            <div style="font-size:18px; margin-top:8px;">
+              <strong>Current Balance: Rs. ${Number(
+                entry.amount,
+              ).toLocaleString()}</strong>
+            </div>
           </div>
 
           <div class="footer">
@@ -823,6 +988,110 @@ const Debit = ({ user }) => {
                           </span>
                         )}
                       </div>
+
+                      {/* 🔥 HISTORY SECTION */}
+                      {entry.history && entry.history.length > 1 && (
+                        <div className="mt-3 pt-3 border-t border-gray-600">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                📜 Transaction History
+                              </span>
+                              <span className="text-[8px] text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full">
+                                {entry.history.length} entries
+                              </span>
+                            </div>
+                            <span className="text-[8px] text-gray-500">
+                              Total Deducted: Rs.{" "}
+                              {entry.history
+                                .filter((h) => h.type === "debit")
+                                .reduce((sum, h) => sum + h.amount, 0)
+                                .toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                            {entry.history.map((h, idx) => (
+                              <div
+                                key={h.id || idx}
+                                className={`flex flex-col p-2 rounded-lg text-[10px] ${
+                                  h.type === "initial"
+                                    ? "bg-green-900/20 border-l-2 border-green-500"
+                                    : "bg-red-900/20 border-l-2 border-red-500"
+                                }`}
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-yellow-400 font-mono text-[9px] font-bold">
+                                      📅 {h.date || "—"}
+                                    </span>
+                                    <span className="text-gray-300 truncate max-w-[80px]">
+                                      {h.purpose || "—"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {h.type === "debit" && (
+                                      <span className="text-red-400 font-bold text-[11px]">
+                                        -Rs. {h.amount?.toLocaleString()}
+                                      </span>
+                                    )}
+                                    {h.type === "initial" && (
+                                      <span className="text-green-400 font-bold text-[11px]">
+                                        +Rs. {h.amount?.toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between mt-0.5">
+                                  <span className="text-gray-400 text-[8px] font-mono">
+                                    Balance: Rs. {h.balance?.toLocaleString()}
+                                  </span>
+                                  {h.remarks && (
+                                    <span className="text-gray-500 text-[8px] italic truncate max-w-[100px]">
+                                      📝 {h.remarks}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-3 gap-1 bg-gray-700/50 px-2 py-1.5 rounded-lg text-[9px]">
+                            <div className="text-center">
+                              <span className="text-gray-400 block text-[7px] uppercase">
+                                Initial
+                              </span>
+                              <span className="text-green-400 font-mono font-bold">
+                                Rs.{" "}
+                                {entry.history
+                                  .find((h) => h.type === "initial")
+                                  ?.amount?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                            <div className="text-center border-x border-gray-600">
+                              <span className="text-gray-400 block text-[7px] uppercase">
+                                Total Deducted
+                              </span>
+                              <span className="text-red-400 font-mono font-bold">
+                                Rs.{" "}
+                                {entry.history
+                                  .filter((h) => h.type === "debit")
+                                  .reduce((sum, h) => sum + h.amount, 0)
+                                  .toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="text-center">
+                              <span className="text-gray-400 block text-[7px] uppercase">
+                                Remaining
+                              </span>
+                              <span className="text-yellow-400 font-mono font-bold">
+                                Rs. {Number(entry.amount).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-2 mt-2.5">
                         <button
                           onClick={() => startEdit(entry)}

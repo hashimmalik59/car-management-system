@@ -1,4 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { db } from "../firebase";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 
 const serviceOptions = [
   "New Registration",
@@ -464,6 +473,32 @@ const VehicleCard = ({
 
 // ==================== MAIN FORM ====================
 const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
+  // 🔥 Fetch debit entries for validation
+  const [debitEntries, setDebitEntries] = useState([]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDebitEntries();
+    }
+  }, [user]);
+
+  const fetchDebitEntries = async () => {
+    try {
+      const q = query(
+        collection(db, "debits"),
+        where("userId", "==", user.uid),
+      );
+      const snapshot = await getDocs(q);
+      const entries = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setDebitEntries(entries);
+    } catch (error) {
+      console.error("Error fetching debit entries:", error);
+    }
+  };
+
   const createEmptyVehicle = () => ({
     plate: "",
     model: "",
@@ -521,7 +556,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
   const isDebitActive = isDebitView || formData.type === "debit";
 
-  // 🔥 partySummary – ab commission bhi add ho raha hai
+  // 🔥 partySummary – Choice ADD, Online Payment MINUS
   const partySummary = useMemo(() => {
     if (!isPartyOrDebit) {
       return {
@@ -554,16 +589,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       ? Number(formData.onlinePayment) || 0
       : 0;
 
-    // 🔥 Commission add kiya
     const commission = Number(commissionAmount) || 0;
 
-    // 🔥 GrandTotal = Vehicles + Choice + Commission
-    const grandTotal = totalVehicles + choiceAmount + commission;
+    // 🔥 GRAND TOTAL = Vehicles + Choice + Commission - Online Payment
+    const grandTotal =
+      totalVehicles + choiceAmount + commission - onlinePayment;
+
     const totalAdvance = totalVehiclesAdvance;
-    const remainingBalance = Math.max(
-      grandTotal - totalAdvance - onlinePayment,
-      0,
-    );
+    const remainingBalance = Math.max(grandTotal - totalAdvance, 0);
 
     return {
       totalVehicles,
@@ -780,8 +813,46 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     setFormData((prev) => ({ ...prev, onlinePaymentNotes: e.target.value }));
   };
 
+  // 🔥 handleSubmit with Debit validation and Debit Ledger update
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 🔥 DEBIT VALIDATION: Check if party exists in Debit Ledger
+    let existingDebit = null;
+    if (isDebitView) {
+      const partyName = formData.partyName?.trim();
+
+      if (!partyName) {
+        alert("❌ Please enter a party name!");
+        return;
+      }
+
+      // Check if party exists in debitEntries
+      existingDebit = debitEntries.find(
+        (entry) => entry.partyName?.toLowerCase() === partyName.toLowerCase(),
+      );
+
+      if (!existingDebit) {
+        alert(`❌ Party "${partyName}" not found in Debit Ledger!
+
+Please first add this party in Tab 5 (Debit) ledger.`);
+        return; // 🛑 Block transaction
+      }
+
+      // 🔥 Balance check: Total amount vs available balance
+      const currentBalance = Number(existingDebit.amount) || 0;
+      const requestedAmount = Number(formData.totalAmount) || 0;
+
+      if (requestedAmount > currentBalance) {
+        alert(`❌ Balance kam hai!
+
+Available: Rs. ${currentBalance.toLocaleString()}
+Requested: Rs. ${requestedAmount.toLocaleString()}
+
+Pehle Tab 5 (Debit) mein balance update karein.`);
+        return; // 🛑 Block transaction
+      }
+    }
 
     if (formData.type === "individual") {
       if (formData.serviceType.length === 0) {
@@ -800,17 +871,57 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       }
     }
 
+    // ============================================================
+    // 🔥🔥🔥 NEW: UPDATE DEBIT LEDGER IF DEBIT VIEW
+    // ============================================================
+    if (isDebitView && existingDebit) {
+      const currentBalance = Number(existingDebit.amount) || 0;
+      const requestedAmount = Number(formData.totalAmount) || 0;
+      const newBalance = currentBalance - requestedAmount;
+
+      // 📜 History entry
+      const historyEntry = {
+        id: `h_${Date.now()}`,
+        date: formData.date || new Date().toISOString().split("T")[0],
+        type: "debit",
+        amount: requestedAmount,
+        balance: newBalance,
+        purpose: formData.purpose || "Debit Entry",
+        remarks: formData.remarks || "",
+      };
+
+      const updatedDebit = {
+        ...existingDebit,
+        amount: newBalance,
+        history: [...(existingDebit.history || []), historyEntry],
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        // Update Firestore "debits" collection
+        const debitDocRef = doc(db, "debits", existingDebit.id);
+        await updateDoc(debitDocRef, updatedDebit);
+        console.log("✅ Debit ledger updated successfully!");
+      } catch (error) {
+        console.error("❌ Failed to update debit ledger:", error);
+        alert("Debit ledger update failed! Please try again.");
+        return; // 🛑 Stop further execution
+      }
+    }
+
+    // ─── PREPARE FINAL DATA FOR CUSTOMER LEDGER ───
     const finalData = {
       ...formData,
       type: isDebitView ? "debit" : formData.type,
       commissionAmount: Number(commissionAmount) || 0,
       userId: user ? user.uid : null,
-      isDebitView: isDebitView, // ✅ YEH LINE ADD KARO
+      isDebitView: isDebitView,
       ...(isPartyOrDebit && {
         remainingBalance: partySummary.remainingBalance,
       }),
     };
 
+    // ─── SAVE TO CUSTOMER LEDGER ───
     const result = await onAddCustomer(finalData);
     if (result && result.success) {
       alert("Record Saved/Updated Successfully!");
@@ -910,21 +1021,51 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             )}
           </div>
 
+          {/* Warning message for Debit view */}
+          {isDebitView && (
+            <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
+              <p className="text-yellow-300 text-[10px] font-medium">
+                ⚠️ Note: Debit tab se entry sirf unhi parties ke liye ho gi jo
+                pehle{" "}
+                <strong className="text-white">Tab 5 (Debit Ledger)</strong>{" "}
+                mein add hain. Agar party nahi hai toh pehle Tab 5 mein add
+                karein.
+              </p>
+            </div>
+          )}
+
           {/* Common fields */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               {isPartyOrDebit ? "Business / Party Name" : "Customer Name"}
             </label>
-            <input
-              type="text"
-              className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500"
-              placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
-              required
-              value={formData.partyName}
-              onChange={(e) =>
-                setFormData({ ...formData, partyName: e.target.value })
-              }
-            />
+            {/* 🔥 CHANGED: Added relative container + icon */}
+            <div className="relative">
+              <input
+                type="text"
+                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500 w-full pr-10"
+                placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
+                required
+                value={formData.partyName}
+                onChange={(e) =>
+                  setFormData({ ...formData, partyName: e.target.value })
+                }
+              />
+              {/* 🔥 TICK/CROSS ICON */}
+              {isPartyOrDebit && formData.partyName?.trim() && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-lg">
+                  {debitEntries.some(
+                    (entry) =>
+                      entry.partyName?.toLowerCase() ===
+                      formData.partyName?.toLowerCase(),
+                  ) ? (
+                    <span className="text-green-500">✅</span>
+                  ) : (
+                    <span className="text-red-500">❌</span>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
