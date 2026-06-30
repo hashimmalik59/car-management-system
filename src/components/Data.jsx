@@ -147,15 +147,17 @@ const printIndividualReceipt = (item) => {
     <head>
       <title>Receipt - ${item.partyName}</title>
       <style>
-        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-        .label { font-weight: bold; width: 150px; }
-        .value { flex: 1; }
-        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-        .amount { font-size: 14px; font-weight: bold; }
+        body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; }
+        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+        .header p { margin: 5px 0; color: #555; font-size: 14px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+        .label { font-weight: bold; width: 160px; color: #333; }
+        .value { flex: 1; color: #222; }
+        .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
+        .amount { font-size: 16px; font-weight: bold; }
+        h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       </style>
     </head>
     <body>
@@ -185,7 +187,7 @@ const printIndividualReceipt = (item) => {
         <h3>Payment Summary:</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${(item.totalAmount || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${(item.advancePaid || 0).toLocaleString()}</span></div>
-        <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "red" : "green"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Remaining Balance:</span><span class="value amount" style="color: ${(item.remainingBalance || 0) > 0 ? "#c0392b" : "#27ae60"}">Rs. ${(item.remainingBalance || 0).toLocaleString()}</span></div>
         ${
           item.payments && item.payments.length > 0
             ? `
@@ -193,7 +195,7 @@ const printIndividualReceipt = (item) => {
         ${item.payments
           .map(
             (p, i) => `
-        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:green">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
         `,
           )
           .join("")}
@@ -252,20 +254,22 @@ const printPartyReceipt = (item) => {
     <head>
       <title>Receipt - ${item.partyName}</title>
       <style>
-        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-        .receipt { max-width: 1200px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-        .label { font-weight: bold; width: 150px; }
-        .value { flex: 1; }
-        .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .table th { background-color: #f2f2f2; }
+        body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; }
+        .receipt { max-width: 1200px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+        .header p { margin: 5px 0; color: #555; font-size: 14px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+        .label { font-weight: bold; width: 160px; color: #333; }
+        .value { flex: 1; color: #222; }
+        .table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 13px; }
+        .table th, .table td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; }
+        .table th { background-color: #f2f2f2; font-weight: bold; color: #1a1a1a; }
         .text-right { text-align: right; }
-        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-        .remarks-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
+        .remarks-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; background: #f9f9f9; padding: 15px; border-radius: 5px; }
         .remarks-section .label { font-weight: bold; }
+        h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       </style>
     </head>
     <body>
@@ -384,16 +388,18 @@ const printVehicleReceipt = (vehicle, partyData) => {
     <head>
       <title>Vehicle Receipt - ${vehicle.plate}</title>
       <style>
-        body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
-        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dotted #ccc; }
-        .label { font-weight: bold; width: 150px; }
-        .value { flex: 1; }
-        .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; }
-        .amount { font-size: 14px; font-weight: bold; }
-        .service-box { background: #f9f9f9; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; }
+        .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+        .header p { margin: 5px 0; color: #555; font-size: 14px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+        .label { font-weight: bold; width: 160px; color: #333; }
+        .value { flex: 1; color: #222; }
+        .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
+        .amount { font-size: 16px; font-weight: bold; }
+        .service-box { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       </style>
     </head>
     <body>
@@ -406,7 +412,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Party Name:</span><span class="value">${partyData.partyName || "N/A"}</span></div>
         <div class="info-row"><span class="label">Party Phone:</span><span class="value">${partyData.phone || "N/A"}</span></div>
         <div class="info-row"><span class="label">NTN / Reg No:</span><span class="value">${partyData.ntn || "N/A"}</span></div>
-        <div style="margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 8px;">
+        <div style="margin-top: 15px; background: #f0f0f0; padding: 15px; border-radius: 8px;">
           <h3>Vehicle Details</h3>
           <div class="info-row"><span class="label">Vehicle No:</span><span class="value">${vehicle.plate || "N/A"}</span></div>
           <div class="info-row"><span class="label">Model:</span><span class="value">${vehicle.model || "N/A"}</span></div>
@@ -420,7 +426,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <h3>Payment Summary</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${total.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
-        <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "red" : "green"}">Rs. ${remaining.toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "#c0392b" : "#27ae60"}">Rs. ${remaining.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
 
         ${
@@ -508,7 +514,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete, onDebitPayment }) => {
           >
             🖨️ Print All
           </button>
-          {/* 🔥 Pay button — only for Debit entries */}
           {isDebit && (
             <button
               onClick={() => onDebitPayment(item)}

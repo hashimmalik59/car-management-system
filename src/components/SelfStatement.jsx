@@ -173,21 +173,22 @@ const SelfStatement = ({ user }) => {
       <head>
         <title>Self Statement Report</title>
         <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; background: white; }
-          .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .header p { margin: 5px 0; color: #555; }
-          .section-title { margin: 20px 0 10px; font-size: 16px; border-left: 4px solid #333; padding-left: 10px; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 11px; }
-          th { background-color: #f2f2f2; font-weight: bold; }
+          body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; background: #fff; }
+          .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+          .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+          .header p { margin: 5px 0; color: #555; font-size: 14px; }
+          .section-title { margin: 20px 0 10px; font-size: 18px; border-left: 4px solid #333; padding-left: 10px; color: #1a1a1a; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; color: #1a1a1a; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
-          .text-red { color: red; }
-          .text-green { color: green; }
-          .text-yellow { color: #b8860b; }
-          .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
+          .text-red { color: #c0392b; font-weight: bold; }
+          .text-green { color: #27ae60; font-weight: bold; }
+          .text-yellow { color: #d4a017; font-weight: bold; }
+          .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
+          .grand-total { background: #f2f2f2; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -195,7 +196,7 @@ const SelfStatement = ({ user }) => {
           <div class="header">
             <h1>IQRA MOTOR INSURANCE</h1>
             <p>SELF STATEMENT</p>
-            <p style="font-size:10px; color:#999;">Generated: ${new Date().toLocaleString()}</p>
+            <p style="font-size:11px; color:#999;">Generated: ${new Date().toLocaleString()}</p>
           </div>
 
           <div class="section-title">📋 All Entries (${filtered.length})</div>
@@ -254,7 +255,7 @@ const SelfStatement = ({ user }) => {
           <div class="footer">
             <p>Thank you for choosing Iqra Motor Insurance</p>
             <p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p>
-            <p style="font-size:9px; color:#aaa;">This is a computer generated statement.</p>
+            <p style="font-size:10px; color:#aaa;">This is a computer generated statement.</p>
           </div>
         </div>
         <script>window.print();</script>

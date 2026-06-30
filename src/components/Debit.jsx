@@ -402,19 +402,19 @@ const Debit = ({ user }) => {
       <head>
         <title>Debit Ledger Report</title>
         <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; background: white; }
-          .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .header p { margin: 5px 0; color: #555; }
-          .section-title { margin: 20px 0 10px; font-size: 16px; border-left: 4px solid #c0392b; padding-left: 10px; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 11px; }
-          th { background-color: #f2f2f2; font-weight: bold; }
+          body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; background: #fff; }
+          .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+          .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+          .header p { margin: 5px 0; color: #555; font-size: 14px; }
+          .section-title { margin: 20px 0 10px; font-size: 18px; border-left: 4px solid #c0392b; padding-left: 10px; color: #1a1a1a; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; color: #1a1a1a; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
-          .text-red { color: #c0392b; }
-          .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
+          .text-red { color: #c0392b; font-weight: bold; }
+          .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
         </style>
       </head>
       <body>
@@ -498,15 +498,15 @@ const Debit = ({ user }) => {
       <head>
         <title>Debit Entry Receipt</title>
         <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; font-size: 14px; background: white; }
-          .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-          .header h1 { margin: 0; font-size: 22px; }
-          .header p { margin: 5px 0; color: #555; }
+          body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; background: #fff; }
+          .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+          .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
+          .header p { margin: 5px 0; color: #555; font-size: 14px; }
           .details { margin: 10px 0; }
-          .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; }
-          .label { font-weight: bold; color: #333; }
-          .value { color: #222; }
+          .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; }
+          .label { font-weight: bold; width: 160px; color: #333; }
+          .value { flex: 1; color: #222; }
           .amount { font-size: 18px; color: #c0392b; font-weight: bold; }
           .history-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; }
           .history-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ddd; font-size: 12px; }
@@ -515,7 +515,8 @@ const Debit = ({ user }) => {
           .history-credit { color: #27ae60; font-weight: bold; }
           .history-balance { color: #333; font-weight: bold; }
           .summary { margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; font-size: 14px; }
-          .footer { margin-top: 20px; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #777; }
+          .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
+          h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
         </style>
       </head>
       <body>
@@ -980,7 +981,6 @@ const Debit = ({ user }) => {
                         )}
                       </div>
 
-                      {/* 🔥 UPDATED HISTORY — Compact Layout */}
                       {entry.history && entry.history.length > 1 && (
                         <div className="mt-2 pt-2 border-t border-gray-600">
                           <div className="flex items-center justify-between mb-1.5">
@@ -1047,7 +1047,6 @@ const Debit = ({ user }) => {
                             ))}
                           </div>
 
-                          {/* Summary Footer */}
                           <div className="mt-2 grid grid-cols-3 gap-1 bg-gray-700/50 px-2 py-1 rounded-md text-xs">
                             <div className="text-center">
                               <span className="text-gray-400 block text-[8px] uppercase">
