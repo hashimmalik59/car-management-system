@@ -334,46 +334,6 @@ const VehicleCard = ({
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Total Amount (Rs.)
-          </label>
-          <input
-            type="number"
-            readOnly
-            className="rounded p-2 border border-gray-600 bg-gray-700 text-gray-200 text-sm outline-none"
-            value={vehicle.vehicleTotal ?? ""}
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Advance Paid (Rs.)
-          </label>
-          <input
-            type="number"
-            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
-            value={vehicle.vehicleAdvance || 0}
-            onChange={(e) => {
-              const advance = Number(e.target.value) || 0;
-              const total = Number(vehicle.vehicleTotal) || 0;
-              const remaining = Math.max(total - advance, 0);
-              onChange(index, "vehicleAdvance", advance);
-              onChange(index, "vehicleRemaining", remaining);
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-md">
-        <span className="text-[10px] font-bold text-gray-300">
-          Remaining for this Vehicle
-        </span>
-        <span className={`text-sm font-bold ${accentText}`}>
-          Rs. {(vehicle.vehicleRemaining || 0).toLocaleString()}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">
             Token Tax From
           </label>
           <input
@@ -475,6 +435,12 @@ const VehicleCard = ({
 const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   // 🔥 Fetch debit entries for validation
   const [debitEntries, setDebitEntries] = useState([]);
+
+  // 🔥 Party details popup state
+  const [partyDetailsPopup, setPartyDetailsPopup] = useState({
+    open: false,
+    party: null,
+  });
 
   useEffect(() => {
     if (user) {
@@ -683,6 +649,58 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   }, [editingData]);
 
+  // 🔥 Handle party name change: Auto-fill + Reset
+  const handlePartyNameChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, partyName: value }));
+
+    // Only in Debit view
+    if (isDebitView && value.trim()) {
+      const foundParty = debitEntries.find(
+        (entry) =>
+          entry.partyName?.toLowerCase() === value.trim().toLowerCase(),
+      );
+
+      if (foundParty) {
+        // 🔥 AUTO-FILL static fields + RESET dynamic fields
+        setFormData((prev) => ({
+          ...prev,
+          partyName: value,
+          phone: foundParty.phone || "",
+          cnic: foundParty.cnic || "",
+          ntn: foundParty.ntn || "",
+          receivedBy: foundParty.receivedBy || "",
+          handoverTo: foundParty.handoverTo || "",
+          // 🔥 Reset dynamic fields
+          purpose: "",
+          amount: "",
+          date: "",
+          remarks: "",
+          vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
+        }));
+      }
+    }
+  };
+
+  // 🔥 Open popup only on ✅ click
+  const openPartyDetailsPopup = () => {
+    if (isDebitView && formData.partyName?.trim()) {
+      const foundParty = debitEntries.find(
+        (entry) =>
+          entry.partyName?.toLowerCase() ===
+          formData.partyName.trim().toLowerCase(),
+      );
+      if (foundParty) {
+        setPartyDetailsPopup({ open: true, party: foundParty });
+      }
+    }
+  };
+
+  // 🔥 Close popup
+  const closePartyDetailsPopup = () => {
+    setPartyDetailsPopup({ open: false, party: null });
+  };
+
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
     if (field === "advancePaid") {
@@ -872,7 +890,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
     }
 
     // ============================================================
-    // 🔥🔥🔥 NEW: UPDATE DEBIT LEDGER IF DEBIT VIEW
+    // 🔥🔥🔥 UPDATE DEBIT LEDGER IF DEBIT VIEW
     // ============================================================
     if (isDebitView && existingDebit) {
       const currentBalance = Number(existingDebit.amount) || 0;
@@ -929,6 +947,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
       setCommissionAmount(0);
       setIsDebitView(false);
       if (onCancelEdit) onCancelEdit();
+      closePartyDetailsPopup();
     } else if (result && !result.success) {
       alert("Database Error: " + result.message);
     }
@@ -953,6 +972,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 id: prev.id,
               }));
               setIsDebitView(false);
+              closePartyDetailsPopup();
             }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
               formData.type === "individual"
@@ -971,6 +991,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 id: prev.id,
               }));
               setIsDebitView(false);
+              closePartyDetailsPopup();
             }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
               isPartyOrDebit
@@ -1009,7 +1030,10 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             {isPartyOnly && (
               <button
                 type="button"
-                onClick={() => setIsDebitView(!isDebitView)}
+                onClick={() => {
+                  setIsDebitView(!isDebitView);
+                  closePartyDetailsPopup();
+                }}
                 className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${
                   isDebitView
                     ? "bg-orange-600 text-white hover:bg-orange-500"
@@ -1039,7 +1063,6 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               {isPartyOrDebit ? "Business / Party Name" : "Customer Name"}
             </label>
-            {/* 🔥 CHANGED: Added relative container + icon */}
             <div className="relative">
               <input
                 type="text"
@@ -1047,25 +1070,41 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
                 required
                 value={formData.partyName}
-                onChange={(e) =>
-                  setFormData({ ...formData, partyName: e.target.value })
-                }
+                onChange={handlePartyNameChange}
               />
-              {/* 🔥 TICK/CROSS ICON */}
+              {/* 🔥 TICK/CROSS ICON — Click to open popup */}
               {isPartyOrDebit && formData.partyName?.trim() && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-lg">
+                <button
+                  type="button"
+                  onClick={openPartyDetailsPopup}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-lg"
+                >
                   {debitEntries.some(
                     (entry) =>
                       entry.partyName?.toLowerCase() ===
                       formData.partyName?.toLowerCase(),
                   ) ? (
-                    <span className="text-green-500">✅</span>
+                    <span className="text-green-500 hover:opacity-80 cursor-pointer">
+                      ✅
+                    </span>
                   ) : (
                     <span className="text-red-500">❌</span>
                   )}
-                </span>
+                </button>
               )}
             </div>
+            {/* 🔥 Small hint text */}
+            {isDebitView && formData.partyName?.trim() && (
+              <p className="text-[9px] text-gray-500 mt-1">
+                {debitEntries.some(
+                  (entry) =>
+                    entry.partyName?.toLowerCase() ===
+                    formData.partyName?.toLowerCase(),
+                )
+                  ? "💡 Click ✅ to view party details"
+                  : "❌ Party not found in Debit Ledger"}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1336,84 +1375,6 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               )}
 
-              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
-                <div className="text-[10px] font-bold text-gray-400 uppercase">
-                  Payment Details
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-300 block mb-1">
-                    Third-Party Commission (Rs.)
-                  </label>
-                  <input
-                    type="number"
-                    value={commissionAmount}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setCommissionAmount(val);
-                      const servicesTotal = Object.values(
-                        formData.servicePrices,
-                      ).reduce((sum, v) => sum + Number(v?.price || 0), 0);
-                      const newTotal =
-                        servicesTotal +
-                        (formData.regionPrice || 0) +
-                        val +
-                        (Number(formData.choice) || 0);
-                      setFormData((prev) => ({
-                        ...prev,
-                        commissionAmount: val,
-                        totalAmount: newTotal,
-                        remainingBalance: Math.max(
-                          newTotal - (prev.advancePaid || 0),
-                          0,
-                        ),
-                      }));
-                    }}
-                    className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-semibold text-gray-300">
-                      Total Amount (Rs.)
-                    </label>
-                    <input
-                      type="number"
-                      readOnly
-                      value={formData.totalAmount ?? ""}
-                      className="rounded p-2 border border-gray-600 bg-gray-800 text-gray-300 text-sm w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-gray-300">
-                      Advance Paid (Rs.)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.advancePaid ?? ""}
-                      onChange={(e) =>
-                        handleIndividualAmountChange(
-                          "advancePaid",
-                          e.target.value,
-                        )
-                      }
-                      className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
-                  <span className="text-[10px] font-bold text-gray-300">
-                    Remaining Balance
-                  </span>
-                  <span className="text-base font-bold text-blue-400">
-                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1517,13 +1478,124 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                   }
                 />
               </div>
+
+              {/* 🔥 PAYMENT DETAILS — END MEIN */}
+              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
+                <div className="text-[10px] font-bold text-gray-400 uppercase">
+                  Payment Details
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-300 block mb-1">
+                    Third-Party Commission (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    value={commissionAmount}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setCommissionAmount(val);
+                      const servicesTotal = Object.values(
+                        formData.servicePrices,
+                      ).reduce((sum, v) => sum + Number(v?.price || 0), 0);
+                      const newTotal =
+                        servicesTotal +
+                        (formData.regionPrice || 0) +
+                        val +
+                        (Number(formData.choice) || 0);
+                      setFormData((prev) => ({
+                        ...prev,
+                        commissionAmount: val,
+                        totalAmount: newTotal,
+                        remainingBalance: Math.max(
+                          newTotal - (prev.advancePaid || 0),
+                          0,
+                        ),
+                      }));
+                    }}
+                    className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Total Amount (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      readOnly
+                      value={formData.totalAmount ?? ""}
+                      className="rounded p-2 border border-gray-600 bg-gray-800 text-gray-300 text-sm w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Advance Paid (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.advancePaid ?? ""}
+                      onChange={(e) =>
+                        handleIndividualAmountChange(
+                          "advancePaid",
+                          e.target.value,
+                        )
+                      }
+                      className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
+                  <span className="text-[10px] font-bold text-gray-300">
+                    Remaining Balance
+                  </span>
+                  <span className="text-base font-bold text-blue-400">
+                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </>
           )}
 
           {/* ==================== PARTY / DEBIT SECTION ==================== */}
           {isPartyOrDebit && (
             <>
-              {/* CHOICE FIELD – Party/Debit */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Vehicles ({formData.vehicles.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addVehicle}
+                    className={`font-bold text-sm transition-colors ${
+                      isDebitActive
+                        ? "text-red-400 hover:text-red-300"
+                        : "text-orange-400 hover:text-orange-300"
+                    }`}
+                  >
+                    + Add Vehicle
+                  </button>
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
+                  {formData.vehicles.map((vehicle, idx) => (
+                    <VehicleCard
+                      key={vehicle.id || idx}
+                      index={idx}
+                      vehicle={vehicle}
+                      onChange={handleVehicleChange}
+                      onRemove={removeVehicle}
+                      canRemove={formData.vehicles.length > 1}
+                      isDebitActive={isDebitActive}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 🔥 CHOICE FIELD — END MEIN */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice (Additional Amount)
@@ -1544,6 +1616,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 />
               </div>
 
+              {/* 🔥 ONLINE PAYMENT — END MEIN */}
               <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
                 <label className="flex items-center gap-2 cursor-pointer text-green-400">
                   <input
@@ -1580,35 +1653,48 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 )}
               </div>
 
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between sticky top-0 bg-gray-800 z-10 py-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Vehicles ({formData.vehicles.length})
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addVehicle}
-                    className={`font-bold text-sm transition-colors ${
-                      isDebitActive
-                        ? "text-red-400 hover:text-red-300"
-                        : "text-orange-400 hover:text-orange-300"
-                    }`}
-                  >
-                    + Add Vehicle
-                  </button>
+              {/* 🔥 PAYMENT SUMMARY — END MEIN */}
+              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
+                <div className="text-[10px] font-bold text-gray-400 uppercase">
+                  Payment Summary
                 </div>
-                <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-3">
-                  {formData.vehicles.map((vehicle, idx) => (
-                    <VehicleCard
-                      key={vehicle.id || idx}
-                      index={idx}
-                      vehicle={vehicle}
-                      onChange={handleVehicleChange}
-                      onRemove={removeVehicle}
-                      canRemove={formData.vehicles.length > 1}
-                      isDebitActive={isDebitActive}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Total Amount (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      readOnly
+                      value={formData.totalAmount ?? ""}
+                      className="rounded p-2 border border-gray-600 bg-gray-800 text-gray-300 text-sm w-full"
                     />
-                  ))}
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Advance Paid (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.advancePaid ?? ""}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 0;
+                        setFormData((prev) => ({
+                          ...prev,
+                          advancePaid: val,
+                        }));
+                      }}
+                      className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
+                  <span className="text-[10px] font-bold text-gray-300">
+                    Remaining Balance
+                  </span>
+                  <span className="text-base font-bold text-blue-400">
+                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </>
@@ -1641,6 +1727,152 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
           </div>
         </form>
       </div>
+
+      {/* 🔥 Party Details Popup — Only on ✅ click */}
+      {partyDetailsPopup.open && partyDetailsPopup.party && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={closePartyDetailsPopup}
+        >
+          <div
+            className="bg-gray-800 border border-gray-600 rounded-2xl p-5 w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-700 pb-3 mb-3">
+              <h3 className="text-lg font-bold text-white">
+                📋 {partyDetailsPopup.party.partyName}
+              </h3>
+              <button
+                onClick={closePartyDetailsPopup}
+                className="text-gray-400 hover:text-white text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contact Info */}
+            <div className="text-xs text-gray-400 mb-3">
+              {partyDetailsPopup.party.phone && (
+                <span className="mr-3">📞 {partyDetailsPopup.party.phone}</span>
+              )}
+              {partyDetailsPopup.party.cnic && (
+                <span>🪪 {partyDetailsPopup.party.cnic}</span>
+              )}
+              {partyDetailsPopup.party.ntn && (
+                <span>🪪 {partyDetailsPopup.party.ntn}</span>
+              )}
+            </div>
+
+            {/* Current Balance */}
+            <div className="bg-gray-700/50 rounded-lg p-3 mb-3 text-center">
+              <span className="text-[10px] text-gray-400 uppercase block">
+                Current Balance
+              </span>
+              <span className="text-2xl font-bold text-red-400">
+                Rs. {(partyDetailsPopup.party.amount || 0).toLocaleString()}
+              </span>
+            </div>
+
+            {/* History */}
+            {partyDetailsPopup.party.history &&
+              partyDetailsPopup.party.history.length > 0 && (
+                <>
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    📜 Transaction History (
+                    {partyDetailsPopup.party.history.length} entries)
+                  </h4>
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                    {partyDetailsPopup.party.history.map((h, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex flex-col p-2 rounded-md text-xs ${
+                          h.type === "initial"
+                            ? "bg-green-900/20 border-l-2 border-green-500"
+                            : h.type === "repay"
+                              ? "bg-blue-900/20 border-l-2 border-blue-500"
+                              : "bg-red-900/20 border-l-2 border-red-500"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-yellow-400 font-mono text-[10px]">
+                              📅 {h.date || "—"}
+                            </span>
+                            <span className="text-gray-300 truncate max-w-[100px]">
+                              {h.purpose || "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {h.type === "initial" && (
+                              <span className="text-green-400 font-bold">
+                                +Rs. {h.amount?.toLocaleString()}
+                              </span>
+                            )}
+                            {(h.type === "debit" || h.type === "repay") && (
+                              <span className="text-red-400 font-bold">
+                                -Rs. {h.amount?.toLocaleString()}
+                              </span>
+                            )}
+                            <span className="text-gray-400 text-[10px] font-mono">
+                              Bal: Rs. {h.balance?.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <div className="mt-3 grid grid-cols-3 gap-1 bg-gray-700/50 px-3 py-2 rounded-lg text-xs">
+                    <div className="text-center">
+                      <span className="text-gray-400 block text-[8px] uppercase">
+                        Initial
+                      </span>
+                      <span className="text-green-400 font-mono font-bold">
+                        Rs.{" "}
+                        {partyDetailsPopup.party.history
+                          .find((h) => h.type === "initial")
+                          ?.amount?.toLocaleString() || 0}
+                      </span>
+                    </div>
+                    <div className="text-center border-x border-gray-600">
+                      <span className="text-gray-400 block text-[8px] uppercase">
+                        Deducted
+                      </span>
+                      <span className="text-red-400 font-mono font-bold">
+                        Rs.{" "}
+                        {partyDetailsPopup.party.history
+                          .filter(
+                            (h) => h.type === "debit" || h.type === "repay",
+                          )
+                          .reduce((sum, h) => sum + h.amount, 0)
+                          .toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-gray-400 block text-[8px] uppercase">
+                        Remaining
+                      </span>
+                      <span className="text-yellow-400 font-mono font-bold">
+                        Rs.{" "}
+                        {partyDetailsPopup.party.amount?.toLocaleString() || 0}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+            {/* Close button */}
+            <button
+              onClick={closePartyDetailsPopup}
+              className="w-full mt-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

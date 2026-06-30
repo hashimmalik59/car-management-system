@@ -95,14 +95,12 @@ const Debit = ({ user }) => {
   // ─── UPDATE DEBIT ENTRY ─────────────────────────────────────
   const updateDebitEntry = async (id, updatedData) => {
     try {
-      // Update state
       const updatedEntries = entries.map((e) =>
         e.id === id ? updatedData : e,
       );
       setEntries(updatedEntries);
       saveToLocalStorage(updatedEntries);
 
-      // Update Firebase
       if (user) {
         const docRef = doc(db, "debits", id);
         await updateDoc(docRef, updatedData);
@@ -115,7 +113,7 @@ const Debit = ({ user }) => {
     }
   };
 
-  // ─── ADD ENTRY (WITH BALANCE CHECK + HISTORY) ─────────────
+  // ─── ADD ENTRY ──────────────────────────────────────────────
   const addEntry = async (e) => {
     e.preventDefault();
     if (!formData.partyName || !formData.amount || !formData.purpose) {
@@ -131,28 +129,23 @@ const Debit = ({ user }) => {
       createdAt: new Date().toISOString(),
     };
 
-    // 🔥 CHECK: Kya yeh party pehle se exist karti hai?
     const existingEntry = entries.find(
       (e) => e.partyName === newEntry.partyName,
     );
 
     if (existingEntry) {
-      // 🔥 PARTY EXISTS — Balance check + Update
       const currentBalance = Number(existingEntry.amount);
       const debitAmount = Number(newEntry.amount);
 
-      // ❌ Balance check
       if (debitAmount > currentBalance) {
         alert(
           `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
         );
-        return; // 🛑 Transaction BLOCK
+        return;
       }
 
-      // ✅ New balance calculate
       const newBalance = currentBalance - debitAmount;
 
-      // 📜 History entry create with DATE + AMOUNT
       const historyEntry = {
         id: `h_${Date.now()}`,
         date: newEntry.date || new Date().toISOString().split("T")[0],
@@ -163,7 +156,6 @@ const Debit = ({ user }) => {
         remarks: newEntry.remarks || "",
       };
 
-      // 🔄 Update existing entry
       const updatedEntry = {
         ...existingEntry,
         amount: newBalance,
@@ -171,7 +163,6 @@ const Debit = ({ user }) => {
         updatedAt: new Date().toISOString(),
       };
 
-      // 💾 Save update
       const result = await updateDebitEntry(existingEntry.id, updatedEntry);
 
       if (result.success) {
@@ -201,7 +192,7 @@ const Debit = ({ user }) => {
       return;
     }
 
-    // 🔥 NEW PARTY — Direct add with initial history
+    // ─── NEW PARTY ─────────────────────────────────────────────
     const initialHistory = {
       id: `h_${Date.now()}`,
       date: newEntry.date || new Date().toISOString().split("T")[0],
@@ -490,7 +481,7 @@ const Debit = ({ user }) => {
     printWindow.document.close();
   };
 
-  // ─── PRINT SINGLE ENTRY (WITH HISTORY) ─────────────────────
+  // ─── PRINT SINGLE ENTRY ─────────────────────────────────────
   const handlePrintSingle = (entry) => {
     const printWindow = window.open("", "_blank");
 
@@ -989,19 +980,19 @@ const Debit = ({ user }) => {
                         )}
                       </div>
 
-                      {/* 🔥 HISTORY SECTION */}
+                      {/* 🔥 UPDATED HISTORY — Compact Layout */}
                       {entry.history && entry.history.length > 1 && (
-                        <div className="mt-3 pt-3 border-t border-gray-600">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
+                        <div className="mt-2 pt-2 border-t border-gray-600">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                                 📜 Transaction History
                               </span>
-                              <span className="text-[8px] text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full">
+                              <span className="text-[9px] text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded-full">
                                 {entry.history.length} entries
                               </span>
                             </div>
-                            <span className="text-[8px] text-gray-500">
+                            <span className="text-[9px] text-gray-500">
                               Total Deducted: Rs.{" "}
                               {entry.history
                                 .filter((h) => h.type === "debit")
@@ -1010,44 +1001,44 @@ const Debit = ({ user }) => {
                             </span>
                           </div>
 
-                          <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                          <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
                             {entry.history.map((h, idx) => (
                               <div
                                 key={h.id || idx}
-                                className={`flex flex-col p-2 rounded-lg text-[10px] ${
+                                className={`flex flex-col p-1.5 rounded-md text-xs ${
                                   h.type === "initial"
                                     ? "bg-green-900/20 border-l-2 border-green-500"
                                     : "bg-red-900/20 border-l-2 border-red-500"
                                 }`}
                               >
-                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                <div className="flex flex-wrap items-center justify-between gap-0.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-yellow-400 font-mono text-[9px] font-bold">
+                                    <span className="text-yellow-400 font-mono text-[10px] font-bold">
                                       📅 {h.date || "—"}
                                     </span>
-                                    <span className="text-gray-300 truncate max-w-[80px]">
+                                    <span className="text-gray-200 truncate max-w-[80px]">
                                       {h.purpose || "—"}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     {h.type === "debit" && (
-                                      <span className="text-red-400 font-bold text-[11px]">
+                                      <span className="text-red-400 font-bold text-xs">
                                         -Rs. {h.amount?.toLocaleString()}
                                       </span>
                                     )}
                                     {h.type === "initial" && (
-                                      <span className="text-green-400 font-bold text-[11px]">
+                                      <span className="text-green-400 font-bold text-xs">
                                         +Rs. {h.amount?.toLocaleString()}
                                       </span>
                                     )}
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap items-center justify-between mt-0.5">
-                                  <span className="text-gray-400 text-[8px] font-mono">
+                                  <span className="text-gray-300 text-[10px] font-mono">
                                     Balance: Rs. {h.balance?.toLocaleString()}
                                   </span>
                                   {h.remarks && (
-                                    <span className="text-gray-500 text-[8px] italic truncate max-w-[100px]">
+                                    <span className="text-gray-400 text-[9px] italic truncate max-w-[100px]">
                                       📝 {h.remarks}
                                     </span>
                                   )}
@@ -1056,12 +1047,13 @@ const Debit = ({ user }) => {
                             ))}
                           </div>
 
-                          <div className="mt-2 grid grid-cols-3 gap-1 bg-gray-700/50 px-2 py-1.5 rounded-lg text-[9px]">
+                          {/* Summary Footer */}
+                          <div className="mt-2 grid grid-cols-3 gap-1 bg-gray-700/50 px-2 py-1 rounded-md text-xs">
                             <div className="text-center">
-                              <span className="text-gray-400 block text-[7px] uppercase">
+                              <span className="text-gray-400 block text-[8px] uppercase">
                                 Initial
                               </span>
-                              <span className="text-green-400 font-mono font-bold">
+                              <span className="text-green-400 font-mono font-bold text-xs">
                                 Rs.{" "}
                                 {entry.history
                                   .find((h) => h.type === "initial")
@@ -1069,10 +1061,10 @@ const Debit = ({ user }) => {
                               </span>
                             </div>
                             <div className="text-center border-x border-gray-600">
-                              <span className="text-gray-400 block text-[7px] uppercase">
+                              <span className="text-gray-400 block text-[8px] uppercase">
                                 Total Deducted
                               </span>
-                              <span className="text-red-400 font-mono font-bold">
+                              <span className="text-red-400 font-mono font-bold text-xs">
                                 Rs.{" "}
                                 {entry.history
                                   .filter((h) => h.type === "debit")
@@ -1081,10 +1073,10 @@ const Debit = ({ user }) => {
                               </span>
                             </div>
                             <div className="text-center">
-                              <span className="text-gray-400 block text-[7px] uppercase">
+                              <span className="text-gray-400 block text-[8px] uppercase">
                                 Remaining
                               </span>
-                              <span className="text-yellow-400 font-mono font-bold">
+                              <span className="text-yellow-400 font-mono font-bold text-xs">
                                 Rs. {Number(entry.amount).toLocaleString()}
                               </span>
                             </div>

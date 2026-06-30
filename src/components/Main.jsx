@@ -61,8 +61,6 @@ const Main = ({ customer, setCustomer, user }) => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchUserData]);
 
-  // ================= OPTIMISTIC HANDLE CUSTOMER (ADD & EDIT) with fallback =================
-  // ─── UPDATE RECORD DIRECTLY (for payment updates, etc.) ───
   async function handleUpdateRecord(updatedRecord) {
     const recordId = updatedRecord.id;
     if (!recordId) {
@@ -117,7 +115,6 @@ const Main = ({ customer, setCustomer, user }) => {
   }
 
   async function handleCustomer(newCustomer) {
-    // ─── DETECT IF THIS IS A DEBIT ENTRY ───
     const isDebitEntry =
       newCustomer.type === "debit" ||
       (newCustomer.type === "party" && newCustomer.isDebitView === true) ||
@@ -153,13 +150,9 @@ const Main = ({ customer, setCustomer, user }) => {
       const previousCustomers = [...customer];
       const editingId = editingCustomer.id;
 
-      // ✅ FIX: Remove all problematic fields
       const editingData = { ...sanitizedCustomer };
-
-      // Remove attachment completely
       delete editingData.attachment;
 
-      // Remove file from vehicles
       if (editingData.type === "party" && editingData.vehicles) {
         editingData.vehicles = editingData.vehicles.map((v) => {
           const clean = { ...v };
@@ -168,13 +161,9 @@ const Main = ({ customer, setCustomer, user }) => {
         });
       }
 
-      // ✅ IMPORTANT: Use the REAL ID from Firebase, not the local one
-      // Find the actual document in Firebase by searching
       let realDocId = editingId;
 
-      // If ID starts with "temp_", we need to find the real one
       if (editingId.startsWith("temp_")) {
-        // Search by partyName and phone
         if (editingData.partyName && editingData.phone) {
           try {
             const q = query(
@@ -192,12 +181,10 @@ const Main = ({ customer, setCustomer, user }) => {
           }
         }
       } else {
-        // Verify the ID exists in Firebase
         try {
           const docRef = doc(db, "customers", editingId);
           const docSnap = await getDoc(docRef);
           if (!docSnap.exists()) {
-            // ID doesn't exist in Firebase, try to find by partyName + phone
             if (editingData.partyName && editingData.phone) {
               const q = query(
                 collection(db, "customers"),
@@ -223,7 +210,6 @@ const Main = ({ customer, setCustomer, user }) => {
       );
       setEditingCustomer(null);
 
-      // ✅ Auto-switch to Ledger with Party tab for debit entries
       if (isDebitEntry) {
         setMainTab("ledger");
         setDataActiveTab("party");
@@ -248,7 +234,6 @@ const Main = ({ customer, setCustomer, user }) => {
       } catch (error) {
         console.error("Edit save error:", error);
 
-        // Last resort: try fallback search
         if (editingData.partyName && editingData.phone) {
           try {
             const q = query(
@@ -289,7 +274,6 @@ const Main = ({ customer, setCustomer, user }) => {
     const newCustomerWithId = { ...customerWithTime, id: tempId };
     setCustomer((prev) => [newCustomerWithId, ...prev]);
 
-    // ✅ Auto-switch to Ledger with Party tab for debit entries
     if (isDebitEntry) {
       setMainTab("ledger");
       setDataActiveTab("party");
@@ -321,7 +305,6 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   }
 
-  // ================= DELETE (with fallback) =================
   const handleDelete = async (idToDelete, itemData = null) => {
     console.log("Delete called for ID:", idToDelete);
     if (!window.confirm("Are you sure you want to delete this record?")) return;
@@ -370,11 +353,9 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   };
 
-  // ─── ✅ FIXED: Edit Handler for Debit Entries ───
   const handleEdit = (idToEdit) => {
     const target = customer.find((c) => c.id === idToEdit);
     if (target) {
-      // ✅ Agar Debit entry hai toh isDebitView flag set karo
       const editData = {
         ...target,
         isDebitView: target.type === "debit" || target.isDebitView === true,
@@ -384,6 +365,46 @@ const Main = ({ customer, setCustomer, user }) => {
     } else {
       console.error("Customer not found for edit:", idToEdit);
     }
+  };
+
+  // 🔥 NEW: Handle Debit Payment button click
+  const handleDebitPayment = (debitItem) => {
+    setMainTab("form");
+
+    const emptyVehicle = {
+      plate: "",
+      model: "",
+      region: "",
+      regionPrice: 0,
+      conversionServiceType: "",
+      serviceType: [],
+      servicePrices: {},
+      attachment: null,
+      vehicleTotal: 0,
+      vehicleAdvance: 0,
+      vehicleRemaining: 0,
+      tokenTaxFrom: "",
+      tokenTaxTo: "",
+      remarks: "",
+      bankName: "Cash",
+      id: crypto.randomUUID(),
+    };
+
+    setEditingCustomer({
+      ...debitItem,
+      type: "party",
+      isDebitView: true,
+      purpose: "",
+      amount: "",
+      date: "",
+      remarks: "",
+      vehicles: [{ ...emptyVehicle }],
+      phone: debitItem.phone || "",
+      cnic: debitItem.cnic || "",
+      ntn: debitItem.ntn || "",
+      receivedBy: debitItem.receivedBy || "",
+      handoverTo: debitItem.handoverTo || "",
+    });
   };
 
   const handleCancelEdit = () => {
@@ -563,6 +584,7 @@ const Main = ({ customer, setCustomer, user }) => {
                 onDelete={(id, item) => handleDelete(id, item)}
                 onEdit={handleEdit}
                 onUpdateCustomer={handleUpdateRecord}
+                onDebitPayment={handleDebitPayment}
               />
             </motion.div>
           )}

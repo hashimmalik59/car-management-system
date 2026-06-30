@@ -214,14 +214,13 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ────── (🔥 Choice added)
+// ─── PARTY RECEIPT ──────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
 
-  // 🔥 Choice amount add kiya
   const choiceAmount = Number(item?.choice) || 0;
 
   const onlinePaymentEnabled = item.onlinePaymentEnabled || false;
@@ -229,7 +228,6 @@ const printPartyReceipt = (item) => {
     ? Number(item.onlinePayment || 0)
     : 0;
 
-  // 🔥 AdjustedTotal = TotalVehicles + Choice - OnlinePayment
   const adjustedTotal = Math.max(
     totalAllVehicles + choiceAmount - onlinePayment,
     0,
@@ -450,8 +448,8 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ────────── (🔥 Choice + Commission Display)
-const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
+// ─── PARTY LEDGER BLOCK ──────────
+const PartyLedgerBlock = ({ item, onEdit, onDelete, onDebitPayment }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
 
@@ -459,7 +457,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
 
-  // 🔥 Choice amount add kiya
   const choiceAmount = Number(item?.choice) || 0;
 
   const onlinePaymentEnabled = item?.onlinePaymentEnabled || false;
@@ -468,7 +465,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
     : 0;
   const onlinePaymentNotes = item?.onlinePaymentNotes || "";
 
-  // 🔥 AdjustedTotal = TotalVehicles + Choice - OnlinePayment
   const adjustedTotal = Math.max(
     totalAllVehicles + choiceAmount - onlinePayment,
     0,
@@ -478,7 +474,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
     0,
   );
 
-  // Theme based on type: Debit = Red, Party = Orange
   const isDebit = item?.type === "debit";
   const headerGradient = isDebit
     ? "from-red-600 to-red-700"
@@ -506,13 +501,22 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
             </span>
           )}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => printPartyReceipt(item)}
             className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-[10px] font-medium shadow"
           >
             🖨️ Print All
           </button>
+          {/* 🔥 Pay button — only for Debit entries */}
+          {isDebit && (
+            <button
+              onClick={() => onDebitPayment(item)}
+              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium shadow"
+            >
+              💰 Pay
+            </button>
+          )}
           <button
             onClick={() => onEdit(item.id)}
             className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium shadow"
@@ -543,7 +547,6 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
         {item?.choice !== undefined && item?.choice !== null && (
           <span className="text-yellow-300">CHOICE: Rs. {item.choice}</span>
         )}
-        {/* 🔥 COMMISSION DISPLAY */}
         {item?.commissionAmount > 0 && (
           <span className="text-yellow-300">
             💰 Commission: Rs. {item.commissionAmount}
@@ -769,6 +772,7 @@ const Data = ({
   onEdit,
   onDelete,
   onUpdateCustomer,
+  onDebitPayment,
 }) => {
   const [paymentModal, setPaymentModal] = useState({
     open: false,
@@ -986,7 +990,6 @@ const Data = ({
             </motion.button>
           </div>
 
-          {/* DEBIT TOGGLE BUTTON – Red when active */}
           {activeTab === "party" && (
             <button
               onClick={() => setShowDebitOnly(!showDebitOnly)}
@@ -1278,6 +1281,7 @@ const Data = ({
                   item={item}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onDebitPayment={onDebitPayment}
                 />
               ))
             )}
