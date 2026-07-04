@@ -46,6 +46,17 @@ const regionOptions = [
   { value: "Quetta", label: "Quetta" },
 ];
 
+// ─── Normalize Name ──────────────────────────────────────────
+const normalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 // For individual (no online payment)
 const calculateTotalAmount = (
   prices,
@@ -433,8 +444,9 @@ const VehicleCard = ({
 
 // ==================== MAIN FORM ====================
 const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
-  // 🔥 Fetch debit entries for validation
+  // 🔥 Fetch debit entries for validation + dropdown
   const [debitEntries, setDebitEntries] = useState([]);
+  const [selectedDebtor, setSelectedDebtor] = useState(null);
 
   // 🔥 Party details popup state
   const [partyDetailsPopup, setPartyDetailsPopup] = useState({
@@ -522,6 +534,17 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
   const isPartyOrDebit = formData.type === "party" || formData.type === "debit";
   const isDebitActive = isDebitView || formData.type === "debit";
 
+  // 🔥 Filter active debtors (balance > 0) for dropdown
+  const activeDebtors = useMemo(() => {
+    return debitEntries.filter((entry) => Number(entry.amount) > 0);
+  }, [debitEntries]);
+
+  // 🔥 Get selected debtor's balance
+  const selectedBalance = useMemo(() => {
+    if (!selectedDebtor) return 0;
+    return Number(selectedDebtor.amount) || 0;
+  }, [selectedDebtor]);
+
   // 🔥 partySummary – Choice ADD, Online Payment MINUS
   const partySummary = useMemo(() => {
     if (!isPartyOrDebit) {
@@ -534,6 +557,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         grandTotal: 0,
         totalAdvance: 0,
         remainingBalance: 0,
+        finalBalance: 0,
       };
     }
 
@@ -564,6 +588,9 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     const totalAdvance = totalVehiclesAdvance;
     const remainingBalance = Math.max(grandTotal - totalAdvance, 0);
 
+    // 🔥 Live remaining after save = selected balance - remainingBalance
+    const finalBalance = Math.max(selectedBalance - remainingBalance, 0);
+
     return {
       totalVehicles,
       totalVehiclesAdvance,
@@ -573,6 +600,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       grandTotal,
       totalAdvance,
       remainingBalance,
+      finalBalance,
     };
   }, [
     formData.vehicles,
@@ -581,6 +609,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     formData.onlinePayment,
     commissionAmount,
     isPartyOrDebit,
+    selectedBalance,
   ]);
 
   // Update remainingBalance AND totalAmount in formData
@@ -614,6 +643,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           choice: editingData.choice !== undefined ? editingData.choice : null,
         };
         setIsDebitView(false);
+        setSelectedDebtor(null);
       } else {
         setCommissionAmount(0);
         normalized.vehicles = (editingData.vehicles || []).map((v) => ({
@@ -637,8 +667,16 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           editingData.choice !== undefined ? editingData.choice : null;
         if (editingData.type === "debit") {
           setIsDebitView(true);
+          // Find and set selected debtor
+          const found = debitEntries.find(
+            (e) =>
+              normalizeName(e.partyName) ===
+              normalizeName(editingData.partyName),
+          );
+          setSelectedDebtor(found || null);
         } else {
           setIsDebitView(false);
+          setSelectedDebtor(null);
         }
       }
       setFormData(normalized);
@@ -646,8 +684,56 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       setFormData(createInitialForm());
       setCommissionAmount(0);
       setIsDebitView(false);
+      setSelectedDebtor(null);
     }
-  }, [editingData]);
+  }, [editingData, debitEntries]);
+
+  // 🔥 Handle debtor selection from dropdown
+  const handleDebtorSelect = (e) => {
+    const value = e.target.value;
+    if (!value) {
+      setSelectedDebtor(null);
+      setFormData((prev) => ({
+        ...prev,
+        partyName: "",
+        phone: "",
+        cnic: "",
+        receivedBy: "",
+        handoverTo: "",
+        purpose: "",
+        amount: "",
+        date: "",
+        remarks: "",
+        vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
+      }));
+      return;
+    }
+
+    const selected = debitEntries.find((entry) => entry.id === value);
+    if (selected) {
+      setSelectedDebtor(selected);
+      // 🔥 Auto-fill static fields + Reset dynamic fields
+      setFormData((prev) => ({
+        ...prev,
+        partyName: selected.partyName,
+        phone: selected.phone || "",
+        cnic: selected.cnic || "",
+        ntn: selected.ntn || "",
+        receivedBy: selected.receivedBy || "",
+        handoverTo: selected.handoverTo || "",
+        // 🔥 Reset dynamic fields
+        purpose: "",
+        amount: "",
+        date: "",
+        remarks: "",
+        choice: null,
+        onlinePaymentEnabled: false,
+        onlinePayment: 0,
+        onlinePaymentNotes: "",
+        vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
+      }));
+    }
+  };
 
   // 🔥 Handle party name change: Auto-fill + Reset
   const handlePartyNameChange = (e) => {
@@ -658,10 +744,11 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     if (isDebitView && value.trim()) {
       const foundParty = debitEntries.find(
         (entry) =>
-          entry.partyName?.toLowerCase() === value.trim().toLowerCase(),
+          normalizeName(entry.partyName) === normalizeName(value.trim()),
       );
 
       if (foundParty) {
+        setSelectedDebtor(foundParty);
         // 🔥 AUTO-FILL static fields + RESET dynamic fields
         setFormData((prev) => ({
           ...prev,
@@ -676,8 +763,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           amount: "",
           date: "",
           remarks: "",
+          choice: null,
+          onlinePaymentEnabled: false,
+          onlinePayment: 0,
+          onlinePaymentNotes: "",
           vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
         }));
+      } else {
+        setSelectedDebtor(null);
       }
     }
   };
@@ -687,8 +780,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     if (isDebitView && formData.partyName?.trim()) {
       const foundParty = debitEntries.find(
         (entry) =>
-          entry.partyName?.toLowerCase() ===
-          formData.partyName.trim().toLowerCase(),
+          normalizeName(entry.partyName) ===
+          normalizeName(formData.partyName.trim()),
       );
       if (foundParty) {
         setPartyDetailsPopup({ open: true, party: foundParty });
@@ -847,7 +940,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
       // Check if party exists in debitEntries
       existingDebit = debitEntries.find(
-        (entry) => entry.partyName?.toLowerCase() === partyName.toLowerCase(),
+        (entry) => normalizeName(entry.partyName) === normalizeName(partyName),
       );
 
       if (!existingDebit) {
@@ -861,7 +954,10 @@ Please first add this party in Tab 5 (Debit) ledger.`);
       const currentBalance = Number(existingDebit.amount) || 0;
       const requestedAmount = Number(formData.totalAmount) || 0;
 
-      if (requestedAmount > currentBalance) {
+      // 🔥 Also check final balance
+      const finalBalance = currentBalance - requestedAmount;
+
+      if (finalBalance < 0) {
         alert(`❌ Balance kam hai!
 
 Available: Rs. ${currentBalance.toLocaleString()}
@@ -906,6 +1002,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
         balance: newBalance,
         purpose: formData.purpose || "Debit Entry",
         remarks: formData.remarks || "",
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
       };
 
       const updatedDebit = {
@@ -913,6 +1011,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
         amount: newBalance,
         history: [...(existingDebit.history || []), historyEntry],
         updatedAt: new Date().toISOString(),
+        status: newBalance === 0 ? "settled" : "active",
       };
 
       try {
@@ -946,8 +1045,11 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
       setFormData(createInitialForm());
       setCommissionAmount(0);
       setIsDebitView(false);
+      setSelectedDebtor(null);
       if (onCancelEdit) onCancelEdit();
       closePartyDetailsPopup();
+      // Refresh debit entries to update balance
+      fetchDebitEntries();
     } else if (result && !result.success) {
       alert("Database Error: " + result.message);
     }
@@ -972,6 +1074,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 id: prev.id,
               }));
               setIsDebitView(false);
+              setSelectedDebtor(null);
               closePartyDetailsPopup();
             }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
@@ -991,6 +1094,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 id: prev.id,
               }));
               setIsDebitView(false);
+              setSelectedDebtor(null);
               closePartyDetailsPopup();
             }}
             className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${
@@ -1032,7 +1136,29 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 type="button"
                 onClick={() => {
                   setIsDebitView(!isDebitView);
+                  setSelectedDebtor(null);
                   closePartyDetailsPopup();
+                  if (!isDebitView) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      partyName: "",
+                      phone: "",
+                      cnic: "",
+                      receivedBy: "",
+                      handoverTo: "",
+                      purpose: "",
+                      amount: "",
+                      date: "",
+                      remarks: "",
+                      choice: null,
+                      onlinePaymentEnabled: false,
+                      onlinePayment: 0,
+                      onlinePaymentNotes: "",
+                      vehicles: [
+                        { ...createEmptyVehicle(), id: crypto.randomUUID() },
+                      ],
+                    }));
+                  }
                 }}
                 className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${
                   isDebitView
@@ -1058,19 +1184,51 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           )}
 
-          {/* Common fields */}
+          {/* Common fields — Party Name / Dropdown */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
-              {isPartyOrDebit ? "Business / Party Name" : "Customer Name"}
+              {isDebitView
+                ? "Select Debtor / Party Name"
+                : isPartyOrDebit
+                  ? "Business / Party Name"
+                  : "Customer Name"}
             </label>
+
+            {/* 🔥 Dropdown for Debit view */}
+            {isDebitView && (
+              <div className="mb-2">
+                <select
+                  className="w-full rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-red-500"
+                  value={selectedDebtor?.id || ""}
+                  onChange={handleDebtorSelect}
+                >
+                  <option value="">— Select Debtor —</option>
+                  {activeDebtors.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.partyName} — Balance: Rs.{" "}
+                      {Number(entry.amount).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                {activeDebtors.length === 0 && (
+                  <p className="text-[10px] text-yellow-500 mt-1">
+                    ⚠️ No active debtors found. Add qarzdaar in Tab 5 (Debit)
+                    first.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 🔥 Manual input for Party Name (hidden when dropdown selected) */}
             <div className="relative">
               <input
                 type="text"
                 className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500 w-full pr-10"
                 placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
-                required
+                required={!isDebitView}
                 value={formData.partyName}
                 onChange={handlePartyNameChange}
+                disabled={!!selectedDebtor && isDebitView}
               />
               {/* 🔥 TICK/CROSS ICON — Click to open popup */}
               {isPartyOrDebit && formData.partyName?.trim() && (
@@ -1081,8 +1239,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 >
                   {debitEntries.some(
                     (entry) =>
-                      entry.partyName?.toLowerCase() ===
-                      formData.partyName?.toLowerCase(),
+                      normalizeName(entry.partyName) ===
+                      normalizeName(formData.partyName),
                   ) ? (
                     <span className="text-green-500 hover:opacity-80 cursor-pointer">
                       ✅
@@ -1093,13 +1251,38 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </button>
               )}
             </div>
+
+            {/* 🔥 Live balance display for Debit view */}
+            {isDebitView && selectedDebtor && (
+              <div className="mt-2 bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-400 uppercase font-bold">
+                    Current Balance
+                  </span>
+                  <span className="text-lg font-bold text-red-400">
+                    Rs. {selectedBalance.toLocaleString()}
+                  </span>
+                </div>
+                {partySummary.remainingBalance > 0 && (
+                  <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-600">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold">
+                      After Save
+                    </span>
+                    <span className="text-sm font-bold text-blue-400">
+                      Rs. {partySummary.finalBalance.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 🔥 Small hint text */}
-            {isDebitView && formData.partyName?.trim() && (
+            {isDebitView && formData.partyName?.trim() && !selectedDebtor && (
               <p className="text-[9px] text-gray-500 mt-1">
                 {debitEntries.some(
                   (entry) =>
-                    entry.partyName?.toLowerCase() ===
-                    formData.partyName?.toLowerCase(),
+                    normalizeName(entry.partyName) ===
+                    normalizeName(formData.partyName),
                 )
                   ? "💡 Click ✅ to view party details"
                   : "❌ Party not found in Debit Ledger"}
@@ -1120,6 +1303,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
+                disabled={!!selectedDebtor && isDebitView}
               />
             </div>
             <div className="flex flex-col">
@@ -1137,6 +1321,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                     [isPartyOrDebit ? "ntn" : "cnic"]: e.target.value,
                   })
                 }
+                disabled={!!selectedDebtor && isDebitView}
               />
             </div>
           </div>
@@ -1154,6 +1339,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 onChange={(e) =>
                   setFormData({ ...formData, receivedBy: e.target.value })
                 }
+                disabled={!!selectedDebtor && isDebitView}
               />
             </div>
             <div className="flex flex-col">
@@ -1168,6 +1354,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 onChange={(e) =>
                   setFormData({ ...formData, handoverTo: e.target.value })
                 }
+                disabled={!!selectedDebtor && isDebitView}
               />
             </div>
           </div>
@@ -1712,6 +1899,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                     : "bg-orange-600 hover:bg-orange-500"
                   : "bg-blue-600 hover:bg-blue-500"
               }`}
+              disabled={isDebitView && !selectedDebtor}
             >
               {editingData ? "Update Record" : "Save to Khata"}
             </button>

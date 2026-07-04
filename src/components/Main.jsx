@@ -23,6 +23,7 @@ const Main = ({ customer, setCustomer, user }) => {
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mainTab, setMainTab] = useState("form");
+  const [showDebitOnly, setShowDebitOnly] = useState(false); // ← 🔥 YEH LINE ADD KARO
 
   const fetchUserData = useCallback(async () => {
     if (!user) {
@@ -61,6 +62,7 @@ const Main = ({ customer, setCustomer, user }) => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchUserData]);
 
+  // ─── UPDATE RECORD DIRECTLY ───
   async function handleUpdateRecord(updatedRecord) {
     const recordId = updatedRecord.id;
     if (!recordId) {
@@ -210,6 +212,7 @@ const Main = ({ customer, setCustomer, user }) => {
       );
       setEditingCustomer(null);
 
+      // 🔥 AFTER EDIT — Switch to Ledger
       if (isDebitEntry) {
         setMainTab("ledger");
         setDataActiveTab("party");
@@ -265,6 +268,7 @@ const Main = ({ customer, setCustomer, user }) => {
       return;
     }
 
+    // ─── NEW CUSTOMER ──────────────────────────────────────────
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const customerWithTime = {
       ...sanitizedCustomer,
@@ -274,9 +278,13 @@ const Main = ({ customer, setCustomer, user }) => {
     const newCustomerWithId = { ...customerWithTime, id: tempId };
     setCustomer((prev) => [newCustomerWithId, ...prev]);
 
+    // 🔥 AFTER SAVE — Switch to Ledger + Debit view
     if (isDebitEntry) {
       setMainTab("ledger");
       setDataActiveTab("party");
+      // 🔥 ShowDebitOnly true karo taake Debit view active ho
+      // Note: iske liye Data component mein showDebitOnly prop bhi pass karna hoga
+      setShowDebitOnly(true);
     } else {
       setMainTab("ledger");
     }
@@ -305,6 +313,7 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   }
 
+  // 🔥 DELETE with Rollback
   const handleDelete = async (idToDelete, itemData = null) => {
     console.log("Delete called for ID:", idToDelete);
     if (!window.confirm("Are you sure you want to delete this record?")) return;
@@ -367,7 +376,6 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   };
 
-  // 🔥 NEW: Handle Debit Payment button click
   const handleDebitPayment = (debitItem) => {
     setMainTab("form");
 
@@ -585,6 +593,7 @@ const Main = ({ customer, setCustomer, user }) => {
                 onEdit={handleEdit}
                 onUpdateCustomer={handleUpdateRecord}
                 onDebitPayment={handleDebitPayment}
+                showDebitOnly={showDebitOnly} // ← 🔥 YEH PASS KARO
               />
             </motion.div>
           )}

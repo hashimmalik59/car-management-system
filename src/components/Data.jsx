@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const rowVariants = {
@@ -506,6 +506,17 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete, onDebitPayment }) => {
               ({item.ntn || item.phone})
             </span>
           )}
+          {/* 🔥 Status Badge */}
+          {item?.status === "settled" && (
+            <span className="ml-2 px-2 py-0.5 bg-green-600/50 text-green-300 text-[8px] font-bold rounded-full border border-green-500">
+              ✅ SETTLED
+            </span>
+          )}
+          {item?.status === "active" && item?.amount > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-yellow-600/50 text-yellow-300 text-[8px] font-bold rounded-full border border-yellow-500">
+              ● ACTIVE
+            </span>
+          )}
         </p>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -514,7 +525,8 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete, onDebitPayment }) => {
           >
             🖨️ Print All
           </button>
-          {isDebit && (
+          {/* 🔥 Pay button — only for Debit entries with balance > 0 */}
+          {isDebit && Number(item?.amount) > 0 && (
             <button
               onClick={() => onDebitPayment(item)}
               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium shadow"
@@ -778,15 +790,25 @@ const Data = ({
   onDelete,
   onUpdateCustomer,
   onDebitPayment,
+  showDebitOnly: externalShowDebitOnly = false,
 }) => {
   const [paymentModal, setPaymentModal] = useState({
     open: false,
     item: null,
     amount: "",
     date: new Date().toLocaleDateString("en-CA"),
+    method: "Cash",
+    note: "",
   });
 
-  const [showDebitOnly, setShowDebitOnly] = useState(false);
+  const [internalShowDebitOnly, setInternalShowDebitOnly] = useState(false);
+  const showDebitOnly = externalShowDebitOnly || internalShowDebitOnly;
+
+  useEffect(() => {
+    if (externalShowDebitOnly && activeTab === "party") {
+      setInternalShowDebitOnly(true);
+    }
+  }, [externalShowDebitOnly, activeTab]);
 
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
@@ -917,6 +939,65 @@ const Data = ({
       item: null,
       amount: "",
       date: new Date().toLocaleDateString("en-CA"),
+      method: "Cash",
+      note: "",
+    });
+  };
+
+  const handleDebitRepaymentSubmit = () => {
+    const amount = Number(paymentModal.amount);
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+    const item = paymentModal.item;
+    const currentBalance = Number(item.amount) || 0;
+
+    if (amount > currentBalance) {
+      alert(
+        `Repayment amount (Rs. ${amount.toLocaleString()}) cannot exceed current balance (Rs. ${currentBalance.toLocaleString()})!`,
+      );
+      return;
+    }
+
+    const newBalance = currentBalance - amount;
+
+    const historyEntry = {
+      id: `h_${Date.now()}`,
+      date: paymentModal.date,
+      type: "repay",
+      amount: amount,
+      balance: newBalance,
+      purpose: `Repayment (${paymentModal.method})`,
+      remarks: paymentModal.note || `Repaid via ${paymentModal.method}`,
+      balanceBefore: currentBalance,
+      balanceAfter: newBalance,
+    };
+
+    const updatedItem = {
+      ...item,
+      amount: newBalance,
+      history: [...(item.history || []), historyEntry],
+      updatedAt: new Date().toISOString(),
+      status: newBalance === 0 ? "settled" : "active",
+    };
+
+    if (onUpdateCustomer) {
+      onUpdateCustomer(updatedItem);
+      alert(
+        `✅ Repayment recorded!\n\n📅 Date: ${historyEntry.date}\n💰 Paid: Rs. ${amount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}\n💳 Method: ${paymentModal.method}`,
+      );
+    } else {
+      alert("Repayment recorded! (onUpdateCustomer prop not provided)");
+    }
+
+    setPaymentModal({
+      open: false,
+      item: null,
+      amount: "",
+      date: new Date().toLocaleDateString("en-CA"),
+      method: "Cash",
+      note: "",
     });
   };
 
@@ -968,7 +1049,7 @@ const Data = ({
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 setActiveTab("individual");
-                setShowDebitOnly(false);
+                setInternalShowDebitOnly(false);
               }}
               className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
                 activeTab === "individual"
@@ -983,7 +1064,7 @@ const Data = ({
               whileTap={{ scale: 0.96 }}
               onClick={() => {
                 setActiveTab("party");
-                setShowDebitOnly(false);
+                setInternalShowDebitOnly(false);
               }}
               className={`px-6 py-2 rounded-lg font-bold text-[10px] uppercase transition-all ${
                 activeTab === "party"
@@ -997,7 +1078,7 @@ const Data = ({
 
           {activeTab === "party" && (
             <button
-              onClick={() => setShowDebitOnly(!showDebitOnly)}
+              onClick={() => setInternalShowDebitOnly(!internalShowDebitOnly)}
               className={`px-4 py-2 rounded-lg font-bold text-[10px] uppercase transition-all border ${
                 showDebitOnly
                   ? "bg-red-600/20 border-red-500 text-red-400 hover:bg-red-600/30"
@@ -1242,6 +1323,8 @@ const Data = ({
                                   item: item,
                                   amount: "",
                                   date: new Date().toLocaleDateString("en-CA"),
+                                  method: "Cash",
+                                  note: "",
                                 })
                               }
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
@@ -1286,7 +1369,16 @@ const Data = ({
                   item={item}
                   onEdit={onEdit}
                   onDelete={onDelete}
-                  onDebitPayment={onDebitPayment}
+                  onDebitPayment={(item) => {
+                    setPaymentModal({
+                      open: true,
+                      item: item,
+                      amount: "",
+                      date: new Date().toLocaleDateString("en-CA"),
+                      method: "Cash",
+                      note: "",
+                    });
+                  }}
                 />
               ))
             )}
@@ -1294,7 +1386,7 @@ const Data = ({
         )}
       </motion.section>
 
-      {/* Payment Modal */}
+      {/* ─── PAYMENT MODAL ─── */}
       <AnimatePresence>
         {paymentModal.open && paymentModal.item && (
           <motion.div
@@ -1308,6 +1400,8 @@ const Data = ({
                 item: null,
                 amount: "",
                 date: new Date().toLocaleDateString("en-CA"),
+                method: "Cash",
+                note: "",
               })
             }
           >
@@ -1318,29 +1412,36 @@ const Data = ({
               onClick={(e) => e.stopPropagation()}
               className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
             >
-              <h3 className="text-lg font-bold text-white mb-1">Add Payment</h3>
+              <h3 className="text-lg font-bold text-white mb-1">
+                {paymentModal.item.type === "debit"
+                  ? "💳 Repay Debit"
+                  : "Add Payment"}
+              </h3>
               <p className="text-[10px] text-gray-400 mb-2">
                 {paymentModal.item.partyName}
               </p>
 
               {(() => {
-                const currentRemaining =
-                  Number(paymentModal.item.remainingBalance) || 0;
+                const currentBalance =
+                  paymentModal.item.type === "debit"
+                    ? Number(paymentModal.item.amount) || 0
+                    : Number(paymentModal.item.remainingBalance) || 0;
                 const enteredAmount = Number(paymentModal.amount) || 0;
-                const newRemaining = Math.max(
-                  currentRemaining - enteredAmount,
-                  0,
-                );
-                const isOverPay = enteredAmount > currentRemaining;
+                const newBalance = Math.max(currentBalance - enteredAmount, 0);
+                const isOverPay = enteredAmount > currentBalance;
 
                 return (
                   <div className="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-700">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-[10px] text-gray-400 uppercase">
-                        Current Remaining
+                        {paymentModal.item.type === "debit"
+                          ? "Current Balance"
+                          : "Remaining"}
                       </span>
-                      <span className="text-sm font-bold text-orange-400">
-                        Rs. {currentRemaining.toLocaleString()}
+                      <span
+                        className={`text-sm font-bold ${paymentModal.item.type === "debit" ? "text-red-400" : "text-orange-400"}`}
+                      >
+                        Rs. {currentBalance.toLocaleString()}
                       </span>
                     </div>
                     {enteredAmount > 0 && (
@@ -1358,21 +1459,21 @@ const Data = ({
                         <div className="border-t border-gray-700 pt-1 mt-1">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] text-gray-400 uppercase">
-                              New Remaining
+                              New Balance
                             </span>
                             <span
-                              className={`text-sm font-bold ${isOverPay ? "text-red-500" : newRemaining === 0 ? "text-green-400" : "text-blue-400"}`}
+                              className={`text-sm font-bold ${isOverPay ? "text-red-500" : newBalance === 0 ? "text-green-400" : "text-blue-400"}`}
                             >
                               Rs.{" "}
                               {isOverPay
                                 ? "Overpay!"
-                                : newRemaining.toLocaleString()}
+                                : newBalance.toLocaleString()}
                             </span>
                           </div>
                         </div>
                         {isOverPay && (
                           <div className="mt-2 text-[10px] text-red-400 bg-red-900/30 border border-red-700 rounded px-2 py-1">
-                            ⚠️ Amount exceeds remaining balance!
+                            ⚠️ Amount exceeds balance!
                           </div>
                         )}
                       </>
@@ -1417,23 +1518,76 @@ const Data = ({
                     }
                   />
                 </div>
+
+                {paymentModal.item.type === "debit" && (
+                  <>
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        Payment Method
+                      </label>
+                      <select
+                        className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                        value={paymentModal.method}
+                        onChange={(e) =>
+                          setPaymentModal((prev) => ({
+                            ...prev,
+                            method: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="Cash">💵 Cash</option>
+                        <option value="Bank">🏦 Bank Transfer</option>
+                        <option value="Online">💳 Online</option>
+                        <option value="Other">📱 Other</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        Note (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                        placeholder="Any remarks..."
+                        value={paymentModal.note}
+                        onChange={(e) =>
+                          setPaymentModal((prev) => ({
+                            ...prev,
+                            note: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex gap-2 mt-5">
                 <button
-                  onClick={handlePaymentSubmit}
+                  onClick={
+                    paymentModal.item.type === "debit"
+                      ? handleDebitRepaymentSubmit
+                      : handlePaymentSubmit
+                  }
                   disabled={
                     Number(paymentModal.amount) >
-                    (Number(paymentModal.item.remainingBalance) || 0)
+                    (paymentModal.item.type === "debit"
+                      ? Number(paymentModal.item.amount) || 0
+                      : Number(paymentModal.item.remainingBalance) || 0)
                   }
                   className={`flex-1 font-bold py-2.5 rounded-xl text-sm transition-all ${
                     Number(paymentModal.amount) >
-                    (Number(paymentModal.item.remainingBalance) || 0)
+                    (paymentModal.item.type === "debit"
+                      ? Number(paymentModal.item.amount) || 0
+                      : Number(paymentModal.item.remainingBalance) || 0)
                       ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                       : "bg-emerald-600 hover:bg-emerald-500 text-white"
                   }`}
                 >
-                  Save Payment
+                  {paymentModal.item.type === "debit"
+                    ? "Save Repayment"
+                    : "Save Payment"}
                 </button>
                 <button
                   onClick={() =>
@@ -1442,6 +1596,8 @@ const Data = ({
                       item: null,
                       amount: "",
                       date: new Date().toLocaleDateString("en-CA"),
+                      method: "Cash",
+                      note: "",
                     })
                   }
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"

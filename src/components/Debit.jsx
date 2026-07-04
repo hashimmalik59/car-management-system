@@ -12,12 +12,30 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
+// ─── HELPER: Normalize Name ──────────────────────────────
+const normalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .trim()
+    .replace(/\s+/g, " ") // Remove extra spaces
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const Debit = ({ user }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("all");
   const [mobileView, setMobileView] = useState("form");
+
+  // ─── Popup State ──────────────────────────────────────────
+  const [popup, setPopup] = useState({
+    open: false,
+    existingParty: null,
+    newAmount: 0,
+  });
 
   const [formData, setFormData] = useState({
     partyName: "",
@@ -116,27 +134,34 @@ const Debit = ({ user }) => {
   // ─── ADD ENTRY ──────────────────────────────────────────────
   const addEntry = async (e) => {
     e.preventDefault();
-    if (!formData.partyName || !formData.amount || !formData.purpose) {
+
+    // 🔥 Normalize party name
+    const normalizedName = normalizeName(formData.partyName);
+
+    if (!normalizedName || !formData.amount || !formData.purpose) {
       alert("Party Name, Purpose and Amount are required!");
       return;
     }
 
     const newEntry = {
       ...formData,
+      partyName: normalizedName,
       amount: parseFloat(formData.amount),
       category: "debit",
       userId: user?.uid || "local",
       createdAt: new Date().toISOString(),
     };
 
+    // 🔥 Check: Does party exist? (case-insensitive)
     const existingEntry = entries.find(
-      (e) => e.partyName === newEntry.partyName,
+      (e) => normalizeName(e.partyName) === normalizedName,
     );
 
     if (existingEntry) {
       const currentBalance = Number(existingEntry.amount);
       const debitAmount = Number(newEntry.amount);
 
+      // ❌ Balance check
       if (debitAmount > currentBalance) {
         alert(
           `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
@@ -146,6 +171,7 @@ const Debit = ({ user }) => {
 
       const newBalance = currentBalance - debitAmount;
 
+      // 📜 History entry
       const historyEntry = {
         id: `h_${Date.now()}`,
         date: newEntry.date || new Date().toISOString().split("T")[0],
@@ -154,6 +180,9 @@ const Debit = ({ user }) => {
         balance: newBalance,
         purpose: newEntry.purpose,
         remarks: newEntry.remarks || "",
+        // 🔥 Snapshot
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
       };
 
       const updatedEntry = {
@@ -161,6 +190,8 @@ const Debit = ({ user }) => {
         amount: newBalance,
         history: [...(existingEntry.history || []), historyEntry],
         updatedAt: new Date().toISOString(),
+        // 🔥 Update status
+        status: newBalance === 0 ? "settled" : "active",
       };
 
       const result = await updateDebitEntry(existingEntry.id, updatedEntry);
@@ -201,11 +232,14 @@ const Debit = ({ user }) => {
       balance: newEntry.amount,
       purpose: "Initial Debit Entry",
       remarks: newEntry.remarks || "",
+      balanceBefore: 0,
+      balanceAfter: newEntry.amount,
     };
 
     const finalEntry = {
       ...newEntry,
       history: [initialHistory],
+      status: "active",
     };
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;
@@ -391,7 +425,7 @@ const Debit = ({ user }) => {
     setEditingId(null);
   };
 
-  // ─── PRINT ALL ──────────────────────────────────────────────
+  // ─── PRINT FUNCTIONS ────────────────────────────────────────
   const handlePrintAll = () => {
     const printWindow = window.open("", "_blank");
     const totalDebit = entries.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -481,7 +515,6 @@ const Debit = ({ user }) => {
     printWindow.document.close();
   };
 
-  // ─── PRINT SINGLE ENTRY ─────────────────────────────────────
   const handlePrintSingle = (entry) => {
     const printWindow = window.open("", "_blank");
 
@@ -981,6 +1014,7 @@ const Debit = ({ user }) => {
                         )}
                       </div>
 
+                      {/* 🔥 HISTORY SECTION */}
                       {entry.history && entry.history.length > 1 && (
                         <div className="mt-2 pt-2 border-t border-gray-600">
                           <div className="flex items-center justify-between mb-1.5">
