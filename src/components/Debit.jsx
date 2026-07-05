@@ -17,7 +17,7 @@ const normalizeName = (name) => {
   if (!name) return "";
   return name
     .trim()
-    .replace(/\s+/g, " ") // Remove extra spaces
+    .replace(/\s+/g, " ")
     .split(" ")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
@@ -27,15 +27,7 @@ const Debit = ({ user }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("all");
   const [mobileView, setMobileView] = useState("form");
-
-  // ─── Popup State ──────────────────────────────────────────
-  const [popup, setPopup] = useState({
-    open: false,
-    existingParty: null,
-    newAmount: 0,
-  });
 
   const [formData, setFormData] = useState({
     partyName: "",
@@ -51,6 +43,11 @@ const Debit = ({ user }) => {
 
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+
+  // ─── Check if party exists ───────────────────────────────
+  const isExistingParty = entries.some(
+    (e) => normalizeName(e.partyName) === normalizeName(formData.partyName),
+  );
 
   // ─── LOCAL STORAGE HELPERS ────────────────────────────────
   const loadFromLocalStorage = () => {
@@ -135,7 +132,6 @@ const Debit = ({ user }) => {
   const addEntry = async (e) => {
     e.preventDefault();
 
-    // 🔥 Normalize party name
     const normalizedName = normalizeName(formData.partyName);
 
     if (!normalizedName || !formData.amount || !formData.purpose) {
@@ -152,131 +148,61 @@ const Debit = ({ user }) => {
       createdAt: new Date().toISOString(),
     };
 
-    // 🔥 Check: Does party exist? (case-insensitive)
+    // 🔥 Check: Does party exist?
     const existingEntry = entries.find(
       (e) => normalizeName(e.partyName) === normalizedName,
     );
 
     if (existingEntry) {
+      // ✅ EXISTING PARTY → Always ADDITIONAL LOAN (Balance INCREASE)
       const currentBalance = Number(existingEntry.amount);
       const newAmount = Number(newEntry.amount);
+      const newBalance = currentBalance + newAmount;
 
-      // 🔥 NEW: Check if this is a deduction or additional loan
-      // If purpose is NOT "Initial Debit Entry" or "Additional Loan", it's a deduction
-      const isDeduction =
-        newEntry.purpose?.toLowerCase() !== "additional loan" &&
-        newEntry.purpose?.toLowerCase() !== "initial debit entry";
+      const historyEntry = {
+        id: `h_${Date.now()}`,
+        date: newEntry.date || new Date().toISOString().split("T")[0],
+        type: "additional_loan",
+        amount: newAmount,
+        balance: newBalance,
+        purpose: newEntry.purpose || "Additional Loan",
+        remarks: newEntry.remarks || "Mazeed qarz add kiya gaya",
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
+      };
 
-      if (isDeduction) {
-        // ❌ DEDUCTION — Balance check
-        if (newAmount > currentBalance) {
-          alert(
-            `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
-          );
-          return;
-        }
+      const updatedEntry = {
+        ...existingEntry,
+        amount: newBalance,
+        history: [...(existingEntry.history || []), historyEntry],
+        updatedAt: new Date().toISOString(),
+        status: "active",
+      };
 
-        const newBalance = currentBalance - newAmount;
+      const result = await updateDebitEntry(existingEntry.id, updatedEntry);
 
-        const historyEntry = {
-          id: `h_${Date.now()}`,
-          date: newEntry.date || new Date().toISOString().split("T")[0],
-          type: "debit",
-          amount: newAmount,
-          balance: newBalance,
-          purpose: newEntry.purpose,
-          remarks: newEntry.remarks || "",
-          balanceBefore: currentBalance,
-          balanceAfter: newBalance,
-        };
-
-        const updatedEntry = {
-          ...existingEntry,
-          amount: newBalance,
-          history: [...(existingEntry.history || []), historyEntry],
-          updatedAt: new Date().toISOString(),
-          status: newBalance === 0 ? "settled" : "active",
-        };
-
-        const result = await updateDebitEntry(existingEntry.id, updatedEntry);
-
-        if (result.success) {
-          alert(
-            `✅ Kaam record ho gaya!\n\n📅 Date: ${historyEntry.date}\n💰 Deducted: Rs. ${newAmount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}`,
-          );
-
-          const isMobile = window.innerWidth < 768;
-          if (isMobile) {
-            setMobileView("ledger");
-          }
-        } else {
-          alert("❌ Error updating: " + result.error);
-        }
-
-        setFormData({
-          partyName: "",
-          phone: "",
-          cnic: "",
-          date: "",
-          sender: "",
-          receiver: "",
-          purpose: "",
-          amount: "",
-          remarks: "",
-        });
-        return;
+      if (result.success) {
+        alert(
+          `✅ Mazeed qarz add ho gaya!\n\n👤 ${existingEntry.partyName}\n💰 Amount: Rs. ${newAmount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}`,
+        );
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) setMobileView("ledger");
       } else {
-        // ✅ ADDITIONAL LOAN — Balance increase
-        const newBalance = currentBalance + newAmount;
-
-        const historyEntry = {
-          id: `h_${Date.now()}`,
-          date: newEntry.date || new Date().toISOString().split("T")[0],
-          type: "additional_loan",
-          amount: newAmount,
-          balance: newBalance,
-          purpose: "Additional Loan",
-          remarks: newEntry.remarks || "Mazeed qarz add kiya gaya",
-          balanceBefore: currentBalance,
-          balanceAfter: newBalance,
-        };
-
-        const updatedEntry = {
-          ...existingEntry,
-          amount: newBalance,
-          history: [...(existingEntry.history || []), historyEntry],
-          updatedAt: new Date().toISOString(),
-          status: "active",
-        };
-
-        const result = await updateDebitEntry(existingEntry.id, updatedEntry);
-
-        if (result.success) {
-          alert(
-            `✅ Mazeed qarz add ho gaya!\n\n👤 ${existingEntry.partyName}\n💰 New Balance: Rs. ${newBalance.toLocaleString()}`,
-          );
-
-          const isMobile = window.innerWidth < 768;
-          if (isMobile) {
-            setMobileView("ledger");
-          }
-        } else {
-          alert("❌ Error updating: " + result.error);
-        }
-
-        setFormData({
-          partyName: "",
-          phone: "",
-          cnic: "",
-          date: "",
-          sender: "",
-          receiver: "",
-          purpose: "",
-          amount: "",
-          remarks: "",
-        });
-        return;
+        alert("❌ Error updating: " + result.error);
       }
+
+      setFormData({
+        partyName: "",
+        phone: "",
+        cnic: "",
+        date: "",
+        sender: "",
+        receiver: "",
+        purpose: "",
+        amount: "",
+        remarks: "",
+      });
+      return;
     }
 
     // ─── NEW PARTY ─────────────────────────────────────────────
@@ -318,9 +244,7 @@ const Debit = ({ user }) => {
     });
 
     const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      setMobileView("ledger");
-    }
+    if (isMobile) setMobileView("ledger");
 
     try {
       const docRef = await addDoc(collection(db, "debits"), {
@@ -350,9 +274,7 @@ const Debit = ({ user }) => {
     setEntries(filteredEntries);
     saveToLocalStorage(filteredEntries);
 
-    if (id.startsWith("temp_")) {
-      return;
-    }
+    if (id.startsWith("temp_")) return;
 
     try {
       await deleteDoc(doc(db, "debits", id));
@@ -444,19 +366,10 @@ const Debit = ({ user }) => {
   const filteredEntries = entries.filter((entry) => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
-
-    const fieldMap = {
-      all: [entry.partyName, entry.phone, entry.cnic],
-      partyName: [entry.partyName],
-      phone: [entry.phone],
-      cnic: [entry.cnic],
-    };
-
-    const fields = fieldMap[searchField] || fieldMap.all;
-    return fields.some((field) =>
-      String(field || "")
-        .toLowerCase()
-        .includes(term),
+    return (
+      (entry.partyName || "").toLowerCase().includes(term) ||
+      (entry.phone || "").toLowerCase().includes(term) ||
+      (entry.cnic || "").toLowerCase().includes(term)
     );
   });
 
@@ -497,13 +410,13 @@ const Debit = ({ user }) => {
           .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
           .header h1 { margin: 0; font-size: 24px; color: #1a1a1a; }
           .header p { margin: 5px 0; color: #555; font-size: 14px; }
-          .section-title { margin: 20px 0 10px; font-size: 18px; border-left: 4px solid #c0392b; padding-left: 10px; color: #1a1a1a; }
+          .section-title { margin: 20px 0 10px; font-size: 18px; border-left: 4px solid #dc2626; padding-left: 10px; color: #1a1a1a; }
           table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; font-weight: bold; color: #1a1a1a; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
-          .text-red { color: #c0392b; font-weight: bold; }
+          .text-red { color: #dc2626; font-weight: bold; }
           .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
         </style>
       </head>
@@ -522,8 +435,6 @@ const Debit = ({ user }) => {
                 <th>Party Name</th>
                 <th>Phone</th>
                 <th>CNIC</th>
-                <th>Receive From</th>
-                <th>Handover To</th>
                 <th>Purpose</th>
                 <th class="text-right">Amount</th>
                 <th>Remarks</th>
@@ -538,10 +449,8 @@ const Debit = ({ user }) => {
                   <td>${e.partyName}</td>
                   <td>${e.phone || "—"}</td>
                   <td>${e.cnic || "—"}</td>
-                  <td>${e.sender || "—"}</td>
-                  <td>${e.receiver || "—"}</td>
-                  <td>${e.purpose}</td>
-                  <td class="text-right text-red">Rs. ${Number(
+                  <td>${e.purpose || "—"}</td>
+                  <td class="text-right text-red">+Rs. ${Number(
                     e.amount,
                   ).toLocaleString()}</td>
                   <td>${e.remarks || "—"}</td>
@@ -552,7 +461,7 @@ const Debit = ({ user }) => {
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="7" class="text-right"><strong>Total Debit</strong></td>
+                <td colspan="5" class="text-right"><strong>Total Balance</strong></td>
                 <td class="text-right text-red"><strong>Rs. ${totalDebit.toLocaleString()}</strong></td>
                 <td></td>
               </tr>
@@ -575,8 +484,8 @@ const Debit = ({ user }) => {
     const printWindow = window.open("", "_blank");
 
     const history = entry.history || [];
-    const totalDebits = history
-      .filter((h) => h.type === "debit")
+    const totalLoans = history
+      .filter((h) => h.type === "additional_loan")
       .reduce((sum, h) => sum + h.amount, 0);
     const initialAmount =
       history.find((h) => h.type === "initial")?.amount || 0;
@@ -596,12 +505,11 @@ const Debit = ({ user }) => {
           .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; }
           .label { font-weight: bold; width: 160px; color: #333; }
           .value { flex: 1; color: #222; }
-          .amount { font-size: 18px; color: #c0392b; font-weight: bold; }
+          .amount { font-size: 18px; color: #dc2626; font-weight: bold; }
           .history-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; }
           .history-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ddd; font-size: 12px; }
           .history-date { color: #666; }
-          .history-debit { color: #c0392b; font-weight: bold; }
-          .history-credit { color: #27ae60; font-weight: bold; }
+          .history-credit { color: #dc2626; font-weight: bold; }
           .history-balance { color: #333; font-weight: bold; }
           .summary { margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; font-size: 14px; }
           .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
@@ -621,9 +529,7 @@ const Debit = ({ user }) => {
             <div class="row"><span class="label">Phone</span><span class="value">${entry.phone || "—"}</span></div>
             <div class="row"><span class="label">CNIC</span><span class="value">${entry.cnic || "—"}</span></div>
             <div class="row"><span class="label">Date</span><span class="value">${entry.date || "—"}</span></div>
-            <div class="row"><span class="label">Receive From</span><span class="value">${entry.sender || "—"}</span></div>
-            <div class="row"><span class="label">Handover To</span><span class="value">${entry.receiver || "—"}</span></div>
-            <div class="row"><span class="label">Purpose</span><span class="value">${entry.purpose}</span></div>
+            <div class="row"><span class="label">Purpose</span><span class="value">${entry.purpose || "—"}</span></div>
             <div class="row"><span class="label">Current Balance</span><span class="value amount">Rs. ${Number(
               entry.amount,
             ).toLocaleString()}</span></div>
@@ -639,12 +545,17 @@ const Debit = ({ user }) => {
                 <div>
                   <span class="history-date">📅 ${h.date || "—"}</span>
                   <span>${h.purpose || "—"}</span>
+                  ${
+                    h.remarks
+                      ? `<span style="color:#888;font-size:10px;">📝 ${h.remarks}</span>`
+                      : ""
+                  }
                 </div>
                 <div>
                   ${
                     h.type === "initial" || h.type === "additional_loan"
                       ? `<span class="history-credit">+Rs. ${h.amount?.toLocaleString()}</span>`
-                      : `<span class="history-debit">-Rs. ${h.amount?.toLocaleString()}</span>`
+                      : `<span class="history-credit">-Rs. ${h.amount?.toLocaleString()}</span>`
                   }
                   <span class="history-balance">Bal: Rs. ${h.balance?.toLocaleString()}</span>
                 </div>
@@ -656,7 +567,7 @@ const Debit = ({ user }) => {
 
           <div class="summary">
             <div>Initial Amount: Rs. ${initialAmount.toLocaleString()}</div>
-            <div>Total Deducted: Rs. ${totalDebits.toLocaleString()}</div>
+            <div>Total Loans Added: Rs. ${totalLoans.toLocaleString()}</div>
             <div style="font-size:18px; margin-top:8px;">
               <strong>Current Balance: Rs. ${Number(
                 entry.amount,
@@ -712,6 +623,7 @@ const Debit = ({ user }) => {
             Debit Entry
           </h2>
           <form onSubmit={addEntry}>
+            {/* ─── PARTY NAME ─── */}
             <div className="mb-3.5">
               <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
                 Party / Name *
@@ -726,138 +638,230 @@ const Debit = ({ user }) => {
                 }
                 required
               />
-            </div>
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Phone Number
-              </label>
-              <input
-                type="text"
-                placeholder="Enter phone number"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-            </div>
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                CNIC
-              </label>
-              <input
-                type="text"
-                placeholder="Enter CNIC number"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                value={formData.cnic}
-                onChange={(e) =>
-                  setFormData({ ...formData, cnic: e.target.value })
-                }
-              />
-            </div>
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Date
-              </label>
-              <input
-                type="date"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-              />
+              {/* 🔥 Existing Party Indicator */}
+              {formData.partyName && isExistingParty && (
+                <div className="mt-1.5 bg-red-900/30 border border-red-700 rounded-lg px-3 py-1.5">
+                  <p className="text-red-400 text-xs font-medium">
+                    ✅ Existing party — sirf amount, date aur purpose fill
+                    karein
+                  </p>
+                </div>
+              )}
+              {formData.partyName && !isExistingParty && (
+                <div className="mt-1.5 bg-yellow-900/30 border border-yellow-700 rounded-lg px-3 py-1.5">
+                  <p className="text-yellow-400 text-xs font-medium">
+                    🆕 New party — complete details fill karein
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Receive From / Handover To
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1">
-                  <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
-                    Receive From
+            {/* ─── CONDITIONAL FIELDS ─── */}
+            {/* ✅ EXISTING PARTY → ONLY 3 FIELDS */}
+            {isExistingParty ? (
+              <>
+                {/* Purpose */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Purpose / Qarza lene ka maqsad *
                   </label>
                   <input
                     type="text"
-                    placeholder="Received from"
+                    placeholder="e.g., Car purchase, Business expense"
                     className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                    value={formData.sender}
+                    value={formData.purpose}
                     onChange={(e) =>
-                      setFormData({ ...formData, sender: e.target.value })
+                      setFormData({ ...formData, purpose: e.target.value })
                     }
+                    required
                   />
                 </div>
-                <div className="flex-1">
-                  <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
-                    Handover To
+
+                {/* Date */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Amount (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Kitna qarza liya"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.amount}
+                    onChange={(e) =>
+                      setFormData({ ...formData, amount: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              // ─── NEW PARTY → FULL FORM ───
+              <>
+                {/* Phone */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Phone Number
                   </label>
                   <input
                     type="text"
-                    placeholder="Handed over"
+                    placeholder="Enter phone number"
                     className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                    value={formData.receiver}
+                    value={formData.phone}
                     onChange={(e) =>
-                      setFormData({ ...formData, receiver: e.target.value })
+                      setFormData({ ...formData, phone: e.target.value })
                     }
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Purpose *
-              </label>
-              <input
-                type="text"
-                placeholder="Enter purpose"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                value={formData.purpose}
-                onChange={(e) =>
-                  setFormData({ ...formData, purpose: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Amount (PKR) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Enter amount"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                value={formData.amount}
-                onChange={(e) =>
-                  setFormData({ ...formData, amount: e.target.value })
-                }
-                required
-              />
-            </div>
+                {/* CNIC */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    CNIC
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter CNIC number"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.cnic}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cnic: e.target.value })
+                    }
+                  />
+                </div>
 
-            <div className="mb-3.5">
-              <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                Remarks / Notes
-              </label>
-              <textarea
-                placeholder="Any additional remarks..."
-                rows="2"
-                className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50 resize-none"
-                value={formData.remarks}
-                onChange={(e) =>
-                  setFormData({ ...formData, remarks: e.target.value })
-                }
-              />
-            </div>
+                {/* Date */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                  />
+                </div>
 
+                {/* Receive From / Handover To */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Receive From / Handover To
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
+                        Receive From
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Received from"
+                        className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                        value={formData.sender}
+                        onChange={(e) =>
+                          setFormData({ ...formData, sender: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
+                        Handover To
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Handed over"
+                        className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                        value={formData.receiver}
+                        onChange={(e) =>
+                          setFormData({ ...formData, receiver: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Purpose */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Purpose *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter purpose"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.purpose}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purpose: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Amount (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter amount"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
+                    value={formData.amount}
+                    onChange={(e) =>
+                      setFormData({ ...formData, amount: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Remarks */}
+                <div className="mb-3.5">
+                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
+                    Remarks / Notes
+                  </label>
+                  <textarea
+                    placeholder="Any additional remarks..."
+                    rows="2"
+                    className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50 resize-none"
+                    value={formData.remarks}
+                    onChange={(e) =>
+                      setFormData({ ...formData, remarks: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {/* ─── BUTTONS ─── */}
             <div className="flex gap-2 mt-2">
               <button
                 type="submit"
                 className="flex-1 py-3 bg-red-600 text-white rounded-md text-base font-semibold hover:bg-red-700 transition-colors"
               >
-                {editingId ? "Update Debit" : "Add Debit"}
+                {editingId
+                  ? "Update"
+                  : isExistingParty
+                    ? "Add Loan"
+                    : "Add Debit"}
               </button>
               <button
                 type="button"
@@ -898,10 +902,10 @@ const Debit = ({ user }) => {
                 📋 Entries: {totalEntries}
               </span>
               <span className="bg-red-900/50 px-3 py-1 rounded-full text-red-300 border border-red-700">
-                👥 Pending: {uniqueParties}
+                👥 Parties: {uniqueParties}
               </span>
               <span className="bg-yellow-900/50 px-3 py-1 rounded-full text-yellow-300 border border-yellow-700">
-                💰 Remaining: Rs. {totalAmount.toLocaleString()}
+                💰 Total: Rs. {totalAmount.toLocaleString()}
               </span>
             </div>
           </div>
@@ -1017,7 +1021,7 @@ const Debit = ({ user }) => {
                       <div className="flex gap-2 mt-1">
                         <button
                           onClick={() => saveEdit(entry.id)}
-                          className="px-4 py-1.5 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                          className="px-4 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
                         >
                           Save
                         </button>
@@ -1041,24 +1045,22 @@ const Debit = ({ user }) => {
                             {entry.cnic && <span>🪪 {entry.cnic}</span>}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
-                            {entry.sender && (
-                              <span>Receive From: {entry.sender}</span>
-                            )}
+                            {entry.sender && <span>From: {entry.sender}</span>}
                             {entry.sender && entry.receiver && " | "}
                             {entry.receiver && (
-                              <span>Handover To: {entry.receiver}</span>
+                              <span>To: {entry.receiver}</span>
                             )}
                           </div>
                         </div>
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-900/60 text-red-300 border border-red-700">
-                          Debit
+                          💰 Loan
                         </span>
                       </div>
                       <div className="mt-2 text-sm text-gray-300 flex flex-wrap gap-x-4 gap-y-1">
                         <span>
                           Amount:{" "}
                           <span className="font-medium text-red-400">
-                            -PKR {entry.amount}
+                            +PKR {entry.amount}
                           </span>
                         </span>
                         {entry.purpose && <span>Purpose: {entry.purpose}</span>}
@@ -1083,9 +1085,9 @@ const Debit = ({ user }) => {
                               </span>
                             </div>
                             <span className="text-[9px] text-gray-500">
-                              Total Deducted: Rs.{" "}
+                              Total Loans: Rs.{" "}
                               {entry.history
-                                .filter((h) => h.type === "debit")
+                                .filter((h) => h.type === "additional_loan")
                                 .reduce((sum, h) => sum + h.amount, 0)
                                 .toLocaleString()}
                             </span>
@@ -1095,12 +1097,7 @@ const Debit = ({ user }) => {
                             {entry.history.map((h, idx) => (
                               <div
                                 key={h.id || idx}
-                                className={`flex flex-col p-1.5 rounded-md text-xs ${
-                                  h.type === "initial" ||
-                                  h.type === "additional_loan"
-                                    ? "bg-green-900/20 border-l-2 border-green-500"
-                                    : "bg-red-900/20 border-l-2 border-red-500"
-                                }`}
+                                className="flex flex-col p-1.5 rounded-md text-xs bg-red-900/20 border-l-2 border-red-500"
                               >
                                 <div className="flex flex-wrap items-center justify-between gap-0.5">
                                   <div className="flex items-center gap-1.5">
@@ -1112,16 +1109,9 @@ const Debit = ({ user }) => {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {h.type === "initial" ||
-                                    h.type === "additional_loan" ? (
-                                      <span className="text-green-400 font-bold text-xs">
-                                        +Rs. {h.amount?.toLocaleString()}
-                                      </span>
-                                    ) : (
-                                      <span className="text-red-400 font-bold text-xs">
-                                        -Rs. {h.amount?.toLocaleString()}
-                                      </span>
-                                    )}
+                                    <span className="text-red-400 font-bold text-xs">
+                                      +Rs. {h.amount?.toLocaleString()}
+                                    </span>
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap items-center justify-between mt-0.5">
@@ -1138,36 +1128,28 @@ const Debit = ({ user }) => {
                             ))}
                           </div>
 
-                          <div className="mt-2 grid grid-cols-3 gap-1 bg-gray-700/50 px-2 py-1 rounded-md text-xs">
+                          <div className="mt-2 grid grid-cols-2 gap-1 bg-gray-700/50 px-2 py-1 rounded-md text-xs">
                             <div className="text-center">
                               <span className="text-gray-400 block text-[8px] uppercase">
                                 Initial
                               </span>
-                              <span className="text-green-400 font-mono font-bold text-xs">
+                              <span className="text-red-400 font-mono font-bold text-xs">
                                 Rs.{" "}
                                 {entry.history
                                   .find((h) => h.type === "initial")
                                   ?.amount?.toLocaleString() || 0}
                               </span>
                             </div>
-                            <div className="text-center border-x border-gray-600">
-                              <span className="text-gray-400 block text-[8px] uppercase">
-                                Total Deducted
-                              </span>
-                              <span className="text-red-400 font-mono font-bold text-xs">
-                                Rs.{" "}
-                                {entry.history
-                                  .filter((h) => h.type === "debit")
-                                  .reduce((sum, h) => sum + h.amount, 0)
-                                  .toLocaleString()}
-                              </span>
-                            </div>
                             <div className="text-center">
                               <span className="text-gray-400 block text-[8px] uppercase">
-                                Remaining
+                                Total Loans
                               </span>
                               <span className="text-yellow-400 font-mono font-bold text-xs">
-                                Rs. {Number(entry.amount).toLocaleString()}
+                                Rs.{" "}
+                                {entry.history
+                                  .filter((h) => h.type === "additional_loan")
+                                  .reduce((sum, h) => sum + h.amount, 0)
+                                  .toLocaleString()}
                               </span>
                             </div>
                           </div>
