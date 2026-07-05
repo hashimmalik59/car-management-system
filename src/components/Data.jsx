@@ -903,15 +903,29 @@ const Data = ({
 
     let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
 
+    // ✅ FIX: Sirf tab advance add karo jab:
+    // 1. payments array empty ho
+    // 2. advancePaid > 0 ho
+    // 3. advance already history mein nahi ho (double-count prevent)
     if (prevPayments.length === 0 && (item.advancePaid || 0) > 0) {
-      prevPayments = [
-        {
-          amount: Number(item.advancePaid),
-          date: item.createdAt
-            ? new Date(item.createdAt).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
-        },
-      ];
+      // Check karo ke advance already history mein toh nahi?
+      const advanceAlreadyInHistory = item.payments?.some(
+        (p) =>
+          Number(p.amount) === Number(item.advancePaid) &&
+          new Date(p.date).toDateString() ===
+            new Date(item.createdAt).toDateString(),
+      );
+
+      if (!advanceAlreadyInHistory) {
+        prevPayments = [
+          {
+            amount: Number(item.advancePaid),
+            date: item.createdAt
+              ? new Date(item.createdAt).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0],
+          },
+        ];
+      }
     }
 
     const newPayments = [...prevPayments, newPayment];
@@ -1316,21 +1330,26 @@ const Data = ({
                             >
                               🖨️ Print
                             </button>
-                            <button
-                              onClick={() =>
-                                setPaymentModal({
-                                  open: true,
-                                  item: item,
-                                  amount: "",
-                                  date: new Date().toLocaleDateString("en-CA"),
-                                  method: "Cash",
-                                  note: "",
-                                })
-                              }
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
-                            >
-                              💰 Pay
-                            </button>
+                            {/* ✅ FIX: Pay button sirf tab show ho jab remainingBalance > 0 */}
+                            {Number(item.remainingBalance || 0) > 0 && (
+                              <button
+                                onClick={() =>
+                                  setPaymentModal({
+                                    open: true,
+                                    item: item,
+                                    amount: "",
+                                    date: new Date().toLocaleDateString(
+                                      "en-CA",
+                                    ),
+                                    method: "Cash",
+                                    note: "",
+                                  })
+                                }
+                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
+                              >
+                                💰 Pay
+                              </button>
+                            )}
                             <button
                               onClick={() => onEdit(item.id)}
                               className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow"
