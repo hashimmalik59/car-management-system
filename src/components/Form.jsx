@@ -585,7 +585,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     const grandTotal =
       totalVehicles + choiceAmount + commission - onlinePayment;
 
-    const totalAdvance = totalVehiclesAdvance;
+    // ✅ FIX: TOTAL ADVANCE = Vehicle Advance + Manual Advance (formData.advancePaid)
+    const manualAdvance = Number(formData.advancePaid) || 0;
+    const totalAdvance = totalVehiclesAdvance + manualAdvance;
+
     const remainingBalance = Math.max(grandTotal - totalAdvance, 0);
 
     // 🔥 Live remaining after save = selected balance - remainingBalance
@@ -607,6 +610,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     formData.choice,
     formData.onlinePaymentEnabled,
     formData.onlinePayment,
+    formData.advancePaid, // ✅ ADDED
     commissionAmount,
     isPartyOrDebit,
     selectedBalance,
