@@ -159,68 +159,124 @@ const Debit = ({ user }) => {
 
     if (existingEntry) {
       const currentBalance = Number(existingEntry.amount);
-      const debitAmount = Number(newEntry.amount);
+      const newAmount = Number(newEntry.amount);
 
-      // ❌ Balance check
-      if (debitAmount > currentBalance) {
-        alert(
-          `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
-        );
+      // 🔥 NEW: Check if this is a deduction or additional loan
+      // If purpose is NOT "Initial Debit Entry" or "Additional Loan", it's a deduction
+      const isDeduction =
+        newEntry.purpose?.toLowerCase() !== "additional loan" &&
+        newEntry.purpose?.toLowerCase() !== "initial debit entry";
+
+      if (isDeduction) {
+        // ❌ DEDUCTION — Balance check
+        if (newAmount > currentBalance) {
+          alert(
+            `❌ Balance kam hai! Available: Rs. ${currentBalance.toLocaleString()}`,
+          );
+          return;
+        }
+
+        const newBalance = currentBalance - newAmount;
+
+        const historyEntry = {
+          id: `h_${Date.now()}`,
+          date: newEntry.date || new Date().toISOString().split("T")[0],
+          type: "debit",
+          amount: newAmount,
+          balance: newBalance,
+          purpose: newEntry.purpose,
+          remarks: newEntry.remarks || "",
+          balanceBefore: currentBalance,
+          balanceAfter: newBalance,
+        };
+
+        const updatedEntry = {
+          ...existingEntry,
+          amount: newBalance,
+          history: [...(existingEntry.history || []), historyEntry],
+          updatedAt: new Date().toISOString(),
+          status: newBalance === 0 ? "settled" : "active",
+        };
+
+        const result = await updateDebitEntry(existingEntry.id, updatedEntry);
+
+        if (result.success) {
+          alert(
+            `✅ Kaam record ho gaya!\n\n📅 Date: ${historyEntry.date}\n💰 Deducted: Rs. ${newAmount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}`,
+          );
+
+          const isMobile = window.innerWidth < 768;
+          if (isMobile) {
+            setMobileView("ledger");
+          }
+        } else {
+          alert("❌ Error updating: " + result.error);
+        }
+
+        setFormData({
+          partyName: "",
+          phone: "",
+          cnic: "",
+          date: "",
+          sender: "",
+          receiver: "",
+          purpose: "",
+          amount: "",
+          remarks: "",
+        });
+        return;
+      } else {
+        // ✅ ADDITIONAL LOAN — Balance increase
+        const newBalance = currentBalance + newAmount;
+
+        const historyEntry = {
+          id: `h_${Date.now()}`,
+          date: newEntry.date || new Date().toISOString().split("T")[0],
+          type: "additional_loan",
+          amount: newAmount,
+          balance: newBalance,
+          purpose: "Additional Loan",
+          remarks: newEntry.remarks || "Mazeed qarz add kiya gaya",
+          balanceBefore: currentBalance,
+          balanceAfter: newBalance,
+        };
+
+        const updatedEntry = {
+          ...existingEntry,
+          amount: newBalance,
+          history: [...(existingEntry.history || []), historyEntry],
+          updatedAt: new Date().toISOString(),
+          status: "active",
+        };
+
+        const result = await updateDebitEntry(existingEntry.id, updatedEntry);
+
+        if (result.success) {
+          alert(
+            `✅ Mazeed qarz add ho gaya!\n\n👤 ${existingEntry.partyName}\n💰 New Balance: Rs. ${newBalance.toLocaleString()}`,
+          );
+
+          const isMobile = window.innerWidth < 768;
+          if (isMobile) {
+            setMobileView("ledger");
+          }
+        } else {
+          alert("❌ Error updating: " + result.error);
+        }
+
+        setFormData({
+          partyName: "",
+          phone: "",
+          cnic: "",
+          date: "",
+          sender: "",
+          receiver: "",
+          purpose: "",
+          amount: "",
+          remarks: "",
+        });
         return;
       }
-
-      const newBalance = currentBalance - debitAmount;
-
-      // 📜 History entry
-      const historyEntry = {
-        id: `h_${Date.now()}`,
-        date: newEntry.date || new Date().toISOString().split("T")[0],
-        type: "debit",
-        amount: debitAmount,
-        balance: newBalance,
-        purpose: newEntry.purpose,
-        remarks: newEntry.remarks || "",
-        // 🔥 Snapshot
-        balanceBefore: currentBalance,
-        balanceAfter: newBalance,
-      };
-
-      const updatedEntry = {
-        ...existingEntry,
-        amount: newBalance,
-        history: [...(existingEntry.history || []), historyEntry],
-        updatedAt: new Date().toISOString(),
-        // 🔥 Update status
-        status: newBalance === 0 ? "settled" : "active",
-      };
-
-      const result = await updateDebitEntry(existingEntry.id, updatedEntry);
-
-      if (result.success) {
-        alert(
-          `✅ Kaam record ho gaya!\n\n📅 Date: ${historyEntry.date}\n💰 Deducted: Rs. ${debitAmount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}`,
-        );
-
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-          setMobileView("ledger");
-        }
-      } else {
-        alert("❌ Error updating: " + result.error);
-      }
-
-      setFormData({
-        partyName: "",
-        phone: "",
-        cnic: "",
-        date: "",
-        sender: "",
-        receiver: "",
-        purpose: "",
-        amount: "",
-        remarks: "",
-      });
-      return;
     }
 
     // ─── NEW PARTY ─────────────────────────────────────────────
@@ -586,7 +642,7 @@ const Debit = ({ user }) => {
                 </div>
                 <div>
                   ${
-                    h.type === "initial"
+                    h.type === "initial" || h.type === "additional_loan"
                       ? `<span class="history-credit">+Rs. ${h.amount?.toLocaleString()}</span>`
                       : `<span class="history-debit">-Rs. ${h.amount?.toLocaleString()}</span>`
                   }
@@ -1040,7 +1096,8 @@ const Debit = ({ user }) => {
                               <div
                                 key={h.id || idx}
                                 className={`flex flex-col p-1.5 rounded-md text-xs ${
-                                  h.type === "initial"
+                                  h.type === "initial" ||
+                                  h.type === "additional_loan"
                                     ? "bg-green-900/20 border-l-2 border-green-500"
                                     : "bg-red-900/20 border-l-2 border-red-500"
                                 }`}
@@ -1055,14 +1112,14 @@ const Debit = ({ user }) => {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {h.type === "debit" && (
-                                      <span className="text-red-400 font-bold text-xs">
-                                        -Rs. {h.amount?.toLocaleString()}
-                                      </span>
-                                    )}
-                                    {h.type === "initial" && (
+                                    {h.type === "initial" ||
+                                    h.type === "additional_loan" ? (
                                       <span className="text-green-400 font-bold text-xs">
                                         +Rs. {h.amount?.toLocaleString()}
+                                      </span>
+                                    ) : (
+                                      <span className="text-red-400 font-bold text-xs">
+                                        -Rs. {h.amount?.toLocaleString()}
                                       </span>
                                     )}
                                   </div>
