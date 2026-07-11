@@ -589,7 +589,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     const manualAdvance = Number(formData.advancePaid) || 0;
     const totalAdvance = totalVehiclesAdvance + manualAdvance;
 
-    const remainingBalance = Math.max(grandTotal - totalAdvance, 0);
+    // ✅ FIX: Include party payments in remaining balance
+    const partyPayments = formData.partyPayments || [];
+    const totalPartyPayments = partyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const remainingBalance = Math.max(grandTotal - totalAdvance - totalPartyPayments, 0);
 
     // 🔥 Live remaining after save = selected balance - remainingBalance
     const finalBalance = Math.max(selectedBalance - remainingBalance, 0);
@@ -610,7 +613,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     formData.choice,
     formData.onlinePaymentEnabled,
     formData.onlinePayment,
-    formData.advancePaid, // ✅ ADDED
+    formData.advancePaid,
+    formData.partyPayments, // ✅ ADDED
     commissionAmount,
     isPartyOrDebit,
     selectedBalance,
@@ -1398,6 +1402,22 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               </div>
 
+              {/* 🔥 BANK DROPDOWN FOR INDIVIDUAL — ADDED HERE */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Bank / Payment Method
+                </label>
+                <select
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
+                  value={formData.bankName || "Cash"}
+                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                >
+                  {bankOptions.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Region
@@ -1434,38 +1454,6 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                   />
                 </div>
               )}
-
-              {/* CHOICE FIELD – Individual */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Choice (Additional Amount)
-                </label>
-                <input
-                  type="number"
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter choice amount"
-                  value={formData.choice === null ? "" : formData.choice}
-                  onChange={(e) => {
-                    const val =
-                      e.target.value === "" ? null : Number(e.target.value);
-                    setFormData((prev) => {
-                      const { total, remaining } = calculateTotalAmount(
-                        prev.servicePrices,
-                        commissionAmount,
-                        prev.advancePaid || 0,
-                        prev.regionPrice || 0,
-                        val || 0,
-                      );
-                      return {
-                        ...prev,
-                        choice: val,
-                        totalAmount: total,
-                        remainingBalance: remaining,
-                      };
-                    });
-                  }}
-                />
-              </div>
 
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1667,6 +1655,38 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                   onChange={(e) =>
                     setFormData({ ...formData, remarks: e.target.value })
                   }
+                />
+              </div>
+
+              {/* 🔥 CHOICE FIELD — MOVED HERE (End of individual, before Payment Details) */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Choice (Additional Amount)
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter choice amount"
+                  value={formData.choice === null ? "" : formData.choice}
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === "" ? null : Number(e.target.value);
+                    setFormData((prev) => {
+                      const { total, remaining } = calculateTotalAmount(
+                        prev.servicePrices,
+                        commissionAmount,
+                        prev.advancePaid || 0,
+                        prev.regionPrice || 0,
+                        val || 0,
+                      );
+                      return {
+                        ...prev,
+                        choice: val,
+                        totalAmount: total,
+                        remainingBalance: remaining,
+                      };
+                    });
+                  }}
                 />
               </div>
 
