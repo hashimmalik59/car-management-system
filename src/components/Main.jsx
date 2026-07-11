@@ -23,7 +23,7 @@ const Main = ({ customer, setCustomer, user }) => {
   const [dataActiveTab, setDataActiveTab] = useState("individual");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mainTab, setMainTab] = useState("form");
-  const [showDebitOnly, setShowDebitOnly] = useState(false); // ← 🔥 YEH LINE ADD KARO
+  const [showDebitOnly, setShowDebitOnly] = useState(false);
 
   const fetchUserData = useCallback(async () => {
     if (!user) {
@@ -82,6 +82,10 @@ const Main = ({ customer, setCustomer, user }) => {
         if (clean.attachment?.file) delete clean.attachment.file;
         return clean;
       });
+      // ✅ FIX: Preserve advancePaid, totalAmount, remainingBalance on update
+      updateData.advancePaid = Number(updatedRecord.advancePaid) || 0;
+      updateData.totalAmount = Number(updatedRecord.totalAmount) || 0;
+      updateData.remainingBalance = Number(updatedRecord.remainingBalance) || 0;
     }
 
     try {
@@ -125,6 +129,7 @@ const Main = ({ customer, setCustomer, user }) => {
           editingCustomer.isDebitView === true));
 
     let sanitizedCustomer = { ...newCustomer };
+    
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
       const advance = Number(newCustomer.advancePaid) || 0;
@@ -135,6 +140,7 @@ const Main = ({ customer, setCustomer, user }) => {
         remainingBalance: total - advance,
       };
     }
+    
     if (newCustomer.type === "party") {
       sanitizedCustomer = {
         ...newCustomer,
@@ -145,6 +151,10 @@ const Main = ({ customer, setCustomer, user }) => {
           vehicleRemaining:
             (Number(v.vehicleTotal) || 0) - (Number(v.vehicleAdvance) || 0),
         })),
+        // ✅ FIX: Preserve advancePaid, totalAmount, remainingBalance from form
+        advancePaid: Number(newCustomer.advancePaid) || 0,
+        totalAmount: Number(newCustomer.totalAmount) || 0,
+        remainingBalance: Number(newCustomer.remainingBalance) || 0,
       };
     }
 
@@ -212,7 +222,6 @@ const Main = ({ customer, setCustomer, user }) => {
       );
       setEditingCustomer(null);
 
-      // 🔥 AFTER EDIT — Switch to Ledger
       if (isDebitEntry) {
         setMainTab("ledger");
         setDataActiveTab("party");
@@ -278,12 +287,9 @@ const Main = ({ customer, setCustomer, user }) => {
     const newCustomerWithId = { ...customerWithTime, id: tempId };
     setCustomer((prev) => [newCustomerWithId, ...prev]);
 
-    // 🔥 AFTER SAVE — Switch to Ledger + Debit view
     if (isDebitEntry) {
       setMainTab("ledger");
       setDataActiveTab("party");
-      // 🔥 ShowDebitOnly true karo taake Debit view active ho
-      // Note: iske liye Data component mein showDebitOnly prop bhi pass karna hoga
       setShowDebitOnly(true);
     } else {
       setMainTab("ledger");
@@ -593,7 +599,7 @@ const Main = ({ customer, setCustomer, user }) => {
                 onEdit={handleEdit}
                 onUpdateCustomer={handleUpdateRecord}
                 onDebitPayment={handleDebitPayment}
-                showDebitOnly={showDebitOnly} // ← 🔥 YEH PASS KARO
+                showDebitOnly={showDebitOnly}
               />
             </motion.div>
           )}

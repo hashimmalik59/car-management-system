@@ -46,35 +46,27 @@ const App = () => {
     };
   }, []); // Empty dependency array – run only once
 
+  // ✅ FIXED: Directly use remainingBalance from records
   const calculateTotalOutstanding = () => {
     let total = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
-        total += item.remainingBalance || 0;
+        total += Number(item.remainingBalance) || 0;
       } else if (item.type === "party") {
-        const vehicles = item.vehicles || [];
-        const partyRemaining = vehicles.reduce(
-          (sum, v) => sum + (v.vehicleRemaining || 0),
-          0,
-        );
-        total += partyRemaining;
+        total += Number(item.remainingBalance) || 0;
       }
     });
     return total;
   };
 
+  // ✅ FIXED: Directly use remainingBalance from records
   const calculatePendingCount = () => {
     let pending = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
-        if ((item.remainingBalance || 0) > 0) pending++;
+        if ((Number(item.remainingBalance) || 0) > 0) pending++;
       } else if (item.type === "party") {
-        const vehicles = item.vehicles || [];
-        const partyRemaining = vehicles.reduce(
-          (sum, v) => sum + (v.vehicleRemaining || 0),
-          0,
-        );
-        if (partyRemaining > 0) pending++;
+        if ((Number(item.remainingBalance) || 0) > 0) pending++;
       }
     });
     return pending;

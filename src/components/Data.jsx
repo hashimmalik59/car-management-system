@@ -243,8 +243,9 @@ const printPartyReceipt = (item) => {
     0,
   );
 
-  // ✅ Advance should include party payments
-  const adjustedAdvance = advanceAllVehicles + totalPartyPayments;
+// ✅ Include manual advance from form
+const manualAdvance = Number(item?.advancePaid) || 0;
+const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
 
   let overallRemark = "";
   if (item.remarks) {
@@ -511,15 +512,18 @@ const PartyLedgerBlock = ({
   const partyPayments = item?.partyPayments || [];
   const totalPartyPayments = partyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
-  // ✅ Advance should include party payments
-  const adjustedAdvance = advanceAllVehicles + totalPartyPayments;
+  // ✅ Include manual advance from form
+  const manualAdvance = Number(item?.advancePaid) || 0;
+  const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
+
+  // ✅ FIX: Include manual advance in remaining calculation
+  const adjustedRemaining = Math.max(
+    remainingAllVehicles + choiceAmount - onlinePayment - totalPartyPayments - manualAdvance,
+    0,
+  );
 
   const adjustedTotal = Math.max(
     totalAllVehicles + choiceAmount - onlinePayment,
-    0,
-  );
-  const adjustedRemaining = Math.max(
-    remainingAllVehicles + choiceAmount - onlinePayment - totalPartyPayments,
     0,
   );
 
@@ -779,7 +783,7 @@ const PartyLedgerBlock = ({
                 <td className="px-4 py-3 text-right font-mono font-bold">
                   {adjustedTotal.toLocaleString()}
                 </td>
-                {/* ✅ Advance column updated with party payments */}
+                {/* ✅ Advance column updated with manual advance */}
                 <td className="px-4 py-3 text-right font-mono font-bold text-green-400">
                   {adjustedAdvance.toLocaleString()}
                 </td>
@@ -797,7 +801,7 @@ const PartyLedgerBlock = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-4 text-[10px] text-gray-300">
             <span>💰 Total: Rs. {adjustedTotal.toLocaleString()}</span>
-            {/* ✅ Advance display updated with party payments */}
+            {/* ✅ Advance display updated with manual advance */}
             <span>💵 Advance: Rs. {adjustedAdvance.toLocaleString()}</span>
             <span>📊 Remaining: Rs. {adjustedRemaining.toLocaleString()}</span>
           </div>
@@ -1036,7 +1040,7 @@ const Data = ({
     });
   };
 
-  // 🔥 FIXED: Handle Party Payment with advance update
+  // ✅ FIXED: Handle Party Payment — NO DOUBLE DEDUCTION!
   const handlePartyPaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
     if (!amount || amount <= 0) {
@@ -1045,7 +1049,6 @@ const Data = ({
     }
     const item = paymentModal.item;
 
-    // Calculate current remaining for party
     const vehicles = item?.vehicles || [];
     const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
     const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
@@ -1053,12 +1056,22 @@ const Data = ({
     const onlinePayment = item?.onlinePaymentEnabled ? Number(item?.onlinePayment || 0) : 0;
     const existingPayments = item?.partyPayments || [];
     const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    
-    const currentRemaining = Math.max(
-      remainingAllVehicles + choiceAmount - onlinePayment - totalExistingPayments,
-      0,
-    );
+    const manualAdvance = Number(item?.advancePaid) || 0;
 
+    // ✅ Grand Total = Vehicles + Choice - Online Payment
+    const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
+
+    // ✅ New advance = existing advance + payment amount
+    const newAdvance = manualAdvance + amount;
+
+    // ✅ Total payments after this transaction
+    const totalPayments = totalExistingPayments + amount;
+
+    // ✅ New remaining = Grand Total - New Advance - Total Payments
+    const newRemaining = Math.max(grandTotal - newAdvance - totalPayments, 0);
+
+    // ✅ Validate: Amount should not exceed current remaining
+    const currentRemaining = Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
     if (amount > currentRemaining) {
       alert(
         `Payment amount (Rs. ${amount.toLocaleString()}) cannot exceed remaining balance (Rs. ${currentRemaining.toLocaleString()})!`,
@@ -1071,19 +1084,12 @@ const Data = ({
       date: paymentModal.date,
     };
 
-    const updatedPayments = [...existingPayments, newPayment];
-    
-    // ✅ FIX: Update remaining AND advance
-    const newRemaining = Math.max(currentRemaining - amount, 0);
-    const currentAdvance = Number(item?.advancePaid) || 0;
-    const newAdvance = currentAdvance + amount;
-
     const updatedItem = {
       ...item,
-      partyPayments: updatedPayments,
+      partyPayments: [...existingPayments, newPayment],
       remainingBalance: newRemaining,
-      advancePaid: newAdvance, // 🔥 Advance update
-      totalAmount: item.totalAmount || totalAllVehicles + choiceAmount - onlinePayment,
+      advancePaid: newAdvance,
+      totalAmount: grandTotal,
     };
 
     if (onUpdateCustomer) {
@@ -1608,15 +1614,16 @@ const Data = ({
                 let currentBalance = 0;
                 if (paymentModal.isPartyPayment) {
                   const vehicles = paymentModal.item?.vehicles || [];
+                  const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
                   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
                   const choiceAmount = Number(paymentModal.item?.choice) || 0;
                   const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
                   const existingPayments = paymentModal.item?.partyPayments || [];
                   const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                  currentBalance = Math.max(
-                    remainingAllVehicles + choiceAmount - onlinePayment - totalExistingPayments,
-                    0,
-                  );
+                  const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
+                  
+                  const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
+                  currentBalance = Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
                 } else if (paymentModal.item.type === "debit") {
                   currentBalance = Number(paymentModal.item.amount) || 0;
                 } else {
@@ -1776,15 +1783,15 @@ const Data = ({
                     (() => {
                       if (paymentModal.isPartyPayment) {
                         const vehicles = paymentModal.item?.vehicles || [];
+                        const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
                         const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
                         const choiceAmount = Number(paymentModal.item?.choice) || 0;
                         const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
                         const existingPayments = paymentModal.item?.partyPayments || [];
                         const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                        return Math.max(
-                          remainingAllVehicles + choiceAmount - onlinePayment - totalExistingPayments,
-                          0,
-                        );
+                        const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
+                        return Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
                       } else if (paymentModal.item.type === "debit") {
                         return Number(paymentModal.item.amount) || 0;
                       } else {
@@ -1797,15 +1804,15 @@ const Data = ({
                     (() => {
                       if (paymentModal.isPartyPayment) {
                         const vehicles = paymentModal.item?.vehicles || [];
+                        const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
                         const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
                         const choiceAmount = Number(paymentModal.item?.choice) || 0;
                         const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
                         const existingPayments = paymentModal.item?.partyPayments || [];
                         const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                        return Math.max(
-                          remainingAllVehicles + choiceAmount - onlinePayment - totalExistingPayments,
-                          0,
-                        );
+                        const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
+                        return Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
                       } else if (paymentModal.item.type === "debit") {
                         return Number(paymentModal.item.amount) || 0;
                       } else {
