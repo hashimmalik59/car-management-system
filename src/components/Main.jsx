@@ -4,7 +4,7 @@ import Form from "./Form";
 import Data from "./Data";
 import Reports from "./Reports";
 import SelfStatement from "./SelfStatement";
-import Debit from "./Debit";
+import Debtor from "./Debit";
 import { db } from "../firebase";
 import {
   collection,
@@ -129,7 +129,7 @@ const Main = ({ customer, setCustomer, user }) => {
           editingCustomer.isDebitView === true));
 
     let sanitizedCustomer = { ...newCustomer };
-    
+
     if (newCustomer.type === "individual") {
       const total = Number(newCustomer.totalAmount) || 0;
       const advance = Number(newCustomer.advancePaid) || 0;
@@ -140,7 +140,7 @@ const Main = ({ customer, setCustomer, user }) => {
         remainingBalance: total - advance,
       };
     }
-    
+
     if (newCustomer.type === "party") {
       sanitizedCustomer = {
         ...newCustomer,
@@ -457,10 +457,10 @@ const Main = ({ customer, setCustomer, user }) => {
     },
     {
       key: "debit",
-      label: "Debit",
+      label: "Debtor",
       icon: "💳",
       color: "red",
-      desc: "Debit entries",
+      desc: "Debtor entries",
     },
   ];
 
@@ -639,7 +639,7 @@ const Main = ({ customer, setCustomer, user }) => {
               exit="exit"
               transition={{ duration: 0.3 }}
             >
-              <Debit user={user} />
+              <Debtor user={user} />
             </motion.div>
           )}
         </AnimatePresence>

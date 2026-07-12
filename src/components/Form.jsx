@@ -591,8 +591,14 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
     // ✅ FIX: Include party payments in remaining balance
     const partyPayments = formData.partyPayments || [];
-    const totalPartyPayments = partyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const remainingBalance = Math.max(grandTotal - totalAdvance - totalPartyPayments, 0);
+    const totalPartyPayments = partyPayments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0,
+    );
+    const remainingBalance = Math.max(
+      grandTotal - totalAdvance - totalPartyPayments,
+      0,
+    );
 
     // 🔥 Live remaining after save = selected balance - remainingBalance
     const finalBalance = Math.max(selectedBalance - remainingBalance, 0);
@@ -1410,10 +1416,14 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 <select
                   className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
                   value={formData.bankName || "Cash"}
-                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bankName: e.target.value })
+                  }
                 >
                   {bankOptions.map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
                   ))}
                 </select>
               </div>

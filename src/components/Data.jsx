@@ -232,7 +232,10 @@ const printPartyReceipt = (item) => {
 
   // ✅ Include party payments in adjusted total
   const partyPayments = item.partyPayments || [];
-  const totalPartyPayments = partyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalPartyPayments = partyPayments.reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
+  );
 
   const adjustedTotal = Math.max(
     totalAllVehicles + choiceAmount - onlinePayment,
@@ -243,9 +246,10 @@ const printPartyReceipt = (item) => {
     0,
   );
 
-// ✅ Include manual advance from form
-const manualAdvance = Number(item?.advancePaid) || 0;
-const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
+  // ✅ Include manual advance from form
+  const manualAdvance = Number(item?.advancePaid) || 0;
+  const adjustedAdvance =
+    advanceAllVehicles + totalPartyPayments + manualAdvance;
 
   let overallRemark = "";
   if (item.remarks) {
@@ -281,6 +285,8 @@ const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
         .payment-history { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
         .payment-history .ph-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
+        .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+        .vehicle-remarks { font-size: 11px; color: #555; font-style: italic; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -306,6 +312,7 @@ const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
               <th class="text-right">Remaining</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -328,6 +335,7 @@ const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+                    <td>${v.remarks || "—"}</td>
                   </tr>
                   `;
               })
@@ -339,6 +347,7 @@ const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
               <td class="text-right"><strong>${adjustedTotal.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedAdvance.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedRemaining.toLocaleString()}</strong></td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -371,6 +380,9 @@ const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
                 <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
                 <span class="ph-amount">+Rs. ${Number(p.amount).toLocaleString()}</span>
               </div>
+              ${
+                p.remarks ? `<div class="ph-remarks">📝 ${p.remarks}</div>` : ""
+              }
             `,
               )
               .join("")}
@@ -412,6 +424,9 @@ const printVehicleReceipt = (vehicle, partyData) => {
     : 0;
   const onlinePaymentNotes = partyData.onlinePaymentNotes || "";
 
+  // ✅ Party payments for vehicle receipt
+  const partyPayments = partyData.partyPayments || [];
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -431,6 +446,10 @@ const printVehicleReceipt = (vehicle, partyData) => {
         .amount { font-size: 16px; font-weight: bold; }
         .service-box { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+        .payment-history { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
+        .payment-history .ph-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+        .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
+        .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -476,6 +495,30 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
         ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
+
+        ${
+          partyPayments.length > 0
+            ? `
+          <div class="payment-history">
+            <h3>💰 Payment History</h3>
+            ${partyPayments
+              .map(
+                (p) => `
+              <div class="ph-row">
+                <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
+                <span class="ph-amount">+Rs. ${Number(p.amount).toLocaleString()}</span>
+              </div>
+              ${
+                p.remarks ? `<div class="ph-remarks">📝 ${p.remarks}</div>` : ""
+              }
+            `,
+              )
+              .join("")}
+          </div>
+          `
+            : ""
+        }
+
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -486,11 +529,11 @@ const printVehicleReceipt = (vehicle, partyData) => {
 };
 
 // ─── PARTY LEDGER BLOCK ──────────
-const PartyLedgerBlock = ({ 
-  item, 
-  onEdit, 
-  onDelete, 
-  onDebitPayment, 
+const PartyLedgerBlock = ({
+  item,
+  onEdit,
+  onDelete,
+  onDebitPayment,
   onPartyPayment,
 }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
@@ -510,15 +553,23 @@ const PartyLedgerBlock = ({
 
   // 🔥 Party payments array
   const partyPayments = item?.partyPayments || [];
-  const totalPartyPayments = partyPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalPartyPayments = partyPayments.reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
+  );
 
   // ✅ Include manual advance from form
   const manualAdvance = Number(item?.advancePaid) || 0;
-  const adjustedAdvance = advanceAllVehicles + totalPartyPayments + manualAdvance;
+  const adjustedAdvance =
+    advanceAllVehicles + totalPartyPayments + manualAdvance;
 
   // ✅ FIX: Include manual advance in remaining calculation
   const adjustedRemaining = Math.max(
-    remainingAllVehicles + choiceAmount - onlinePayment - totalPartyPayments - manualAdvance,
+    remainingAllVehicles +
+      choiceAmount -
+      onlinePayment -
+      totalPartyPayments -
+      manualAdvance,
     0,
   );
 
@@ -572,7 +623,7 @@ const PartyLedgerBlock = ({
           >
             🖨️ Print All
           </button>
-          
+
           {/* 🔥 Pay button for Party (not Debit) */}
           {!isDebit && adjustedRemaining > 0 && (
             <button
@@ -834,8 +885,8 @@ const PartyLedgerBlock = ({
             )}
           </div>
         )}
-        
-        {/* 🔥 Party Payment History */}
+
+        {/* 🔥 Party Payment History — WITH REMARKS */}
         {partyPayments.length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-600">
             <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">
@@ -843,17 +894,25 @@ const PartyLedgerBlock = ({
             </div>
             <div className="flex flex-col gap-1">
               {partyPayments.map((p, pi) => (
-                <div key={pi} className="flex justify-between text-[10px]">
-                  <span className="text-gray-400">
-                    {new Date(p.date).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
-                  <span className="text-green-400 font-mono">
-                    +Rs. {Number(p.amount).toLocaleString()}
-                  </span>
+                <div key={pi} className="flex flex-col text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">
+                      {new Date(p.date).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span className="text-green-400 font-mono">
+                      +Rs. {Number(p.amount).toLocaleString()}
+                    </span>
+                  </div>
+                  {/* ✅ NEW: Show remarks if exists */}
+                  {p.remarks && (
+                    <div className="text-[9px] text-gray-400 italic mt-0.5">
+                      📝 {p.remarks}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1040,7 +1099,7 @@ const Data = ({
     });
   };
 
-  // ✅ FIXED: Handle Party Payment — NO DOUBLE DEDUCTION!
+  // ✅ FIXED: Handle Party Payment — WITH REMARKS
   const handlePartyPaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
     if (!amount || amount <= 0) {
@@ -1053,35 +1112,32 @@ const Data = ({
     const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
     const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
     const choiceAmount = Number(item?.choice) || 0;
-    const onlinePayment = item?.onlinePaymentEnabled ? Number(item?.onlinePayment || 0) : 0;
+    const onlinePayment = item?.onlinePaymentEnabled
+      ? Number(item?.onlinePayment || 0)
+      : 0;
     const existingPayments = item?.partyPayments || [];
-    const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalExistingPayments = existingPayments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0,
+    );
     const manualAdvance = Number(item?.advancePaid) || 0;
 
-    // ✅ Grand Total = Vehicles + Choice - Online Payment
-    const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
+    const newTotalPayments = totalExistingPayments + amount;
+    const newRemaining = Math.max(
+      remainingAllVehicles +
+        choiceAmount -
+        onlinePayment -
+        newTotalPayments -
+        manualAdvance,
+      0,
+    );
+    const newAdvance = manualAdvance + newTotalPayments;
 
-    // ✅ New advance = existing advance + payment amount
-    const newAdvance = manualAdvance + amount;
-
-    // ✅ Total payments after this transaction
-    const totalPayments = totalExistingPayments + amount;
-
-    // ✅ New remaining = Grand Total - New Advance - Total Payments
-    const newRemaining = Math.max(grandTotal - newAdvance - totalPayments, 0);
-
-    // ✅ Validate: Amount should not exceed current remaining
-    const currentRemaining = Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
-    if (amount > currentRemaining) {
-      alert(
-        `Payment amount (Rs. ${amount.toLocaleString()}) cannot exceed remaining balance (Rs. ${currentRemaining.toLocaleString()})!`,
-      );
-      return;
-    }
-
+    // ✅ NEW: Include remarks in payment object
     const newPayment = {
       amount,
       date: paymentModal.date,
+      remarks: paymentModal.note || "",
     };
 
     const updatedItem = {
@@ -1089,13 +1145,17 @@ const Data = ({
       partyPayments: [...existingPayments, newPayment],
       remainingBalance: newRemaining,
       advancePaid: newAdvance,
-      totalAmount: grandTotal,
+      totalAmount: Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0),
     };
 
     if (onUpdateCustomer) {
       onUpdateCustomer(updatedItem);
       alert(
-        `✅ Payment recorded!\n\n📅 Date: ${newPayment.date}\n💰 Amount: Rs. ${amount.toLocaleString()}\n📊 Remaining: Rs. ${newRemaining.toLocaleString()}`,
+        `✅ Payment recorded!
+
+📅 Date: ${newPayment.date}
+💰 Amount: Rs. ${amount.toLocaleString()}
+📊 Remaining: Rs. ${newRemaining.toLocaleString()}`,
       );
     } else {
       alert("Payment recorded! (onUpdateCustomer prop not provided)");
@@ -1600,11 +1660,12 @@ const Data = ({
               className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
             >
               <h3 className="text-lg font-bold text-white mb-1">
-                {paymentModal.item.type === "debit" && !paymentModal.isPartyPayment
+                {paymentModal.item.type === "debit" &&
+                !paymentModal.isPartyPayment
                   ? "💳 Repay Debit"
                   : paymentModal.isPartyPayment
-                  ? "💰 Add Payment"
-                  : "Add Payment"}
+                    ? "💰 Add Payment"
+                    : "Add Payment"}
               </h3>
               <p className="text-[10px] text-gray-400 mb-2">
                 {paymentModal.item.partyName}
@@ -1614,20 +1675,36 @@ const Data = ({
                 let currentBalance = 0;
                 if (paymentModal.isPartyPayment) {
                   const vehicles = paymentModal.item?.vehicles || [];
-                  const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
-                  const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+                  const totalAllVehicles = sumVehicleField(
+                    vehicles,
+                    "vehicleTotal",
+                  );
                   const choiceAmount = Number(paymentModal.item?.choice) || 0;
-                  const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
-                  const existingPayments = paymentModal.item?.partyPayments || [];
-                  const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                  const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
-                  
-                  const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
-                  currentBalance = Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
+                  const onlinePayment = paymentModal.item?.onlinePaymentEnabled
+                    ? Number(paymentModal.item?.onlinePayment || 0)
+                    : 0;
+                  const existingPayments =
+                    paymentModal.item?.partyPayments || [];
+                  const totalExistingPayments = existingPayments.reduce(
+                    (sum, p) => sum + Number(p.amount),
+                    0,
+                  );
+                  const manualAdvance =
+                    Number(paymentModal.item?.advancePaid) || 0;
+
+                  const grandTotal = Math.max(
+                    totalAllVehicles + choiceAmount - onlinePayment,
+                    0,
+                  );
+                  currentBalance = Math.max(
+                    grandTotal - manualAdvance - totalExistingPayments,
+                    0,
+                  );
                 } else if (paymentModal.item.type === "debit") {
                   currentBalance = Number(paymentModal.item.amount) || 0;
                 } else {
-                  currentBalance = Number(paymentModal.item.remainingBalance) || 0;
+                  currentBalance =
+                    Number(paymentModal.item.remainingBalance) || 0;
                 }
 
                 const enteredAmount = Number(paymentModal.amount) || 0;
@@ -1641,8 +1718,8 @@ const Data = ({
                         {paymentModal.isPartyPayment
                           ? "Remaining Balance"
                           : paymentModal.item.type === "debit"
-                          ? "Current Balance"
-                          : "Remaining"}
+                            ? "Current Balance"
+                            : "Remaining"}
                       </span>
                       <span
                         className={`text-sm font-bold ${paymentModal.isPartyPayment ? "text-orange-400" : paymentModal.item.type === "debit" ? "text-red-400" : "text-orange-400"}`}
@@ -1725,73 +1802,113 @@ const Data = ({
                   />
                 </div>
 
-                {(paymentModal.item.type === "debit" && !paymentModal.isPartyPayment) && (
-                  <>
-                    <div className="flex flex-col">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                        Payment Method
-                      </label>
-                      <select
-                        className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
-                        value={paymentModal.method}
-                        onChange={(e) =>
-                          setPaymentModal((prev) => ({
-                            ...prev,
-                            method: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="Cash">💵 Cash</option>
-                        <option value="Bank">🏦 Bank Transfer</option>
-                        <option value="Online">💳 Online</option>
-                        <option value="Other">📱 Other</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                        Note (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
-                        placeholder="Any remarks..."
-                        value={paymentModal.note}
-                        onChange={(e) =>
-                          setPaymentModal((prev) => ({
-                            ...prev,
-                            note: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </>
+                {/* ✅ Note field for Party Payment */}
+                {paymentModal.isPartyPayment && (
+                  <div className="flex flex-col">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      Note (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                      placeholder="Any remarks..."
+                      value={paymentModal.note}
+                      onChange={(e) =>
+                        setPaymentModal((prev) => ({
+                          ...prev,
+                          note: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 )}
+
+                {paymentModal.item.type === "debit" &&
+                  !paymentModal.isPartyPayment && (
+                    <>
+                      <div className="flex flex-col">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Payment Method
+                        </label>
+                        <select
+                          className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                          value={paymentModal.method}
+                          onChange={(e) =>
+                            setPaymentModal((prev) => ({
+                              ...prev,
+                              method: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="Cash">💵 Cash</option>
+                          <option value="Bank">🏦 Bank Transfer</option>
+                          <option value="Online">💳 Online</option>
+                          <option value="Other">📱 Other</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Note (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                          placeholder="Any remarks..."
+                          value={paymentModal.note}
+                          onChange={(e) =>
+                            setPaymentModal((prev) => ({
+                              ...prev,
+                              note: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
               </div>
 
               <div className="flex gap-2 mt-5">
                 <button
                   onClick={
-                    paymentModal.item.type === "debit" && !paymentModal.isPartyPayment
+                    paymentModal.item.type === "debit" &&
+                    !paymentModal.isPartyPayment
                       ? handleDebitRepaymentSubmit
                       : paymentModal.isPartyPayment
-                      ? handlePartyPaymentSubmit
-                      : handlePaymentSubmit
+                        ? handlePartyPaymentSubmit
+                        : handlePaymentSubmit
                   }
                   disabled={
                     Number(paymentModal.amount) >
                     (() => {
                       if (paymentModal.isPartyPayment) {
                         const vehicles = paymentModal.item?.vehicles || [];
-                        const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
-                        const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
-                        const choiceAmount = Number(paymentModal.item?.choice) || 0;
-                        const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
-                        const existingPayments = paymentModal.item?.partyPayments || [];
-                        const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                        const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
-                        const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
-                        return Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
+                        const totalAllVehicles = sumVehicleField(
+                          vehicles,
+                          "vehicleTotal",
+                        );
+                        const choiceAmount =
+                          Number(paymentModal.item?.choice) || 0;
+                        const onlinePayment = paymentModal.item
+                          ?.onlinePaymentEnabled
+                          ? Number(paymentModal.item?.onlinePayment || 0)
+                          : 0;
+                        const existingPayments =
+                          paymentModal.item?.partyPayments || [];
+                        const totalExistingPayments = existingPayments.reduce(
+                          (sum, p) => sum + Number(p.amount),
+                          0,
+                        );
+                        const manualAdvance =
+                          Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(
+                          totalAllVehicles + choiceAmount - onlinePayment,
+                          0,
+                        );
+                        return Math.max(
+                          grandTotal - manualAdvance - totalExistingPayments,
+                          0,
+                        );
                       } else if (paymentModal.item.type === "debit") {
                         return Number(paymentModal.item.amount) || 0;
                       } else {
@@ -1804,15 +1921,32 @@ const Data = ({
                     (() => {
                       if (paymentModal.isPartyPayment) {
                         const vehicles = paymentModal.item?.vehicles || [];
-                        const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
-                        const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
-                        const choiceAmount = Number(paymentModal.item?.choice) || 0;
-                        const onlinePayment = paymentModal.item?.onlinePaymentEnabled ? Number(paymentModal.item?.onlinePayment || 0) : 0;
-                        const existingPayments = paymentModal.item?.partyPayments || [];
-                        const totalExistingPayments = existingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                        const manualAdvance = Number(paymentModal.item?.advancePaid) || 0;
-                        const grandTotal = Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0);
-                        return Math.max(grandTotal - manualAdvance - totalExistingPayments, 0);
+                        const totalAllVehicles = sumVehicleField(
+                          vehicles,
+                          "vehicleTotal",
+                        );
+                        const choiceAmount =
+                          Number(paymentModal.item?.choice) || 0;
+                        const onlinePayment = paymentModal.item
+                          ?.onlinePaymentEnabled
+                          ? Number(paymentModal.item?.onlinePayment || 0)
+                          : 0;
+                        const existingPayments =
+                          paymentModal.item?.partyPayments || [];
+                        const totalExistingPayments = existingPayments.reduce(
+                          (sum, p) => sum + Number(p.amount),
+                          0,
+                        );
+                        const manualAdvance =
+                          Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(
+                          totalAllVehicles + choiceAmount - onlinePayment,
+                          0,
+                        );
+                        return Math.max(
+                          grandTotal - manualAdvance - totalExistingPayments,
+                          0,
+                        );
                       } else if (paymentModal.item.type === "debit") {
                         return Number(paymentModal.item.amount) || 0;
                       } else {
@@ -1823,11 +1957,12 @@ const Data = ({
                       : "bg-emerald-600 hover:bg-emerald-500 text-white"
                   }`}
                 >
-                  {paymentModal.item.type === "debit" && !paymentModal.isPartyPayment
+                  {paymentModal.item.type === "debit" &&
+                  !paymentModal.isPartyPayment
                     ? "Save Repayment"
                     : paymentModal.isPartyPayment
-                    ? "Save Payment"
-                    : "Save Payment"}
+                      ? "Save Payment"
+                      : "Save Payment"}
                 </button>
                 <button
                   onClick={() =>

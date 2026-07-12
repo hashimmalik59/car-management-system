@@ -46,27 +46,77 @@ const App = () => {
     };
   }, []); // Empty dependency array – run only once
 
-  // ✅ FIXED: Directly use remainingBalance from records
+  // ✅ FIXED: Calculate remaining using same formula as PartyLedgerBlock
   const calculateTotalOutstanding = () => {
     let total = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
         total += Number(item.remainingBalance) || 0;
       } else if (item.type === "party") {
-        total += Number(item.remainingBalance) || 0;
+        // ✅ Use same formula as PartyLedgerBlock for accurate calculation
+        const vehicles = item.vehicles || [];
+        const remainingAllVehicles = vehicles.reduce(
+          (sum, v) => sum + (Number(v?.vehicleRemaining) || 0),
+          0,
+        );
+        const choiceAmount = Number(item.choice) || 0;
+        const onlinePayment = item.onlinePaymentEnabled
+          ? Number(item.onlinePayment || 0)
+          : 0;
+        const partyPayments = item.partyPayments || [];
+        const totalPartyPayments = partyPayments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0,
+        );
+        const manualAdvance = Number(item.advancePaid) || 0;
+
+        const actualRemaining = Math.max(
+          remainingAllVehicles +
+            choiceAmount -
+            onlinePayment -
+            totalPartyPayments -
+            manualAdvance,
+          0,
+        );
+        total += actualRemaining;
       }
     });
     return total;
   };
 
-  // ✅ FIXED: Directly use remainingBalance from records
+  // ✅ FIXED: Calculate pending using same formula as PartyLedgerBlock
   const calculatePendingCount = () => {
     let pending = 0;
     customer.forEach((item) => {
       if (item.type === "individual") {
         if ((Number(item.remainingBalance) || 0) > 0) pending++;
       } else if (item.type === "party") {
-        if ((Number(item.remainingBalance) || 0) > 0) pending++;
+        // ✅ Use same formula as PartyLedgerBlock for accurate calculation
+        const vehicles = item.vehicles || [];
+        const remainingAllVehicles = vehicles.reduce(
+          (sum, v) => sum + (Number(v?.vehicleRemaining) || 0),
+          0,
+        );
+        const choiceAmount = Number(item.choice) || 0;
+        const onlinePayment = item.onlinePaymentEnabled
+          ? Number(item.onlinePayment || 0)
+          : 0;
+        const partyPayments = item.partyPayments || [];
+        const totalPartyPayments = partyPayments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0,
+        );
+        const manualAdvance = Number(item.advancePaid) || 0;
+
+        const actualRemaining = Math.max(
+          remainingAllVehicles +
+            choiceAmount -
+            onlinePayment -
+            totalPartyPayments -
+            manualAdvance,
+          0,
+        );
+        if (actualRemaining > 0) pending++;
       }
     });
     return pending;
