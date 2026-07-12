@@ -620,7 +620,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     formData.onlinePaymentEnabled,
     formData.onlinePayment,
     formData.advancePaid,
-    formData.partyPayments, // ✅ ADDED
+    formData.partyPayments,
     commissionAmount,
     isPartyOrDebit,
     selectedBalance,
@@ -1233,7 +1233,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
               </div>
             )}
 
-            {/* 🔥 Manual input for Party Name (hidden when dropdown selected) */}
+            {/* 🔥 Manual input for Party Name */}
             <div className="relative">
               <input
                 type="text"
@@ -1244,8 +1244,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 onChange={handlePartyNameChange}
                 disabled={!!selectedDebtor && isDebitView}
               />
-              {/* 🔥 TICK/CROSS ICON — Click to open popup */}
-              {isPartyOrDebit && formData.partyName?.trim() && (
+              {/* 🔥 TICK/CROSS ICON — SIRF DEBIT VIEW MEIN */}
+              {isDebitView && formData.partyName?.trim() && (
                 <button
                   type="button"
                   onClick={openPartyDetailsPopup}
