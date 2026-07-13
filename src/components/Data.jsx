@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const rowVariants = {
@@ -529,7 +529,12 @@ const printVehicleReceipt = (vehicle, partyData) => {
 };
 
 // ─── PARTY LEDGER BLOCK ──────────
-const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
+const PartyLedgerBlock = ({
+  item,
+  onEdit,
+  onDelete,
+  isHighlighted = false,
+}) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
 
@@ -585,7 +590,11 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
       initial="hidden"
       animate="visible"
       transition={{ duration: 0.3 }}
-      className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg"
+      className={`w-full rounded-xl border overflow-hidden shadow-lg ${
+        isHighlighted
+          ? "border-green-400 bg-gray-800 ring-2 ring-green-400/50"
+          : "border-gray-700 bg-gray-800"
+      }`}
     >
       <div
         className={`bg-gradient-to-r ${headerGradient} px-4 py-2.5 flex items-center justify-between flex-wrap gap-2`}
@@ -596,6 +605,12 @@ const PartyLedgerBlock = ({ item, onEdit, onDelete }) => {
           {(item?.ntn || item?.phone) && (
             <span className="text-orange-200 font-normal text-xs ml-2">
               ({item.ntn || item.phone})
+            </span>
+          )}
+          {/* ⭐ Highlight Badge */}
+          {isHighlighted && (
+            <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-[8px] font-bold rounded-full animate-pulse">
+              🆕 JUST SAVED
             </span>
           )}
           {/* 🔥 Status Badge */}
@@ -911,6 +926,7 @@ const Data = ({
   onDelete,
   onUpdateCustomer,
   showDebitOnly: externalShowDebitOnly = false,
+  highlightId = null, // ⭐ NEW: ID of entry to highlight
 }) => {
   const [paymentModal, setPaymentModal] = useState({
     open: false,
@@ -923,12 +939,25 @@ const Data = ({
 
   const [internalShowDebitOnly, setInternalShowDebitOnly] = useState(false);
   const showDebitOnly = externalShowDebitOnly || internalShowDebitOnly;
+  const highlightRef = useRef(null); // ⭐ NEW: Ref for scrolling to highlighted entry
 
   useEffect(() => {
     if (externalShowDebitOnly && activeTab === "party") {
       setInternalShowDebitOnly(true);
     }
   }, [externalShowDebitOnly, activeTab]);
+
+  // ⭐ NEW: Scroll to highlighted entry when it changes
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  }, [highlightId, activeTab, showDebitOnly]);
 
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
@@ -991,14 +1020,19 @@ const Data = ({
       return matchesSearch;
     });
 
+    // ⭐ NEW: Sort highlighted entry to top, then by date
     filtered.sort((a, b) => {
+      if (highlightId) {
+        if (a.id === highlightId) return -1;
+        if (b.id === highlightId) return 1;
+      }
       const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
       const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
       return dateB - dateA;
     });
 
     return filtered;
-  }, [customerData, searchTerm, activeTab, showDebitOnly]);
+  }, [customerData, searchTerm, activeTab, showDebitOnly, highlightId]);
 
   const handlePaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
@@ -1288,17 +1322,15 @@ const Data = ({
                             </span>
                           )}
                         </td>
-                        {/* ✅ Commission Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.commissionAmount > 0
-                            ? `Commission: Rs.${Number(item.commissionAmount).toLocaleString()}`
-                            : "Commission: -"}
+                            ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
+                            : "-"}
                         </td>
-                        {/* ✅ Choice Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.choice !== undefined && item.choice !== null
-                            ? `Choice: Rs.${item.choice}`
-                            : "Choice: —"}
+                            ? `Rs.${item.choice}`
+                            : "—"}
                         </td>
                         <td className="p-2 md:p-4 block md:table-cell">
                           <div className="flex flex-col gap-1">
@@ -1442,12 +1474,17 @@ const Data = ({
               </div>
             ) : (
               filteredData.map((item) => (
-                <PartyLedgerBlock
+                <div
                   key={item.id}
-                  item={item}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
+                  ref={item.id === highlightId ? highlightRef : null}
+                >
+                  <PartyLedgerBlock
+                    item={item}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    isHighlighted={item.id === highlightId}
+                  />
+                </div>
               ))
             )}
           </div>

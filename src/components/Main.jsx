@@ -82,7 +82,6 @@ const Main = ({ customer, setCustomer, user }) => {
         if (clean.attachment?.file) delete clean.attachment.file;
         return clean;
       });
-      // ✅ FIX: Preserve advancePaid, totalAmount, remainingBalance on update
       updateData.advancePaid = Number(updatedRecord.advancePaid) || 0;
       updateData.totalAmount = Number(updatedRecord.totalAmount) || 0;
       updateData.remainingBalance = Number(updatedRecord.remainingBalance) || 0;
@@ -151,7 +150,6 @@ const Main = ({ customer, setCustomer, user }) => {
           vehicleRemaining:
             (Number(v.vehicleTotal) || 0) - (Number(v.vehicleAdvance) || 0),
         })),
-        // ✅ FIX: Preserve advancePaid, totalAmount, remainingBalance from form
         advancePaid: Number(newCustomer.advancePaid) || 0,
         totalAmount: Number(newCustomer.totalAmount) || 0,
         remainingBalance: Number(newCustomer.remainingBalance) || 0,
@@ -227,6 +225,11 @@ const Main = ({ customer, setCustomer, user }) => {
         setDataActiveTab("party");
       } else {
         setMainTab("ledger");
+        if (editingData.type === "individual") {
+          setDataActiveTab("individual");
+        } else if (editingData.type === "party") {
+          setDataActiveTab("party");
+        }
       }
 
       const updateData = { ...editingData };
@@ -287,12 +290,26 @@ const Main = ({ customer, setCustomer, user }) => {
     const newCustomerWithId = { ...customerWithTime, id: tempId };
     setCustomer((prev) => [newCustomerWithId, ...prev]);
 
-    if (isDebitEntry) {
-      setMainTab("ledger");
+    // ✅ Clear search so new entry shows
+    setSearchTerm("");
+
+    // ✅ Switch to correct tab based on entry type
+    if (sanitizedCustomer.type === "party") {
       setDataActiveTab("party");
+    } else if (sanitizedCustomer.type === "individual") {
+      setDataActiveTab("individual");
+    }
+
+    // ✅ Open ledger tab
+    setMainTab("ledger");
+
+    // ✅ NEW: Scroll to top so new entry is visible
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 100);
+
+    if (isDebitEntry) {
       setShowDebitOnly(true);
-    } else {
-      setMainTab("ledger");
     }
 
     try {
