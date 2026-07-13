@@ -1288,15 +1288,17 @@ const Data = ({
                             </span>
                           )}
                         </td>
+                        {/* ✅ Commission Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.commissionAmount > 0
-                            ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
-                            : "-"}
+                            ? `Commission: Rs.${Number(item.commissionAmount).toLocaleString()}`
+                            : "Commission: -"}
                         </td>
+                        {/* ✅ Choice Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.choice !== undefined && item.choice !== null
-                            ? `Rs.${item.choice}`
-                            : "—"}
+                            ? `Choice: Rs.${item.choice}`
+                            : "Choice: —"}
                         </td>
                         <td className="p-2 md:p-4 block md:table-cell">
                           <div className="flex flex-col gap-1">
