@@ -34,8 +34,6 @@ const Debit = ({ user }) => {
     phone: "",
     cnic: "",
     date: "",
-    sender: "",
-    receiver: "",
     purpose: "",
     amount: "",
     remarks: "",
@@ -196,8 +194,6 @@ const Debit = ({ user }) => {
         phone: "",
         cnic: "",
         date: "",
-        sender: "",
-        receiver: "",
         purpose: "",
         amount: "",
         remarks: "",
@@ -236,8 +232,6 @@ const Debit = ({ user }) => {
       phone: "",
       cnic: "",
       date: "",
-      sender: "",
-      receiver: "",
       purpose: "",
       amount: "",
       remarks: "",
@@ -385,8 +379,6 @@ const Debit = ({ user }) => {
       phone: "",
       cnic: "",
       date: "",
-      sender: "",
-      receiver: "",
       purpose: "",
       amount: "",
       remarks: "",
@@ -403,7 +395,7 @@ const Debit = ({ user }) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Debit Ledger Report</title>
+        <title>Loan Ledger Report</title>
         <style>
           body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; background: #fff; }
           .receipt { max-width: 1000px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
@@ -423,11 +415,11 @@ const Debit = ({ user }) => {
       <body>
         <div class="receipt">
           <div class="header">
-            <h1>DEBIT LEDGER</h1>
+            <h1>LOAN LEDGER</h1>
             <p>Generated: ${new Date().toLocaleString()}</p>
           </div>
 
-          <div class="section-title">📋 All Debit Entries (${entries.length})</div>
+          <div class="section-title">📋 All Loan Entries (${entries.length})</div>
           <table>
             <thead>
               <tr>
@@ -494,7 +486,7 @@ const Debit = ({ user }) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Debit Entry Receipt</title>
+        <title>Loan Statement</title>
         <style>
           body { font-family: Arial, Helvetica, sans-serif; padding: 20px; font-size: 14px; line-height: 1.6; color: #222; background: #fff; }
           .receipt { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 25px; border-radius: 10px; background: #fff; }
@@ -519,7 +511,7 @@ const Debit = ({ user }) => {
       <body>
         <div class="receipt">
           <div class="header">
-            <h1>DEBIT STATEMENT</h1>
+            <h1>LOAN STATEMENT</h1>
             <p>${entry.partyName}</p>
             <p>Generated: ${new Date().toLocaleString()}</p>
           </div>
@@ -598,7 +590,7 @@ const Debit = ({ user }) => {
               : "bg-gray-700 text-gray-300 hover:bg-gray-600"
           }`}
         >
-          Debit
+          Loan
         </button>
         <button
           onClick={() => setMobileView("ledger")}
@@ -620,7 +612,7 @@ const Debit = ({ user }) => {
       >
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700">
           <h2 className="text-2xl font-bold text-white mb-5 pb-2 border-b-2 border-red-500">
-            Debit Entry
+            Loan Manager
           </h2>
           <form onSubmit={addEntry}>
             {/* ─── PARTY NAME ─── */}
@@ -761,43 +753,6 @@ const Debit = ({ user }) => {
                   />
                 </div>
 
-                {/* Receive From / Handover To */}
-                <div className="mb-3.5">
-                  <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
-                    Receive From / Handover To
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1">
-                      <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
-                        Receive From
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Received from"
-                        className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                        value={formData.sender}
-                        onChange={(e) =>
-                          setFormData({ ...formData, sender: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-[10px] text-gray-400 uppercase block mb-0.5">
-                        Handover To
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Handed over"
-                        className="w-full p-2.5 border border-gray-600 rounded-md text-sm bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50"
-                        value={formData.receiver}
-                        onChange={(e) =>
-                          setFormData({ ...formData, receiver: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Purpose */}
                 <div className="mb-3.5">
                   <label className="block mb-1.5 font-semibold text-gray-300 text-sm">
@@ -861,7 +816,7 @@ const Debit = ({ user }) => {
                   ? "Update"
                   : isExistingParty
                     ? "Add Loan"
-                    : "Add Debit"}
+                    : "Add Loan"}
               </button>
               <button
                 type="button"
@@ -884,7 +839,7 @@ const Debit = ({ user }) => {
         <div className="bg-gray-800 p-5 rounded-xl shadow-md border border-gray-700 flex-1 flex flex-col overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-white">Debit Ledger</h2>
+              <h2 className="text-2xl font-bold text-white">Loan Ledger</h2>
               <button
                 onClick={handlePrintAll}
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg flex items-center gap-1 transition"
@@ -927,7 +882,7 @@ const Debit = ({ user }) => {
               </div>
             ) : filteredEntries.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-lg">
-                No debit entries found.
+                No loan entries found.
               </div>
             ) : (
               filteredEntries.map((entry) => (
@@ -967,29 +922,6 @@ const Debit = ({ user }) => {
                         placeholder="CNIC"
                         className="p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
                       />
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="text"
-                          value={editData.sender || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, sender: e.target.value })
-                          }
-                          placeholder="Receive From"
-                          className="flex-1 p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
-                        />
-                        <input
-                          type="text"
-                          value={editData.receiver || ""}
-                          onChange={(e) =>
-                            setEditData({
-                              ...editData,
-                              receiver: e.target.value,
-                            })
-                          }
-                          placeholder="Handover To"
-                          className="flex-1 p-2 border border-gray-600 rounded text-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
-                        />
-                      </div>
                       <input
                         type="text"
                         value={editData.purpose || ""}
@@ -1043,13 +975,6 @@ const Debit = ({ user }) => {
                           <div className="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
                             {entry.phone && <span>📞 {entry.phone}</span>}
                             {entry.cnic && <span>🪪 {entry.cnic}</span>}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
-                            {entry.sender && <span>From: {entry.sender}</span>}
-                            {entry.sender && entry.receiver && " | "}
-                            {entry.receiver && (
-                              <span>To: {entry.receiver}</span>
-                            )}
                           </div>
                         </div>
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-900/60 text-red-300 border border-red-700">

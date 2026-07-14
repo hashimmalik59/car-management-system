@@ -474,10 +474,10 @@ const Main = ({ customer, setCustomer, user }) => {
     },
     {
       key: "debit",
-      label: "Debtor",
+      label: "Loan Manager",
       icon: "💳",
       color: "red",
-      desc: "Debtor entries",
+      desc: "Loan entries",
     },
   ];
 
