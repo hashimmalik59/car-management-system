@@ -158,6 +158,7 @@ const printIndividualReceipt = (item) => {
         .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
         .amount { font-size: 16px; font-weight: bold; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+        .remark-text { font-size: 10px; color: #888; font-style: italic; display: block; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -195,7 +196,13 @@ const printIndividualReceipt = (item) => {
         ${item.payments
           .map(
             (p, i) => `
-        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        <div class="info-row">
+          <span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span>
+          <span class="value" style="color:#27ae60">
+            +Rs. ${Number(p.amount).toLocaleString()}
+            ${p.remark ? `<span class="remark-text">📝 ${p.remark}</span>` : ""}
+          </span>
+        </div>
         `,
           )
           .join("")}
@@ -943,7 +950,7 @@ const Data = ({
     amount: "",
     date: new Date().toLocaleDateString("en-CA"),
     method: "Cash",
-    note: "",
+    remark: "", // ✅ NEW: Remark field
   });
 
   // ✅ NEW: Party Payment Modal state
@@ -1072,6 +1079,7 @@ const Data = ({
     const newPayment = {
       amount,
       date: paymentModal.date,
+      remark: paymentModal.remark || "", // ✅ NEW: Save remark
     };
 
     let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
@@ -1091,6 +1099,7 @@ const Data = ({
             date: item.createdAt
               ? new Date(item.createdAt).toISOString().split("T")[0]
               : new Date().toISOString().split("T")[0],
+            remark: "Advance payment",
           },
         ];
       }
@@ -1122,7 +1131,7 @@ const Data = ({
       amount: "",
       date: new Date().toLocaleDateString("en-CA"),
       method: "Cash",
-      note: "",
+      remark: "",
     });
   };
 
@@ -1468,23 +1477,29 @@ const Data = ({
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {item.payments.map((p, pi) => (
-                                    <div
-                                      key={pi}
-                                      className="flex justify-between text-[10px]"
-                                    >
-                                      <span className="text-gray-400">
-                                        {new Date(p.date).toLocaleDateString(
-                                          "en-GB",
-                                          {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                          },
-                                        )}
-                                      </span>
-                                      <span className="text-green-400 font-mono">
-                                        +Rs. {Number(p.amount).toLocaleString()}
-                                      </span>
+                                    <div key={pi} className="flex flex-col">
+                                      <div className="flex justify-between text-[10px]">
+                                        <span className="text-gray-400">
+                                          {new Date(p.date).toLocaleDateString(
+                                            "en-GB",
+                                            {
+                                              day: "2-digit",
+                                              month: "short",
+                                              year: "numeric",
+                                            },
+                                          )}
+                                        </span>
+                                        <span className="text-green-400 font-mono">
+                                          +Rs.{" "}
+                                          {Number(p.amount).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      {/* ✅ NEW: Show remark if exists */}
+                                      {p.remark && (
+                                        <div className="text-[9px] text-gray-400 italic mt-0.5">
+                                          📝 {p.remark}
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1537,7 +1552,7 @@ const Data = ({
                                       "en-CA",
                                     ),
                                     method: "Cash",
-                                    note: "",
+                                    remark: "",
                                   })
                                 }
                                 className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
@@ -1619,7 +1634,7 @@ const Data = ({
                 amount: "",
                 date: new Date().toLocaleDateString("en-CA"),
                 method: "Cash",
-                note: "",
+                remark: "",
               })
             }
           >
@@ -1725,6 +1740,28 @@ const Data = ({
                     }
                   />
                 </div>
+
+                {/* ✅ NEW: Remark field for Individual */}
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Remark{" "}
+                    <span className="text-gray-500 font-normal">
+                      (Optional)
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500 placeholder:text-gray-500"
+                    placeholder="Any remarks..."
+                    value={paymentModal.remark}
+                    onChange={(e) =>
+                      setPaymentModal((prev) => ({
+                        ...prev,
+                        remark: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 mt-5">
@@ -1751,7 +1788,7 @@ const Data = ({
                       amount: "",
                       date: new Date().toLocaleDateString("en-CA"),
                       method: "Cash",
-                      note: "",
+                      remark: "",
                     })
                   }
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"
