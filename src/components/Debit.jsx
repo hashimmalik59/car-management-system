@@ -216,6 +216,7 @@ const Debit = ({ user }) => {
 
     const finalEntry = {
       ...newEntry,
+      type: "debit",
       history: [initialHistory],
       status: "active",
     };

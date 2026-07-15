@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const rowVariants = {
@@ -158,7 +158,6 @@ const printIndividualReceipt = (item) => {
         .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
         .amount { font-size: 16px; font-weight: bold; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
-        .remark-text { font-size: 10px; color: #888; font-style: italic; display: block; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -196,13 +195,7 @@ const printIndividualReceipt = (item) => {
         ${item.payments
           .map(
             (p, i) => `
-        <div class="info-row">
-          <span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span>
-          <span class="value" style="color:#27ae60">
-            +Rs. ${Number(p.amount).toLocaleString()}
-            ${p.remark ? `<span class="remark-text">📝 ${p.remark}</span>` : ""}
-          </span>
-        </div>
+        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
         `,
           )
           .join("")}
@@ -293,7 +286,6 @@ const printPartyReceipt = (item) => {
         .payment-history .ph-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
         .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
-        .vehicle-remarks { font-size: 11px; color: #555; font-style: italic; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -319,7 +311,6 @@ const printPartyReceipt = (item) => {
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
               <th class="text-right">Remaining</th>
-              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -342,7 +333,6 @@ const printPartyReceipt = (item) => {
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
-                    <td>${v.remarks || "—"}</td>
                   </tr>
                   `;
               })
@@ -354,7 +344,6 @@ const printPartyReceipt = (item) => {
               <td class="text-right"><strong>${adjustedTotal.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedAdvance.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedRemaining.toLocaleString()}</strong></td>
-              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -540,8 +529,8 @@ const PartyLedgerBlock = ({
   item,
   onEdit,
   onDelete,
-  isHighlighted = false,
-  onPartyPayment, // ⭐ NEW: Payment handler
+  onDebitPayment,
+  onPartyPayment,
 }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -598,11 +587,7 @@ const PartyLedgerBlock = ({
       initial="hidden"
       animate="visible"
       transition={{ duration: 0.3 }}
-      className={`w-full rounded-xl border overflow-hidden shadow-lg ${
-        isHighlighted
-          ? "border-green-400 bg-gray-800 ring-2 ring-green-400/50"
-          : "border-gray-700 bg-gray-800"
-      }`}
+      className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg"
     >
       <div
         className={`bg-gradient-to-r ${headerGradient} px-4 py-2.5 flex items-center justify-between flex-wrap gap-2`}
@@ -613,12 +598,6 @@ const PartyLedgerBlock = ({
           {(item?.ntn || item?.phone) && (
             <span className="text-orange-200 font-normal text-xs ml-2">
               ({item.ntn || item.phone})
-            </span>
-          )}
-          {/* ⭐ Highlight Badge */}
-          {isHighlighted && (
-            <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-[8px] font-bold rounded-full animate-pulse">
-              🆕 JUST SAVED
             </span>
           )}
           {/* 🔥 Status Badge */}
@@ -641,7 +620,7 @@ const PartyLedgerBlock = ({
             🖨️ Print All
           </button>
 
-          {/* ✅ NEW: Party Pay Button — ONLY FOR PARTY (not debit) */}
+          {/* 🔥 Pay button for Party (not Debit) */}
           {!isDebit && adjustedRemaining > 0 && (
             <button
               onClick={() => onPartyPayment(item)}
@@ -651,6 +630,15 @@ const PartyLedgerBlock = ({
             </button>
           )}
 
+          {/* 🔥 Pay button — only for Debit entries with balance > 0 */}
+          {isDebit && Number(item?.amount) > 0 && (
+            <button
+              onClick={() => onDebitPayment(item)}
+              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium shadow"
+            >
+              💰 Pay
+            </button>
+          )}
           <button
             onClick={() => onEdit(item.id)}
             className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-medium shadow"
@@ -941,8 +929,8 @@ const Data = ({
   onEdit,
   onDelete,
   onUpdateCustomer,
+  onDebitPayment,
   showDebitOnly: externalShowDebitOnly = false,
-  highlightId = null,
 }) => {
   const [paymentModal, setPaymentModal] = useState({
     open: false,
@@ -950,39 +938,26 @@ const Data = ({
     amount: "",
     date: new Date().toLocaleDateString("en-CA"),
     method: "Cash",
-    remark: "", // ✅ NEW: Remark field
-  });
-
-  // ✅ NEW: Party Payment Modal state
-  const [partyPaymentModal, setPartyPaymentModal] = useState({
-    open: false,
-    item: null,
-    amount: "",
-    date: new Date().toLocaleDateString("en-CA"),
-    remark: "",
+    note: "",
+    isPartyPayment: false,
   });
 
   const [internalShowDebitOnly, setInternalShowDebitOnly] = useState(false);
-  const showDebitOnly = externalShowDebitOnly || internalShowDebitOnly;
-  const highlightRef = useRef(null);
+  // ⭐ FIX: Only show debit when user explicitly clicks Debit button (internal)
+  // Ignore externalShowDebitOnly when user manually switches to Party tab
+  const showDebitOnly = internalShowDebitOnly;
 
   useEffect(() => {
-    if (externalShowDebitOnly && activeTab === "party") {
+    // ⭐ Auto-enable debit view only when coming from form debit save
+    // AND user hasn't manually switched tabs yet
+    if (
+      externalShowDebitOnly &&
+      activeTab === "party" &&
+      !internalShowDebitOnly
+    ) {
       setInternalShowDebitOnly(true);
     }
   }, [externalShowDebitOnly, activeTab]);
-
-  // ⭐ Scroll to highlighted entry when it changes
-  useEffect(() => {
-    if (highlightId && highlightRef.current) {
-      setTimeout(() => {
-        highlightRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 100);
-    }
-  }, [highlightId, activeTab, showDebitOnly]);
 
   const filteredData = useMemo(() => {
     const search = (searchTerm || "").toLowerCase();
@@ -1045,21 +1020,15 @@ const Data = ({
       return matchesSearch;
     });
 
-    // Sort highlighted entry to top, then by date
     filtered.sort((a, b) => {
-      if (highlightId) {
-        if (a.id === highlightId) return -1;
-        if (b.id === highlightId) return 1;
-      }
       const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
       const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
       return dateB - dateA;
     });
 
     return filtered;
-  }, [customerData, searchTerm, activeTab, showDebitOnly, highlightId]);
+  }, [customerData, searchTerm, activeTab, showDebitOnly]);
 
-  // ─── INDIVIDUAL PAYMENT ──────────────────────────────────
   const handlePaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
     if (!amount || amount <= 0) {
@@ -1079,7 +1048,6 @@ const Data = ({
     const newPayment = {
       amount,
       date: paymentModal.date,
-      remark: paymentModal.remark || "", // ✅ NEW: Save remark
     };
 
     let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
@@ -1099,7 +1067,6 @@ const Data = ({
             date: item.createdAt
               ? new Date(item.createdAt).toISOString().split("T")[0]
               : new Date().toISOString().split("T")[0],
-            remark: "Advance payment",
           },
         ];
       }
@@ -1131,21 +1098,20 @@ const Data = ({
       amount: "",
       date: new Date().toLocaleDateString("en-CA"),
       method: "Cash",
-      remark: "",
+      note: "",
+      isPartyPayment: false,
     });
   };
 
-  // ✅ NEW: Party Payment Submit
+  // ✅ FIXED: Handle Party Payment — WITH REMARKS
   const handlePartyPaymentSubmit = () => {
-    const amount = Number(partyPaymentModal.amount);
+    const amount = Number(paymentModal.amount);
     if (!amount || amount <= 0) {
       alert("Please enter a valid amount!");
       return;
     }
+    const item = paymentModal.item;
 
-    const item = partyPaymentModal.item;
-
-    // Calculate current remaining balance (same as PartyLedgerBlock)
     const vehicles = item?.vehicles || [];
     const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
     const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
@@ -1160,33 +1126,7 @@ const Data = ({
     );
     const manualAdvance = Number(item?.advancePaid) || 0;
 
-    const currentRemaining = Math.max(
-      remainingAllVehicles +
-        choiceAmount -
-        onlinePayment -
-        totalExistingPayments -
-        manualAdvance,
-      0,
-    );
-
-    if (amount > currentRemaining) {
-      alert(
-        `Payment amount (Rs. ${amount.toLocaleString()}) cannot exceed remaining balance (Rs. ${currentRemaining.toLocaleString()})!`,
-      );
-      return;
-    }
-
-    const newPayment = {
-      amount: amount,
-      date: partyPaymentModal.date,
-      remarks: partyPaymentModal.remark || "",
-    };
-
-    const updatedPayments = [...existingPayments, newPayment];
-    const newTotalPayments = updatedPayments.reduce(
-      (sum, p) => sum + Number(p.amount),
-      0,
-    );
+    const newTotalPayments = totalExistingPayments + amount;
     const newRemaining = Math.max(
       remainingAllVehicles +
         choiceAmount -
@@ -1195,28 +1135,102 @@ const Data = ({
         manualAdvance,
       0,
     );
+    const newAdvance = manualAdvance + newTotalPayments;
+
+    // ✅ NEW: Include remarks in payment object
+    const newPayment = {
+      amount,
+      date: paymentModal.date,
+      remarks: paymentModal.note || "",
+    };
 
     const updatedItem = {
       ...item,
-      partyPayments: updatedPayments,
+      partyPayments: [...existingPayments, newPayment],
       remainingBalance: newRemaining,
+      advancePaid: newAdvance,
+      totalAmount: Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0),
     };
 
     if (onUpdateCustomer) {
       onUpdateCustomer(updatedItem);
       alert(
-        `✅ Payment recorded!\n\nAmount: Rs. ${amount.toLocaleString()}\nDate: ${partyPaymentModal.date}\nRemaining: Rs. ${newRemaining.toLocaleString()}`,
+        `✅ Payment recorded!
+
+📅 Date: ${newPayment.date}
+💰 Amount: Rs. ${amount.toLocaleString()}
+📊 Remaining: Rs. ${newRemaining.toLocaleString()}`,
       );
     } else {
       alert("Payment recorded! (onUpdateCustomer prop not provided)");
     }
 
-    setPartyPaymentModal({
+    setPaymentModal({
       open: false,
       item: null,
       amount: "",
       date: new Date().toLocaleDateString("en-CA"),
-      remark: "",
+      method: "Cash",
+      note: "",
+      isPartyPayment: false,
+    });
+  };
+
+  const handleDebitRepaymentSubmit = () => {
+    const amount = Number(paymentModal.amount);
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+    const item = paymentModal.item;
+    const currentBalance = Number(item.amount) || 0;
+
+    if (amount > currentBalance) {
+      alert(
+        `Repayment amount (Rs. ${amount.toLocaleString()}) cannot exceed current balance (Rs. ${currentBalance.toLocaleString()})!`,
+      );
+      return;
+    }
+
+    const newBalance = currentBalance - amount;
+
+    const historyEntry = {
+      id: `h_${Date.now()}`,
+      date: paymentModal.date,
+      type: "repay",
+      amount: amount,
+      balance: newBalance,
+      purpose: `Repayment (${paymentModal.method})`,
+      remarks: paymentModal.note || `Repaid via ${paymentModal.method}`,
+      balanceBefore: currentBalance,
+      balanceAfter: newBalance,
+    };
+
+    const updatedItem = {
+      ...item,
+      amount: newBalance,
+      history: [...(item.history || []), historyEntry],
+      updatedAt: new Date().toISOString(),
+      status: newBalance === 0 ? "settled" : "active",
+    };
+
+    if (onUpdateCustomer) {
+      onUpdateCustomer(updatedItem);
+      alert(
+        `✅ Repayment recorded!\n\n📅 Date: ${historyEntry.date}\n💰 Paid: Rs. ${amount.toLocaleString()}\n📊 New Balance: Rs. ${newBalance.toLocaleString()}\n💳 Method: ${paymentModal.method}`,
+      );
+    } else {
+      alert("Repayment recorded! (onUpdateCustomer prop not provided)");
+    }
+
+    setPaymentModal({
+      open: false,
+      item: null,
+      amount: "",
+      date: new Date().toLocaleDateString("en-CA"),
+      method: "Cash",
+      note: "",
+      isPartyPayment: false,
     });
   };
 
@@ -1282,6 +1296,7 @@ const Data = ({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => {
+                // ✅ FIX: Force Party tab to show Party, not Debit
                 setActiveTab("party");
                 setInternalShowDebitOnly(false);
               }}
@@ -1477,29 +1492,23 @@ const Data = ({
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {item.payments.map((p, pi) => (
-                                    <div key={pi} className="flex flex-col">
-                                      <div className="flex justify-between text-[10px]">
-                                        <span className="text-gray-400">
-                                          {new Date(p.date).toLocaleDateString(
-                                            "en-GB",
-                                            {
-                                              day: "2-digit",
-                                              month: "short",
-                                              year: "numeric",
-                                            },
-                                          )}
-                                        </span>
-                                        <span className="text-green-400 font-mono">
-                                          +Rs.{" "}
-                                          {Number(p.amount).toLocaleString()}
-                                        </span>
-                                      </div>
-                                      {/* ✅ NEW: Show remark if exists */}
-                                      {p.remark && (
-                                        <div className="text-[9px] text-gray-400 italic mt-0.5">
-                                          📝 {p.remark}
-                                        </div>
-                                      )}
+                                    <div
+                                      key={pi}
+                                      className="flex justify-between text-[10px]"
+                                    >
+                                      <span className="text-gray-400">
+                                        {new Date(p.date).toLocaleDateString(
+                                          "en-GB",
+                                          {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                          },
+                                        )}
+                                      </span>
+                                      <span className="text-green-400 font-mono">
+                                        +Rs. {Number(p.amount).toLocaleString()}
+                                      </span>
                                     </div>
                                   ))}
                                 </div>
@@ -1552,7 +1561,8 @@ const Data = ({
                                       "en-CA",
                                     ),
                                     method: "Cash",
-                                    remark: "",
+                                    note: "",
+                                    isPartyPayment: false,
                                   })
                                 }
                                 className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow"
@@ -1593,33 +1603,41 @@ const Data = ({
               </div>
             ) : (
               filteredData.map((item) => (
-                <div
+                <PartyLedgerBlock
                   key={item.id}
-                  ref={item.id === highlightId ? highlightRef : null}
-                >
-                  <PartyLedgerBlock
-                    item={item}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    isHighlighted={item.id === highlightId}
-                    onPartyPayment={(partyItem) => {
-                      setPartyPaymentModal({
-                        open: true,
-                        item: partyItem,
-                        amount: "",
-                        date: new Date().toLocaleDateString("en-CA"),
-                        remark: "",
-                      });
-                    }}
-                  />
-                </div>
+                  item={item}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onDebitPayment={(item) => {
+                    setPaymentModal({
+                      open: true,
+                      item: item,
+                      amount: "",
+                      date: new Date().toLocaleDateString("en-CA"),
+                      method: "Cash",
+                      note: "",
+                      isPartyPayment: false,
+                    });
+                  }}
+                  onPartyPayment={(item) => {
+                    setPaymentModal({
+                      open: true,
+                      item: item,
+                      amount: "",
+                      date: new Date().toLocaleDateString("en-CA"),
+                      method: "Cash",
+                      note: "",
+                      isPartyPayment: true,
+                    });
+                  }}
+                />
               ))
             )}
           </div>
         )}
       </motion.section>
 
-      {/* ─── INDIVIDUAL PAYMENT MODAL ─── */}
+      {/* ─── PAYMENT MODAL ─── */}
       <AnimatePresence>
         {paymentModal.open && paymentModal.item && (
           <motion.div
@@ -1634,188 +1652,8 @@ const Data = ({
                 amount: "",
                 date: new Date().toLocaleDateString("en-CA"),
                 method: "Cash",
-                remark: "",
-              })
-            }
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
-            >
-              <h3 className="text-lg font-bold text-white mb-1">Add Payment</h3>
-              <p className="text-[10px] text-gray-400 mb-2">
-                {paymentModal.item.partyName}
-              </p>
-
-              <div className="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-700">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] text-gray-400 uppercase">
-                    Remaining Balance
-                  </span>
-                  <span className="text-sm font-bold text-orange-400">
-                    Rs.{" "}
-                    {(
-                      Number(paymentModal.item.remainingBalance) || 0
-                    ).toLocaleString()}
-                  </span>
-                </div>
-                {Number(paymentModal.amount) > 0 && (
-                  <>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] text-gray-400 uppercase">
-                        Payment Amount
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${Number(paymentModal.amount) > Number(paymentModal.item.remainingBalance) ? "text-red-500" : "text-emerald-400"}`}
-                      >
-                        -Rs. {Number(paymentModal.amount).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-700 pt-1 mt-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-gray-400 uppercase">
-                          New Balance
-                        </span>
-                        <span
-                          className={`text-sm font-bold ${Number(paymentModal.amount) > Number(paymentModal.item.remainingBalance) ? "text-red-500" : Math.max(Number(paymentModal.item.remainingBalance) - Number(paymentModal.amount), 0) === 0 ? "text-green-400" : "text-blue-400"}`}
-                        >
-                          Rs.{" "}
-                          {Number(paymentModal.amount) >
-                          Number(paymentModal.item.remainingBalance)
-                            ? "Overpay!"
-                            : Math.max(
-                                Number(paymentModal.item.remainingBalance) -
-                                  Number(paymentModal.amount),
-                                0,
-                              ).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    {Number(paymentModal.amount) >
-                      Number(paymentModal.item.remainingBalance) && (
-                      <div className="mt-2 text-[10px] text-red-400 bg-red-900/30 border border-red-700 rounded px-2 py-1">
-                        ⚠️ Amount exceeds balance!
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Amount (Rs.)
-                  </label>
-                  <input
-                    type="number"
-                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
-                    placeholder="Enter amount"
-                    value={paymentModal.amount}
-                    onChange={(e) =>
-                      setPaymentModal((prev) => ({
-                        ...prev,
-                        amount: e.target.value,
-                      }))
-                    }
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
-                    value={paymentModal.date}
-                    onChange={(e) =>
-                      setPaymentModal((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                {/* ✅ NEW: Remark field for Individual */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Remark{" "}
-                    <span className="text-gray-500 font-normal">
-                      (Optional)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500 placeholder:text-gray-500"
-                    placeholder="Any remarks..."
-                    value={paymentModal.remark}
-                    onChange={(e) =>
-                      setPaymentModal((prev) => ({
-                        ...prev,
-                        remark: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-5">
-                <button
-                  onClick={handlePaymentSubmit}
-                  disabled={
-                    Number(paymentModal.amount) >
-                    Number(paymentModal.item.remainingBalance)
-                  }
-                  className={`flex-1 font-bold py-2.5 rounded-xl text-sm transition-all ${
-                    Number(paymentModal.amount) >
-                    Number(paymentModal.item.remainingBalance)
-                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                  }`}
-                >
-                  Save Payment
-                </button>
-                <button
-                  onClick={() =>
-                    setPaymentModal({
-                      open: false,
-                      item: null,
-                      amount: "",
-                      date: new Date().toLocaleDateString("en-CA"),
-                      method: "Cash",
-                      remark: "",
-                    })
-                  }
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ✅ NEW: PARTY PAYMENT MODAL */}
-      <AnimatePresence>
-        {partyPaymentModal.open && partyPaymentModal.item && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() =>
-              setPartyPaymentModal({
-                open: false,
-                item: null,
-                amount: "",
-                date: new Date().toLocaleDateString("en-CA"),
-                remark: "",
+                note: "",
+                isPartyPayment: false,
               })
             }
           >
@@ -1827,55 +1665,71 @@ const Data = ({
               className="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
             >
               <h3 className="text-lg font-bold text-white mb-1">
-                💰 Online Payment
+                {paymentModal.item.type === "debit" &&
+                !paymentModal.isPartyPayment
+                  ? "💳 Repay Debit"
+                  : paymentModal.isPartyPayment
+                    ? "💰 Add Payment"
+                    : "Add Payment"}
               </h3>
               <p className="text-[10px] text-gray-400 mb-2">
-                {partyPaymentModal.item.partyName}
+                {paymentModal.item.partyName}
               </p>
 
-              {/* Calculate current remaining balance */}
               {(() => {
-                const item = partyPaymentModal.item;
-                const vehicles = item?.vehicles || [];
-                const remainingAllVehicles = sumVehicleField(
-                  vehicles,
-                  "vehicleRemaining",
-                );
-                const choiceAmount = Number(item?.choice) || 0;
-                const onlinePayment = item?.onlinePaymentEnabled
-                  ? Number(item?.onlinePayment || 0)
-                  : 0;
-                const existingPayments = item?.partyPayments || [];
-                const totalExistingPayments = existingPayments.reduce(
-                  (sum, p) => sum + Number(p.amount),
-                  0,
-                );
-                const manualAdvance = Number(item?.advancePaid) || 0;
+                let currentBalance = 0;
+                if (paymentModal.isPartyPayment) {
+                  const vehicles = paymentModal.item?.vehicles || [];
+                  const totalAllVehicles = sumVehicleField(
+                    vehicles,
+                    "vehicleTotal",
+                  );
+                  const choiceAmount = Number(paymentModal.item?.choice) || 0;
+                  const onlinePayment = paymentModal.item?.onlinePaymentEnabled
+                    ? Number(paymentModal.item?.onlinePayment || 0)
+                    : 0;
+                  const existingPayments =
+                    paymentModal.item?.partyPayments || [];
+                  const totalExistingPayments = existingPayments.reduce(
+                    (sum, p) => sum + Number(p.amount),
+                    0,
+                  );
+                  const manualAdvance =
+                    Number(paymentModal.item?.advancePaid) || 0;
 
-                const currentRemaining = Math.max(
-                  remainingAllVehicles +
-                    choiceAmount -
-                    onlinePayment -
-                    totalExistingPayments -
-                    manualAdvance,
-                  0,
-                );
+                  const grandTotal = Math.max(
+                    totalAllVehicles + choiceAmount - onlinePayment,
+                    0,
+                  );
+                  currentBalance = Math.max(
+                    grandTotal - manualAdvance - totalExistingPayments,
+                    0,
+                  );
+                } else if (paymentModal.item.type === "debit") {
+                  currentBalance = Number(paymentModal.item.amount) || 0;
+                } else {
+                  currentBalance =
+                    Number(paymentModal.item.remainingBalance) || 0;
+                }
 
-                const enteredAmount = Number(partyPaymentModal.amount) || 0;
-                const newBalance = Math.max(
-                  currentRemaining - enteredAmount,
-                  0,
-                );
-                const isOverPay = enteredAmount > currentRemaining;
+                const enteredAmount = Number(paymentModal.amount) || 0;
+                const newBalance = Math.max(currentBalance - enteredAmount, 0);
+                const isOverPay = enteredAmount > currentBalance;
 
                 return (
                   <div className="bg-gray-900 rounded-lg p-3 mb-4 border border-gray-700">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-[10px] text-gray-400 uppercase">
-                        Remaining Balance
+                        {paymentModal.isPartyPayment
+                          ? "Remaining Balance"
+                          : paymentModal.item.type === "debit"
+                            ? "Current Balance"
+                            : "Remaining"}
                       </span>
-                      <span className="text-sm font-bold text-orange-400">
-                        Rs. {currentRemaining.toLocaleString()}
+                      <span
+                        className={`text-sm font-bold ${paymentModal.isPartyPayment ? "text-orange-400" : paymentModal.item.type === "debit" ? "text-red-400" : "text-orange-400"}`}
+                      >
+                        Rs. {currentBalance.toLocaleString()}
                       </span>
                     </div>
                     {enteredAmount > 0 && (
@@ -1925,9 +1779,9 @@ const Data = ({
                     type="number"
                     className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
                     placeholder="Enter amount"
-                    value={partyPaymentModal.amount}
+                    value={paymentModal.amount}
                     onChange={(e) =>
-                      setPartyPaymentModal((prev) => ({
+                      setPaymentModal((prev) => ({
                         ...prev,
                         amount: e.target.value,
                       }))
@@ -1943,9 +1797,9 @@ const Data = ({
                   <input
                     type="date"
                     className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
-                    value={partyPaymentModal.date}
+                    value={paymentModal.date}
                     onChange={(e) =>
-                      setPartyPaymentModal((prev) => ({
+                      setPaymentModal((prev) => ({
                         ...prev,
                         date: e.target.value,
                       }))
@@ -1953,103 +1807,178 @@ const Data = ({
                   />
                 </div>
 
-                {/* ✅ NEW: Remark field — Optional */}
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Remark{" "}
-                    <span className="text-gray-500 font-normal">
-                      (Optional)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500 placeholder:text-gray-500"
-                    placeholder="Any remarks..."
-                    value={partyPaymentModal.remark}
-                    onChange={(e) =>
-                      setPartyPaymentModal((prev) => ({
-                        ...prev,
-                        remark: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
+                {/* ✅ Note field for Party Payment */}
+                {paymentModal.isPartyPayment && (
+                  <div className="flex flex-col">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      Note (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                      placeholder="Any remarks..."
+                      value={paymentModal.note}
+                      onChange={(e) =>
+                        setPaymentModal((prev) => ({
+                          ...prev,
+                          note: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+
+                {paymentModal.item.type === "debit" &&
+                  !paymentModal.isPartyPayment && (
+                    <>
+                      <div className="flex flex-col">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Payment Method
+                        </label>
+                        <select
+                          className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                          value={paymentModal.method}
+                          onChange={(e) =>
+                            setPaymentModal((prev) => ({
+                              ...prev,
+                              method: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="Cash">💵 Cash</option>
+                          <option value="Bank">🏦 Bank Transfer</option>
+                          <option value="Online">💳 Online</option>
+                          <option value="Other">📱 Other</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Note (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                          placeholder="Any remarks..."
+                          value={paymentModal.note}
+                          onChange={(e) =>
+                            setPaymentModal((prev) => ({
+                              ...prev,
+                              note: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
               </div>
 
               <div className="flex gap-2 mt-5">
                 <button
-                  onClick={handlePartyPaymentSubmit}
+                  onClick={
+                    paymentModal.item.type === "debit" &&
+                    !paymentModal.isPartyPayment
+                      ? handleDebitRepaymentSubmit
+                      : paymentModal.isPartyPayment
+                        ? handlePartyPaymentSubmit
+                        : handlePaymentSubmit
+                  }
                   disabled={
-                    Number(partyPaymentModal.amount) >
+                    Number(paymentModal.amount) >
                     (() => {
-                      const item = partyPaymentModal.item;
-                      const vehicles = item?.vehicles || [];
-                      const remainingAllVehicles = sumVehicleField(
-                        vehicles,
-                        "vehicleRemaining",
-                      );
-                      const choiceAmount = Number(item?.choice) || 0;
-                      const onlinePayment = item?.onlinePaymentEnabled
-                        ? Number(item?.onlinePayment || 0)
-                        : 0;
-                      const existingPayments = item?.partyPayments || [];
-                      const totalExistingPayments = existingPayments.reduce(
-                        (sum, p) => sum + Number(p.amount),
-                        0,
-                      );
-                      const manualAdvance = Number(item?.advancePaid) || 0;
-                      return Math.max(
-                        remainingAllVehicles +
-                          choiceAmount -
-                          onlinePayment -
-                          totalExistingPayments -
-                          manualAdvance,
-                        0,
-                      );
+                      if (paymentModal.isPartyPayment) {
+                        const vehicles = paymentModal.item?.vehicles || [];
+                        const totalAllVehicles = sumVehicleField(
+                          vehicles,
+                          "vehicleTotal",
+                        );
+                        const choiceAmount =
+                          Number(paymentModal.item?.choice) || 0;
+                        const onlinePayment = paymentModal.item
+                          ?.onlinePaymentEnabled
+                          ? Number(paymentModal.item?.onlinePayment || 0)
+                          : 0;
+                        const existingPayments =
+                          paymentModal.item?.partyPayments || [];
+                        const totalExistingPayments = existingPayments.reduce(
+                          (sum, p) => sum + Number(p.amount),
+                          0,
+                        );
+                        const manualAdvance =
+                          Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(
+                          totalAllVehicles + choiceAmount - onlinePayment,
+                          0,
+                        );
+                        return Math.max(
+                          grandTotal - manualAdvance - totalExistingPayments,
+                          0,
+                        );
+                      } else if (paymentModal.item.type === "debit") {
+                        return Number(paymentModal.item.amount) || 0;
+                      } else {
+                        return Number(paymentModal.item.remainingBalance) || 0;
+                      }
                     })()
                   }
                   className={`flex-1 font-bold py-2.5 rounded-xl text-sm transition-all ${
-                    Number(partyPaymentModal.amount) >
+                    Number(paymentModal.amount) >
                     (() => {
-                      const item = partyPaymentModal.item;
-                      const vehicles = item?.vehicles || [];
-                      const remainingAllVehicles = sumVehicleField(
-                        vehicles,
-                        "vehicleRemaining",
-                      );
-                      const choiceAmount = Number(item?.choice) || 0;
-                      const onlinePayment = item?.onlinePaymentEnabled
-                        ? Number(item?.onlinePayment || 0)
-                        : 0;
-                      const existingPayments = item?.partyPayments || [];
-                      const totalExistingPayments = existingPayments.reduce(
-                        (sum, p) => sum + Number(p.amount),
-                        0,
-                      );
-                      const manualAdvance = Number(item?.advancePaid) || 0;
-                      return Math.max(
-                        remainingAllVehicles +
-                          choiceAmount -
-                          onlinePayment -
-                          totalExistingPayments -
-                          manualAdvance,
-                        0,
-                      );
+                      if (paymentModal.isPartyPayment) {
+                        const vehicles = paymentModal.item?.vehicles || [];
+                        const totalAllVehicles = sumVehicleField(
+                          vehicles,
+                          "vehicleTotal",
+                        );
+                        const choiceAmount =
+                          Number(paymentModal.item?.choice) || 0;
+                        const onlinePayment = paymentModal.item
+                          ?.onlinePaymentEnabled
+                          ? Number(paymentModal.item?.onlinePayment || 0)
+                          : 0;
+                        const existingPayments =
+                          paymentModal.item?.partyPayments || [];
+                        const totalExistingPayments = existingPayments.reduce(
+                          (sum, p) => sum + Number(p.amount),
+                          0,
+                        );
+                        const manualAdvance =
+                          Number(paymentModal.item?.advancePaid) || 0;
+                        const grandTotal = Math.max(
+                          totalAllVehicles + choiceAmount - onlinePayment,
+                          0,
+                        );
+                        return Math.max(
+                          grandTotal - manualAdvance - totalExistingPayments,
+                          0,
+                        );
+                      } else if (paymentModal.item.type === "debit") {
+                        return Number(paymentModal.item.amount) || 0;
+                      } else {
+                        return Number(paymentModal.item.remainingBalance) || 0;
+                      }
                     })()
                       ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                       : "bg-emerald-600 hover:bg-emerald-500 text-white"
                   }`}
                 >
-                  Pay Now
+                  {paymentModal.item.type === "debit" &&
+                  !paymentModal.isPartyPayment
+                    ? "Save Repayment"
+                    : paymentModal.isPartyPayment
+                      ? "Save Payment"
+                      : "Save Payment"}
                 </button>
                 <button
                   onClick={() =>
-                    setPartyPaymentModal({
+                    setPaymentModal({
                       open: false,
                       item: null,
                       amount: "",
                       date: new Date().toLocaleDateString("en-CA"),
-                      remark: "",
+                      method: "Cash",
+                      note: "",
+                      isPartyPayment: false,
                     })
                   }
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2.5 rounded-xl text-sm transition-all"

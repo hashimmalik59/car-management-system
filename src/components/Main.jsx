@@ -18,6 +18,17 @@ import {
   getDoc,
 } from "firebase/firestore";
 
+// ─── HELPER: Normalize Name ──────────────────────────────
+const normalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const Main = ({ customer, setCustomer, user }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dataActiveTab, setDataActiveTab] = useState("individual");
@@ -119,6 +130,7 @@ const Main = ({ customer, setCustomer, user }) => {
     }
   }
 
+  // ─── HANDLE CUSTOMER ──────────────────────────────────────
   async function handleCustomer(newCustomer) {
     const isDebitEntry =
       newCustomer.type === "debit" ||
@@ -127,6 +139,118 @@ const Main = ({ customer, setCustomer, user }) => {
         (editingCustomer.type === "debit" ||
           editingCustomer.isDebitView === true));
 
+    // 🔥 CHECK: If debit entry and party exists → UPDATE (NOT CREATE NEW)
+    if (isDebitEntry && !editingCustomer) {
+      // ✅ First, refresh data to get latest IDs
+      await fetchUserData();
+
+      const normalizedName = normalizeName(newCustomer.partyName);
+      const existingParty = customer.find(
+        (c) =>
+          (c.type === "party" || c.type === "debit") &&
+          normalizeName(c.partyName) === normalizedName,
+      );
+
+      if (existingParty) {
+        // ✅ CLEAN vehicles: Remove File objects from attachments
+        const cleanVehicles = (v) => {
+          const clean = { ...v };
+          if (clean.attachment?.file) {
+            delete clean.attachment.file;
+          }
+          return clean;
+        };
+
+        const updatedVehicles = [
+          ...(existingParty.vehicles || []).map(cleanVehicles),
+          ...(newCustomer.vehicles || []).map(cleanVehicles),
+        ];
+
+        const currentRemaining = Number(existingParty.remainingBalance || 0);
+        const deductionAmount = Number(newCustomer.totalAmount || 0);
+        const newRemaining = Math.max(currentRemaining - deductionAmount, 0);
+
+        const historyEntry = {
+          id: `h_${Date.now()}`,
+          type: "service_deduction",
+          amount: deductionAmount,
+          date: newCustomer.date || new Date().toISOString().split("T")[0],
+          vehicles: (newCustomer.vehicles || []).map(cleanVehicles),
+          purpose: "Service deduction against loan",
+          balanceBefore: currentRemaining,
+          balanceAfter: newRemaining,
+        };
+
+        const updatedEntry = {
+          ...existingParty,
+          vehicles: updatedVehicles,
+          totalAmount: (existingParty.totalAmount || 0) + deductionAmount,
+          remainingBalance: newRemaining,
+          history: [...(existingParty.history || []), historyEntry],
+          updatedAt: new Date().toISOString(),
+        };
+
+        try {
+          // Try to update by ID
+          const docRef = doc(db, "customers", existingParty.id);
+          await updateDoc(docRef, updatedEntry);
+
+          setCustomer((prev) =>
+            prev.map((c) => (c.id === existingParty.id ? updatedEntry : c)),
+          );
+
+          setMainTab("ledger");
+          setDataActiveTab("party");
+
+          return { success: true };
+        } catch (error) {
+          // 🔥 FALLBACK: If ID not found, find by name
+          if (error.code === "not-found") {
+            console.warn("Document not found by ID, searching by name...");
+            try {
+              const q = query(
+                collection(db, "customers"),
+                where("userId", "==", user.uid),
+                where("partyName", "==", existingParty.partyName),
+              );
+              const snapshot = await getDocs(q);
+
+              if (!snapshot.empty) {
+                const realDoc = snapshot.docs[0];
+                const docRef = doc(db, "customers", realDoc.id);
+                await updateDoc(docRef, updatedEntry);
+
+                // Update local state with correct ID
+                setCustomer((prev) =>
+                  prev.map((c) =>
+                    c.id === existingParty.id
+                      ? { ...updatedEntry, id: realDoc.id }
+                      : c,
+                  ),
+                );
+
+                setMainTab("ledger");
+                setDataActiveTab("party");
+
+                return { success: true };
+              } else {
+                throw new Error("No matching document found");
+              }
+            } catch (fallbackError) {
+              console.error("Fallback update failed:", fallbackError);
+              alert("Failed to update: " + fallbackError.message);
+              return { success: false, message: fallbackError.message };
+            }
+          } else {
+            console.error("Update error:", error);
+            alert("Failed to update: " + error.message);
+            return { success: false, message: error.message };
+          }
+        }
+      }
+    }
+
+    // ─── REST OF EXISTING CODE ──────────────────────────────
     let sanitizedCustomer = { ...newCustomer };
 
     if (newCustomer.type === "individual") {
@@ -322,7 +446,13 @@ const Main = ({ customer, setCustomer, user }) => {
           return clean;
         });
       }
-      const docRef = await addDoc(collection(db, "customers"), cloudData);
+
+      // ✅ PARALLEL: Dono operations ek saath
+      const [docRef] = await Promise.all([
+        addDoc(collection(db, "customers"), cloudData),
+        // Agar koi aur async operation hai toh yahan add karo
+      ]);
+
       setCustomer((prev) =>
         prev.map((c) => (c.id === tempId ? { ...c, id: docRef.id } : c)),
       );
@@ -541,7 +671,12 @@ const Main = ({ customer, setCustomer, user }) => {
                 transition={{ delay: 0.4 + index * 0.1 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setMainTab(tab.key)}
+                onClick={() => {
+                  if (tab.key !== "ledger") {
+                    setShowDebitOnly(false); // ⭐ Reset debit filter when leaving ledger
+                  }
+                  setMainTab(tab.key);
+                }}
                 className={`
                   w-full md:flex-1 
                   flex items-center justify-center gap-2 md:gap-2.5 
@@ -611,7 +746,13 @@ const Main = ({ customer, setCustomer, user }) => {
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 activeTab={dataActiveTab}
-                setActiveTab={setDataActiveTab}
+                setActiveTab={(tab) => {
+                  // ⭐ Reset showDebitOnly when user manually clicks Party tab
+                  if (tab === "party") {
+                    setShowDebitOnly(false);
+                  }
+                  setDataActiveTab(tab);
+                }}
                 onDelete={(id, item) => handleDelete(id, item)}
                 onEdit={handleEdit}
                 onUpdateCustomer={handleUpdateRecord}

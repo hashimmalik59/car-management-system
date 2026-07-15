@@ -1032,7 +1032,6 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
         // Update Firestore "debits" collection
         const debitDocRef = doc(db, "debits", existingDebit.id);
         await updateDoc(debitDocRef, updatedDebit);
-        console.log("✅ Debit ledger updated successfully!");
       } catch (error) {
         console.error("❌ Failed to update debit ledger:", error);
         alert("Debit ledger update failed! Please try again.");
