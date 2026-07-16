@@ -138,7 +138,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── INDIVIDUAL RECEIPT ──────────────────────────
+// ─── INDIVIDUAL RECEIPT ────────────────────────── (NO CHANGES)
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -158,6 +158,7 @@ const printIndividualReceipt = (item) => {
         .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
         .amount { font-size: 16px; font-weight: bold; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+        .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
       </style>
     </head>
     <body>
@@ -195,7 +196,10 @@ const printIndividualReceipt = (item) => {
         ${item.payments
           .map(
             (p, i) => `
-        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        <div class="info-row">
+          <span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span>
+          <span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}${p.remarks ? `<span class="payment-remark">📝 ${p.remarks}</span>` : ""}</span>
+        </div>
         `,
           )
           .join("")}
@@ -216,7 +220,7 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ──────
+// ─── PARTY RECEIPT ────── (✅ UPDATED: Payment Remarks Added)
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -286,6 +290,7 @@ const printPartyReceipt = (item) => {
         .payment-history .ph-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
         .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+        .vehicle-remarks { font-size: 11px; color: #555; font-style: italic; margin-top: 2px; }
       </style>
     </head>
     <body>
@@ -311,6 +316,7 @@ const printPartyReceipt = (item) => {
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
               <th class="text-right">Remaining</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -333,6 +339,7 @@ const printPartyReceipt = (item) => {
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
+                    <td>${v.remarks || "—"}</td>
                   </tr>
                   `;
               })
@@ -344,6 +351,7 @@ const printPartyReceipt = (item) => {
               <td class="text-right"><strong>${adjustedTotal.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedAdvance.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedRemaining.toLocaleString()}</strong></td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -368,7 +376,7 @@ const printPartyReceipt = (item) => {
           partyPayments.length > 0
             ? `
           <div class="payment-history">
-            <h3>💰 Payment History</h3>
+            <h3>💰 Party Payment History</h3>
             ${partyPayments
               .map(
                 (p) => `
@@ -401,7 +409,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE RECEIPT ──────
+// ─── VEHICLE RECEIPT ────── (NO CHANGES)
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -524,7 +532,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ──────────
+// ─── PARTY LEDGER BLOCK ────────── (NO CHANGES - Already has remarks)
 const PartyLedgerBlock = ({
   item,
   onEdit,
@@ -919,7 +927,7 @@ const PartyLedgerBlock = ({
   );
 };
 
-// ─── MAIN DATA COMPONENT ────────────────────────────────────────
+// ─── MAIN DATA COMPONENT ──────────────────────────────────────── (NO CHANGES to main component - already has all functionality)
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -943,13 +951,9 @@ const Data = ({
   });
 
   const [internalShowDebitOnly, setInternalShowDebitOnly] = useState(false);
-  // ⭐ FIX: Only show debit when user explicitly clicks Debit button (internal)
-  // Ignore externalShowDebitOnly when user manually switches to Party tab
   const showDebitOnly = internalShowDebitOnly;
 
   useEffect(() => {
-    // ⭐ Auto-enable debit view only when coming from form debit save
-    // AND user hasn't manually switched tabs yet
     if (
       externalShowDebitOnly &&
       activeTab === "party" &&
@@ -1048,6 +1052,7 @@ const Data = ({
     const newPayment = {
       amount,
       date: paymentModal.date,
+      remarks: paymentModal.note || "",
     };
 
     let prevPayments = Array.isArray(item.payments) ? [...item.payments] : [];
@@ -1067,6 +1072,7 @@ const Data = ({
             date: item.createdAt
               ? new Date(item.createdAt).toISOString().split("T")[0]
               : new Date().toISOString().split("T")[0],
+            remarks: "Advance Payment",
           },
         ];
       }
@@ -1103,7 +1109,6 @@ const Data = ({
     });
   };
 
-  // ✅ FIXED: Handle Party Payment — WITH REMARKS
   const handlePartyPaymentSubmit = () => {
     const amount = Number(paymentModal.amount);
     if (!amount || amount <= 0) {
@@ -1137,7 +1142,6 @@ const Data = ({
     );
     const newAdvance = manualAdvance + newTotalPayments;
 
-    // ✅ NEW: Include remarks in payment object
     const newPayment = {
       amount,
       date: paymentModal.date,
@@ -1296,7 +1300,6 @@ const Data = ({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                // ✅ FIX: Force Party tab to show Party, not Debit
                 setActiveTab("party");
                 setInternalShowDebitOnly(false);
               }}
@@ -1492,23 +1495,28 @@ const Data = ({
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {item.payments.map((p, pi) => (
-                                    <div
-                                      key={pi}
-                                      className="flex justify-between text-[10px]"
-                                    >
-                                      <span className="text-gray-400">
-                                        {new Date(p.date).toLocaleDateString(
-                                          "en-GB",
-                                          {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                          },
-                                        )}
-                                      </span>
-                                      <span className="text-green-400 font-mono">
-                                        +Rs. {Number(p.amount).toLocaleString()}
-                                      </span>
+                                    <div key={pi} className="flex flex-col">
+                                      <div className="flex justify-between text-[10px]">
+                                        <span className="text-gray-400">
+                                          {new Date(p.date).toLocaleDateString(
+                                            "en-GB",
+                                            {
+                                              day: "2-digit",
+                                              month: "short",
+                                              year: "numeric",
+                                            },
+                                          )}
+                                        </span>
+                                        <span className="text-green-400 font-mono">
+                                          +Rs.{" "}
+                                          {Number(p.amount).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      {p.remarks && (
+                                        <div className="text-[9px] text-gray-400 italic mt-0.5">
+                                          📝 {p.remarks}
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1807,15 +1815,15 @@ const Data = ({
                   />
                 </div>
 
-                {/* ✅ Note field for Party Payment */}
-                {paymentModal.isPartyPayment && (
+                {(paymentModal.isPartyPayment ||
+                  paymentModal.item.type === "individual") && (
                   <div className="flex flex-col">
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Note (Optional)
+                      Remark (Optional)
                     </label>
                     <input
                       type="text"
-                      className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500"
+                      className="rounded-lg p-2.5 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-emerald-500 placeholder:text-gray-500"
                       placeholder="Any remarks..."
                       value={paymentModal.note}
                       onChange={(e) =>

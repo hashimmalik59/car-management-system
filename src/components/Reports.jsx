@@ -121,6 +121,7 @@ const printIndividualReceipt = (item) => {
       .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
       .amount { font-size: 16px; font-weight: bold; }
       h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+      .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
     </style>
     </head>
     <body>
@@ -162,7 +163,10 @@ const printIndividualReceipt = (item) => {
         ${item.payments
           .map(
             (p) => `
-        <div class="info-row"><span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span><span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}</span></div>
+        <div class="info-row">
+          <span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span>
+          <span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}${p.remarks ? `<span class="payment-remark">📝 ${p.remarks}</span>` : ""}</span>
+        </div>
         `,
           )
           .join("")}
@@ -192,7 +196,7 @@ const getServicePrice = (servicePrices, serviceName) => {
   return Number(pObj || 0);
 };
 
-// ─── PARTY PRINT ────────────────────────────────────────── (Choice added)
+// ─── PARTY PRINT ────────────────────────────────────────── (✅ UPDATED: Payment Remarks Added)
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -205,6 +209,9 @@ const printPartyReceipt = (item) => {
   const onlinePaymentNotes = onlinePaymentEnabled
     ? item.onlinePaymentNotes || ""
     : "";
+
+  // ✅ Get party payments with remarks
+  const partyPayments = item.partyPayments || [];
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -226,6 +233,8 @@ const printPartyReceipt = (item) => {
       .text-right { text-align: right; }
       .footer { margin-top: 25px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #777; }
       h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+      .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
+      .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
     </style>
     </head>
     <body>
@@ -298,6 +307,25 @@ const printPartyReceipt = (item) => {
             : ""
         }
         ${
+          partyPayments.length > 0
+            ? `
+          <div style="margin-top:15px; border-top:1px solid #ccc; padding-top:10px;">
+            <h3>💰 Party Payment History</h3>
+            ${partyPayments
+              .map(
+                (p) => `
+              <div class="info-row">
+                <span class="label">${new Date(p.date).toLocaleDateString("en-GB")}:</span>
+                <span class="value" style="color:#27ae60">+Rs. ${Number(p.amount).toLocaleString()}${p.remarks ? `<span class="payment-remark">📝 ${p.remarks}</span>` : ""}</span>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+          `
+            : ""
+        }
+        ${
           item.remarks
             ? `<div class="info-row" style="margin-top:15px; border-top:1px solid #ccc; padding-top:10px;"><span class="label">Overall Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
             : ""
@@ -311,7 +339,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE PRINT ────────────────────────────────────────
+// ─── VEHICLE PRINT ──────────────────────────────────────── (NO CHANGES)
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -380,7 +408,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block ────────────────────────────────── (Choice added)
+// ─── Party Ledger Block ────────────────────────────────── (✅ UPDATED: Payment Remarks Added)
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -394,6 +422,9 @@ const PartyLedgerBlock = ({ item }) => {
   const onlinePaymentNotes = onlinePaymentEnabled
     ? item?.onlinePaymentNotes || ""
     : "";
+
+  // ✅ Get party payments with remarks
+  const partyPayments = item?.partyPayments || [];
 
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800 overflow-hidden shadow-lg">
@@ -607,6 +638,37 @@ const PartyLedgerBlock = ({ item }) => {
             )}
           </div>
         )}
+        {/* ✅ Party Payment History with Remarks */}
+        {partyPayments.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-gray-600">
+            <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">
+              💰 Payment History
+            </div>
+            <div className="flex flex-col gap-1">
+              {partyPayments.map((p, pi) => (
+                <div key={pi} className="flex flex-col text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">
+                      {new Date(p.date).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span className="text-green-400 font-mono">
+                      +Rs. {Number(p.amount).toLocaleString()}
+                    </span>
+                  </div>
+                  {p.remarks && (
+                    <div className="text-[9px] text-gray-400 italic mt-0.5">
+                      📝 {p.remarks}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -687,7 +749,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report (daily/weekly/monthly/annual) ───────────
+// ─── Print Report ────────────────────────────────────────── (✅ UPDATED: Party Payment Remarks Added)
 const printReport = (
   reportType,
   dateRange,
@@ -700,6 +762,29 @@ const printReport = (
     alert("Please allow popups to print!");
     return;
   }
+
+  // Helper for party payments with remarks
+  const getPartyPaymentsHTML = (item) => {
+    const payments = item.partyPayments || [];
+    if (payments.length === 0) return "";
+    return `
+      <div style="margin-top:8px; border-top:1px solid #ddd; padding-top:5px;">
+        <strong>Payment History:</strong>
+        ${payments
+          .map(
+            (p) => `
+          <div style="display:flex; justify-content:space-between; padding:3px 0; font-size:11px;">
+            <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
+            <span style="color:#27ae60; font-weight:bold;">+Rs. ${Number(p.amount).toLocaleString()}</span>
+          </div>
+          ${p.remarks ? `<div style="font-size:11px; color:#888; font-style:italic; margin-top:2px;">📝 ${p.remarks}</div>` : ""}
+        `,
+          )
+          .join("")}
+      </div>
+    `;
+  };
+
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -732,6 +817,7 @@ const printReport = (
         .payment-history { margin-top: 8px; font-size: 11px; border-top: 1px solid #ddd; padding-top: 5px; }
         .payment-history .ph-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
+        .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       </style>
     </head>
@@ -762,6 +848,7 @@ const printReport = (
                           <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
                           <span class="ph-amount">+Rs. ${Number(p.amount).toLocaleString()}</span>
                         </div>
+                        ${p.remarks ? `<div class="ph-remarks">📝 ${p.remarks}</div>` : ""}
                       `,
                         )
                         .join("")}
@@ -812,6 +899,27 @@ const printReport = (
               const onlinePaymentNotes = onlinePaymentEnabled
                 ? item.onlinePaymentNotes || ""
                 : "";
+              // ✅ Get party payments with remarks
+              const partyPayments = item.partyPayments || [];
+              const partyPaymentsHTML =
+                partyPayments.length > 0
+                  ? `
+                <div style="margin-top:8px; border-top:1px solid #ddd; padding-top:5px;">
+                  <strong>Payment History:</strong>
+                  ${partyPayments
+                    .map(
+                      (p) => `
+                    <div style="display:flex; justify-content:space-between; padding:3px 0; font-size:11px;">
+                      <span>${new Date(p.date).toLocaleDateString("en-GB")}</span>
+                      <span style="color:#27ae60; font-weight:bold;">+Rs. ${Number(p.amount).toLocaleString()}</span>
+                    </div>
+                    ${p.remarks ? `<div style="font-size:11px; color:#888; font-style:italic; margin-top:2px;">📝 ${p.remarks}</div>` : ""}
+                  `,
+                    )
+                    .join("")}
+                </div>
+              `
+                  : "";
               return `
           <div class="card">
             <div class="info-row"><span class="label">Party:</span><span class="value"><strong>${item.partyName}</strong></span></div>
@@ -850,6 +958,7 @@ const printReport = (
               `
                 : ""
             }
+            ${partyPaymentsHTML}
             ${
               item.remarks
                 ? `<div class="remarks-text" style="margin-top:8px;"><strong>Overall Remarks:</strong> ${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</div>`
@@ -882,9 +991,8 @@ const printReport = (
 // ─── Main Reports Component ────────────────────────────────
 const Reports = ({ customerData = [] }) => {
   const [reportType, setReportType] = useState("daily");
-  // 🟢 FIX: Use local date string to avoid UTC offset
-  const [selectedDate, setSelectedDate] = useState(
-    () => new Date().toLocaleDateString("en-CA"), // YYYY-MM-DD
+  const [selectedDate, setSelectedDate] = useState(() =>
+    new Date().toLocaleDateString("en-CA"),
   );
   const [activeView, setActiveView] = useState("all");
 
@@ -1006,7 +1114,6 @@ const Reports = ({ customerData = [] }) => {
 
   return (
     <div className="w-full flex flex-col gap-6 bg-gray-900 text-gray-100 px-4 md:px-6 py-6 rounded-2xl">
-      {/* Header */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-5 shadow-xl">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -1035,7 +1142,6 @@ const Reports = ({ customerData = [] }) => {
         </div>
       </div>
 
-      {/* Report Type Selector */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {reportTypes.map((type) => (
           <button
@@ -1056,7 +1162,6 @@ const Reports = ({ customerData = [] }) => {
         ))}
       </div>
 
-      {/* Date Navigation */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-3 flex flex-wrap items-center justify-between gap-3 shadow">
         <button
           onClick={() => navigateDate(-1)}
@@ -1096,7 +1201,6 @@ const Reports = ({ customerData = [] }) => {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           {
@@ -1142,7 +1246,6 @@ const Reports = ({ customerData = [] }) => {
         ))}
       </div>
 
-      {/* View Toggle */}
       <div className="flex bg-gray-800 p-1 rounded-xl w-fit border border-gray-700">
         {[
           { key: "all", label: "All Records", icon: "📋" },
@@ -1163,7 +1266,6 @@ const Reports = ({ customerData = [] }) => {
         ))}
       </div>
 
-      {/* Records Display */}
       <AnimatePresence mode="wait">
         {displayData.length === 0 ? (
           <div className="bg-gray-800 rounded-xl border border-gray-700 p-16 text-center">
@@ -1183,7 +1285,6 @@ const Reports = ({ customerData = [] }) => {
             exit={{ opacity: 0 }}
             className="flex flex-col gap-5"
           >
-            {/* Individual Records Table */}
             {(activeView === "all" || activeView === "individual") &&
               individualData.length > 0 && (
                 <div className="overflow-x-auto -mx-4 md:mx-0">
@@ -1301,7 +1402,6 @@ const Reports = ({ customerData = [] }) => {
                                 <div className="text-xs font-bold text-red-400">
                                   Bal: {item.remainingBalance?.toLocaleString()}
                                 </div>
-                                {/* Payment History */}
                                 {item.payments && item.payments.length > 0 && (
                                   <div className="mt-2 pt-2 border-t border-gray-600">
                                     <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">
@@ -1309,23 +1409,29 @@ const Reports = ({ customerData = [] }) => {
                                     </div>
                                     <div className="flex flex-col gap-1">
                                       {item.payments.map((p, pi) => (
-                                        <div
-                                          key={pi}
-                                          className="flex justify-between text-[10px]"
-                                        >
-                                          <span className="text-gray-400">
-                                            {new Date(
-                                              p.date,
-                                            ).toLocaleDateString("en-GB", {
-                                              day: "2-digit",
-                                              month: "short",
-                                              year: "numeric",
-                                            })}
-                                          </span>
-                                          <span className="text-green-400 font-mono">
-                                            +Rs.{" "}
-                                            {Number(p.amount).toLocaleString()}
-                                          </span>
+                                        <div key={pi} className="flex flex-col">
+                                          <div className="flex justify-between text-[10px]">
+                                            <span className="text-gray-400">
+                                              {new Date(
+                                                p.date,
+                                              ).toLocaleDateString("en-GB", {
+                                                day: "2-digit",
+                                                month: "short",
+                                                year: "numeric",
+                                              })}
+                                            </span>
+                                            <span className="text-green-400 font-mono">
+                                              +Rs.{" "}
+                                              {Number(
+                                                p.amount,
+                                              ).toLocaleString()}
+                                            </span>
+                                          </div>
+                                          {p.remarks && (
+                                            <div className="text-[9px] text-gray-400 italic mt-0.5">
+                                              📝 {p.remarks}
+                                            </div>
+                                          )}
                                         </div>
                                       ))}
                                     </div>
@@ -1362,7 +1468,6 @@ const Reports = ({ customerData = [] }) => {
                 </div>
               )}
 
-            {/* Party Records */}
             {(activeView === "all" || activeView === "party") &&
               partyData.length > 0 && (
                 <div className="flex flex-col gap-4">
