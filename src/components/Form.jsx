@@ -198,6 +198,11 @@ const VehicleCard = ({
     onChange(index, "vehicleRemaining", remaining);
   };
 
+  const handleVehicleFileReturnChange = (value) => {
+    const fileReturn = Number(value) || 0;
+    onChange(index, "vehicleFileReturn", fileReturn);
+  };
+
   const accentColor = isDebitActive ? "red" : "orange";
   const accentText = isDebitActive ? "text-red-400" : "text-orange-400";
   const accentBorder = isDebitActive ? "border-red-500" : "border-orange-500";
@@ -369,6 +374,22 @@ const VehicleCard = ({
         </div>
       </div>
 
+      {/* ✅ NEW: Vehicle File Return Field */}
+      <div className="flex flex-col">
+        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
+          File Return (Vehicle)
+        </label>
+        <input
+          type="number"
+          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
+          placeholder="Enter file return amount"
+          value={
+            vehicle.vehicleFileReturn === 0 ? "" : vehicle.vehicleFileReturn
+          }
+          onChange={(e) => handleVehicleFileReturnChange(e.target.value)}
+        />
+      </div>
+
       <div className="flex flex-col gap-2">
         <label className={`text-[10px] font-bold uppercase ${accentText}`}>
           Attachment
@@ -491,6 +512,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     vehicleTotal: 0,
     vehicleAdvance: 0,
     vehicleRemaining: 0,
+    vehicleFileReturn: 0,
     tokenTaxFrom: "",
     tokenTaxTo: "",
     remarks: "",
@@ -578,6 +600,10 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       (sum, v) => sum + (Number(v.vehicleRemaining) || 0),
       0,
     );
+    const totalVehiclesFileReturn = vehicles.reduce(
+      (sum, v) => sum + (Number(v.vehicleFileReturn) || 0),
+      0,
+    );
     const choiceAmount = Number(formData.choice) || 0;
     const onlinePayment = formData.onlinePaymentEnabled
       ? Number(formData.onlinePayment) || 0
@@ -585,9 +611,13 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
 
     const commission = Number(commissionAmount) || 0;
 
-    // 🔥 GRAND TOTAL = Vehicles + Choice + Commission - Online Payment
+    // 🔥 GRAND TOTAL = Vehicles + Vehicles File Return + Choice + Commission - Online Payment
     const grandTotal =
-      totalVehicles + choiceAmount + commission - onlinePayment;
+      totalVehicles +
+      totalVehiclesFileReturn +
+      choiceAmount +
+      commission -
+      onlinePayment;
 
     // ✅ FIX: TOTAL ADVANCE = Vehicle Advance + Manual Advance (formData.advancePaid)
     const manualAdvance = Number(formData.advancePaid) || 0;
@@ -611,6 +641,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       totalVehicles,
       totalVehiclesAdvance,
       totalVehiclesRemaining,
+      totalVehiclesFileReturn,
       choiceAmount,
       onlinePayment,
       grandTotal,
@@ -673,6 +704,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
             (v.vehicleTotal || 0) - (v.vehicleAdvance || 0),
             0,
           ),
+          vehicleFileReturn: v.vehicleFileReturn ?? 0,
           bankName: v.bankName || "Cash",
           region: v.region ?? "",
           regionPrice: v.regionPrice ?? 0,

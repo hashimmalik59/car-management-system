@@ -230,6 +230,10 @@ const printPartyReceipt = (item) => {
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+  const totalAllVehicleFileReturn = sumVehicleField(
+    vehicles,
+    "vehicleFileReturn",
+  );
 
   const choiceAmount = Number(item?.choice) || 0;
 
@@ -246,11 +250,15 @@ const printPartyReceipt = (item) => {
   );
 
   const adjustedTotal = Math.max(
-    totalAllVehicles + choiceAmount - onlinePayment,
+    totalAllVehicles + totalAllVehicleFileReturn + choiceAmount - onlinePayment,
     0,
   );
   const adjustedRemaining = Math.max(
-    remainingAllVehicles + choiceAmount - onlinePayment - totalPartyPayments,
+    remainingAllVehicles +
+      totalAllVehicleFileReturn +
+      choiceAmount -
+      onlinePayment -
+      totalPartyPayments,
     0,
   );
 
@@ -319,6 +327,7 @@ const printPartyReceipt = (item) => {
               <th>Bank</th>
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
+              <th class="text-right">File Return</th>
               <th class="text-right">Remaining</th>
               <th>Remarks</th>
             </tr>
@@ -342,6 +351,7 @@ const printPartyReceipt = (item) => {
                     <td>${v.bankName || "Cash"}</td>
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                    <td class="text-right">${Number(v.vehicleFileReturn || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
                     <td>${v.remarks || "—"}</td>
                   </tr>
@@ -354,6 +364,7 @@ const printPartyReceipt = (item) => {
               <td colspan="5" class="text-right"><strong>GRAND TOTAL</strong></td>
               <td class="text-right"><strong>${adjustedTotal.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedAdvance.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${(totalAllVehicleFileReturn || 0).toLocaleString()}</strong></td>
               <td class="text-right"><strong>${adjustedRemaining.toLocaleString()}</strong></td>
               <td></td>
             </tr>
@@ -418,6 +429,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
   const remaining = Number(vehicle.vehicleRemaining || 0);
+  const fileReturn = Number(vehicle.vehicleFileReturn || 0);
 
   const servicesHtml = (vehicle.serviceType || [])
     .map((s) => {
@@ -484,6 +496,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <h3>Payment Summary</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${total.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">File Return:</span><span class="value amount">Rs. ${fileReturn.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "#c0392b" : "#27ae60"}">Rs. ${remaining.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
 
@@ -550,6 +563,10 @@ const PartyLedgerBlock = ({
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+  const totalAllVehicleFileReturn = sumVehicleField(
+    vehicles,
+    "vehicleFileReturn",
+  );
 
   const choiceAmount = Number(item?.choice) || 0;
 
@@ -571,9 +588,10 @@ const PartyLedgerBlock = ({
   const adjustedAdvance =
     advanceAllVehicles + totalPartyPayments + manualAdvance;
 
-  // ✅ FIX: Include manual advance in remaining calculation
+  // ✅ FIX: Include manual advance and file return in remaining calculation
   const adjustedRemaining = Math.max(
     remainingAllVehicles +
+      (totalAllVehicleFileReturn || 0) +
       choiceAmount -
       onlinePayment -
       totalPartyPayments -
@@ -582,7 +600,10 @@ const PartyLedgerBlock = ({
   );
 
   const adjustedTotal = Math.max(
-    totalAllVehicles + choiceAmount - onlinePayment,
+    totalAllVehicles +
+      (totalAllVehicleFileReturn || 0) +
+      choiceAmount -
+      onlinePayment,
     0,
   );
 
@@ -709,6 +730,7 @@ const PartyLedgerBlock = ({
               <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
               <th className="px-4 py-2.5 text-right">Advance</th>
+              <th className="px-4 py-2.5 text-right">File Return</th>
               <th className="px-4 py-2.5 text-right">Remaining</th>
               <th className="px-4 py-2.5 text-center">Action</th>
             </tr>
@@ -717,7 +739,7 @@ const PartyLedgerBlock = ({
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
@@ -815,6 +837,9 @@ const PartyLedgerBlock = ({
                   <td className="px-4 py-3 text-right font-mono text-green-400">
                     {Number(v?.vehicleAdvance).toLocaleString()}
                   </td>
+                  <td className="px-4 py-3 text-right font-mono text-yellow-400">
+                    {Number(v?.vehicleFileReturn || 0).toLocaleString()}
+                  </td>
                   <td className="px-4 py-3 text-right font-mono text-orange-400">
                     {Number(v?.vehicleRemaining).toLocaleString()}
                   </td>
@@ -842,9 +867,11 @@ const PartyLedgerBlock = ({
                 <td className="px-4 py-3 text-right font-mono font-bold">
                   {adjustedTotal.toLocaleString()}
                 </td>
-                {/* ✅ Advance column updated with manual advance */}
                 <td className="px-4 py-3 text-right font-mono font-bold text-green-400">
                   {adjustedAdvance.toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-mono font-bold text-yellow-400">
+                  {(totalAllVehicleFileReturn || 0).toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-red-400">
                   {adjustedRemaining.toLocaleString()}
@@ -860,8 +887,11 @@ const PartyLedgerBlock = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-4 text-[10px] text-gray-300">
             <span>💰 Total: Rs. {adjustedTotal.toLocaleString()}</span>
-            {/* ✅ Advance display updated with manual advance */}
             <span>💵 Advance: Rs. {adjustedAdvance.toLocaleString()}</span>
+            <span>
+              📄 File Return: Rs.{" "}
+              {(totalAllVehicleFileReturn || 0).toLocaleString()}
+            </span>
             <span>📊 Remaining: Rs. {adjustedRemaining.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-3">
@@ -915,7 +945,6 @@ const PartyLedgerBlock = ({
                       +Rs. {Number(p.amount).toLocaleString()}
                     </span>
                   </div>
-                  {/* ✅ NEW: Show remarks if exists */}
                   {p.remarks && (
                     <div className="text-[9px] text-gray-400 italic mt-0.5">
                       📝 {p.remarks}
@@ -1124,6 +1153,10 @@ const Data = ({
     const vehicles = item?.vehicles || [];
     const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
     const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+    const totalAllVehicleFileReturn = sumVehicleField(
+      vehicles,
+      "vehicleFileReturn",
+    );
     const choiceAmount = Number(item?.choice) || 0;
     const onlinePayment = item?.onlinePaymentEnabled
       ? Number(item?.onlinePayment || 0)
@@ -1138,6 +1171,7 @@ const Data = ({
     const newTotalPayments = totalExistingPayments + amount;
     const newRemaining = Math.max(
       remainingAllVehicles +
+        (totalAllVehicleFileReturn || 0) +
         choiceAmount -
         onlinePayment -
         newTotalPayments -
@@ -1157,7 +1191,13 @@ const Data = ({
       partyPayments: [...existingPayments, newPayment],
       remainingBalance: newRemaining,
       advancePaid: newAdvance,
-      totalAmount: Math.max(totalAllVehicles + choiceAmount - onlinePayment, 0),
+      totalAmount: Math.max(
+        totalAllVehicles +
+          (totalAllVehicleFileReturn || 0) +
+          choiceAmount -
+          onlinePayment,
+        0,
+      ),
     };
 
     if (onUpdateCustomer) {
@@ -1458,19 +1498,16 @@ const Data = ({
                             </span>
                           )}
                         </td>
-                        {/* ✅ Commission - Desktop (White Color, No Label) */}
                         <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.commissionAmount > 0
                             ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
                             : "-"}
                         </td>
-                        {/* ✅ Choice - Desktop (White Color, No Label) */}
                         <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.choice !== undefined && item.choice !== null
                             ? `Rs.${item.choice}`
                             : "—"}
                         </td>
-                        {/* ✅ File Return - Desktop (White Color, No Label) */}
                         <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.fileReturn > 0
                             ? `Rs.${Number(item.fileReturn).toLocaleString()}`
@@ -1705,6 +1742,10 @@ const Data = ({
                     vehicles,
                     "vehicleTotal",
                   );
+                  const totalAllVehicleFileReturn = sumVehicleField(
+                    vehicles,
+                    "vehicleFileReturn",
+                  );
                   const choiceAmount = Number(paymentModal.item?.choice) || 0;
                   const onlinePayment = paymentModal.item?.onlinePaymentEnabled
                     ? Number(paymentModal.item?.onlinePayment || 0)
@@ -1719,7 +1760,10 @@ const Data = ({
                     Number(paymentModal.item?.advancePaid) || 0;
 
                   const grandTotal = Math.max(
-                    totalAllVehicles + choiceAmount - onlinePayment,
+                    totalAllVehicles +
+                      (totalAllVehicleFileReturn || 0) +
+                      choiceAmount -
+                      onlinePayment,
                     0,
                   );
                   currentBalance = Math.max(
@@ -1913,6 +1957,10 @@ const Data = ({
                           vehicles,
                           "vehicleTotal",
                         );
+                        const totalAllVehicleFileReturn = sumVehicleField(
+                          vehicles,
+                          "vehicleFileReturn",
+                        );
                         const choiceAmount =
                           Number(paymentModal.item?.choice) || 0;
                         const onlinePayment = paymentModal.item
@@ -1928,7 +1976,10 @@ const Data = ({
                         const manualAdvance =
                           Number(paymentModal.item?.advancePaid) || 0;
                         const grandTotal = Math.max(
-                          totalAllVehicles + choiceAmount - onlinePayment,
+                          totalAllVehicles +
+                            (totalAllVehicleFileReturn || 0) +
+                            choiceAmount -
+                            onlinePayment,
                           0,
                         );
                         return Math.max(
@@ -1951,6 +2002,10 @@ const Data = ({
                           vehicles,
                           "vehicleTotal",
                         );
+                        const totalAllVehicleFileReturn = sumVehicleField(
+                          vehicles,
+                          "vehicleFileReturn",
+                        );
                         const choiceAmount =
                           Number(paymentModal.item?.choice) || 0;
                         const onlinePayment = paymentModal.item
@@ -1966,7 +2021,10 @@ const Data = ({
                         const manualAdvance =
                           Number(paymentModal.item?.advancePaid) || 0;
                         const grandTotal = Math.max(
-                          totalAllVehicles + choiceAmount - onlinePayment,
+                          totalAllVehicles +
+                            (totalAllVehicleFileReturn || 0) +
+                            choiceAmount -
+                            onlinePayment,
                           0,
                         );
                         return Math.max(
