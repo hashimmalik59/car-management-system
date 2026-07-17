@@ -197,12 +197,16 @@ const getServicePrice = (servicePrices, serviceName) => {
   return Number(pObj || 0);
 };
 
-// ─── PARTY PRINT ──────────────────────────────────────────
+// ─── PARTY PRINT ────────────────────────────────────────── (✅ UPDATED: File Return Added)
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+  const totalAllVehicleFileReturn = sumVehicleField(
+    vehicles,
+    "vehicleFileReturn",
+  );
   const onlinePaymentEnabled = item.onlinePaymentEnabled || false;
   const onlinePayment = onlinePaymentEnabled
     ? Number(item.onlinePayment || 0)
@@ -260,6 +264,7 @@ const printPartyReceipt = (item) => {
               <th>Bank</th>
               <th class="text-right">Total</th>
               <th class="text-right">Advance</th>
+              <th class="text-right">File Return</th>
               <th class="text-right">Remaining</th>
             </tr>
           </thead>
@@ -282,6 +287,7 @@ const printPartyReceipt = (item) => {
                     <td>${v.bankName || "Cash"}</td>
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                    <td class="text-right">${Number(v.vehicleFileReturn || 0).toLocaleString()}</td>
                     <td class="text-right">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
                   </tr>
                 `;
@@ -293,6 +299,7 @@ const printPartyReceipt = (item) => {
               <td colspan="4" class="text-right"><strong>GRAND TOTAL</strong></td>
               <td class="text-right"><strong>${totalAllVehicles.toLocaleString()}</strong></td>
               <td class="text-right"><strong>${advanceAllVehicles.toLocaleString()}</strong></td>
+              <td class="text-right"><strong>${(totalAllVehicleFileReturn || 0).toLocaleString()}</strong></td>
               <td class="text-right"><strong>${remainingAllVehicles.toLocaleString()}</strong></td>
             </tr>
           </tfoot>
@@ -340,11 +347,12 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE PRINT ────────────────────────────────────────
+// ─── VEHICLE PRINT ──────────────────────────────────────── (✅ UPDATED: File Return Added)
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
   const remaining = Number(vehicle.vehicleRemaining || 0);
+  const fileReturn = Number(vehicle.vehicleFileReturn || 0);
   const servicesHtml = (vehicle.serviceType || [])
     .map(
       (s) =>
@@ -395,6 +403,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <h3>Payment Summary</h3>
         <div class="info-row"><span class="label">Total Amount:</span><span class="value amount">Rs. ${total.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Advance Paid:</span><span class="value amount">Rs. ${advance.toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">File Return:</span><span class="value amount">Rs. ${fileReturn.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Remaining:</span><span class="value amount" style="color: ${remaining > 0 ? "#c0392b" : "#27ae60"}">Rs. ${remaining.toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Payment Method:</span><span class="value">${vehicle.bankName || "Cash"}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
@@ -409,13 +418,17 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block ──────────────────────────────────
+// ─── Party Ledger Block ────────────────────────────────── (✅ UPDATED: File Return Added)
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
   const advanceAllVehicles = sumVehicleField(vehicles, "vehicleAdvance");
   const remainingAllVehicles = sumVehicleField(vehicles, "vehicleRemaining");
+  const totalAllVehicleFileReturn = sumVehicleField(
+    vehicles,
+    "vehicleFileReturn",
+  );
   const onlinePaymentEnabled = item?.onlinePaymentEnabled || false;
   const onlinePayment = onlinePaymentEnabled
     ? Number(item?.onlinePayment || 0)
@@ -475,6 +488,7 @@ const PartyLedgerBlock = ({ item }) => {
               <th className="px-4 py-2 text-center">Bank</th>
               <th className="px-4 py-2 text-right">Total</th>
               <th className="px-4 py-2 text-right">Advance</th>
+              <th className="px-4 py-2 text-right">File Return</th>
               <th className="px-4 py-2 text-right">Remaining</th>
               <th className="px-4 py-2 text-center">Action</th>
             </tr>
@@ -483,7 +497,7 @@ const PartyLedgerBlock = ({ item }) => {
             {!hasVehicles ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-4 text-center text-gray-500 text-sm"
                 >
                   No vehicles recorded.
@@ -570,6 +584,9 @@ const PartyLedgerBlock = ({ item }) => {
                   <td className="px-4 py-2 text-right font-mono text-green-400">
                     {Number(v.vehicleAdvance).toLocaleString()}
                   </td>
+                  <td className="px-4 py-2 text-right font-mono text-yellow-400">
+                    {Number(v.vehicleFileReturn || 0).toLocaleString()}
+                  </td>
                   <td className="px-4 py-2 text-right font-mono text-orange-400">
                     {Number(v.vehicleRemaining).toLocaleString()}
                   </td>
@@ -597,6 +614,9 @@ const PartyLedgerBlock = ({ item }) => {
                 <td className="px-4 py-2 text-right">
                   {advanceAllVehicles.toLocaleString()}
                 </td>
+                <td className="px-4 py-2 text-right text-yellow-400">
+                  {(totalAllVehicleFileReturn || 0).toLocaleString()}
+                </td>
                 <td className="px-4 py-2 text-right">
                   {remainingAllVehicles.toLocaleString()}
                 </td>
@@ -611,6 +631,10 @@ const PartyLedgerBlock = ({ item }) => {
           <div className="flex gap-3 text-xs text-gray-300">
             <span>💰 Total: Rs. {totalAllVehicles.toLocaleString()}</span>
             <span>💵 Advance: Rs. {advanceAllVehicles.toLocaleString()}</span>
+            <span>
+              📄 File Return: Rs.{" "}
+              {(totalAllVehicleFileReturn || 0).toLocaleString()}
+            </span>
             <span>
               📊 Remaining: Rs. {remainingAllVehicles.toLocaleString()}
             </span>
@@ -750,7 +774,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report ──────────────────────────────────────────
+// ─── Print Report ────────────────────────────────────────── (✅ UPDATED: File Return Added in Party Section)
 const printReport = (
   reportType,
   dateRange,
@@ -923,6 +947,11 @@ const printReport = (
                 </div>
               `
                   : "";
+              // ✅ Get vehicle file return total
+              const totalVehicleFileReturn = sumVehicleField(
+                item.vehicles,
+                "vehicleFileReturn",
+              );
               return `
           <div class="card">
             <div class="info-row"><span class="label">Party:</span><span class="value"><strong>${item.partyName}</strong></span></div>
@@ -930,7 +959,7 @@ const printReport = (
             <div class="info-row"><span class="label">NTN:</span><span class="value">${item.ntn || "N/A"}</span></div>
             <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
             <table>
-              <thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>Remaining</th></tr></thead>
+              <thead><tr><th>Vehicle</th><th>Total</th><th>Advance</th><th>File Return</th><th>Remaining</th></tr></thead>
               <tbody>
                 ${(item.vehicles || [])
                   .map(
@@ -939,6 +968,7 @@ const printReport = (
                     <td>${v.plate || "---"} (${v.model || "---"})</td>
                     <td class="text-right">${Number(v.vehicleTotal || 0).toLocaleString()}</td>
                     <td class="text-right text-green">${Number(v.vehicleAdvance || 0).toLocaleString()}</td>
+                    <td class="text-right text-yellow">${Number(v.vehicleFileReturn || 0).toLocaleString()}</td>
                     <td class="text-right text-red">${Number(v.vehicleRemaining || 0).toLocaleString()}</td>
                   </tr>
                 `,
@@ -949,6 +979,7 @@ const printReport = (
             <div class="grid-info">
               <div class="item">Total: Rs. ${sumVehicleField(item.vehicles, "vehicleTotal").toLocaleString()}</div>
               <div class="item text-green">Advance: Rs. ${sumVehicleField(item.vehicles, "vehicleAdvance").toLocaleString()}</div>
+              <div class="item text-yellow">File Return: Rs. ${(totalVehicleFileReturn || 0).toLocaleString()}</div>
               <div class="item text-red">Remaining: Rs. ${sumVehicleField(item.vehicles, "vehicleRemaining").toLocaleString()}</div>
             </div>
             ${
@@ -1385,7 +1416,6 @@ const Reports = ({ customerData = [] }) => {
                                 ? item.choice
                                 : "—"}
                             </td>
-                            {/* ✅ File Return Column */}
                             <td className="p-3 text-sm text-gray-300">
                               {item.fileReturn > 0
                                 ? `Rs. ${item.fileReturn.toLocaleString()}`
