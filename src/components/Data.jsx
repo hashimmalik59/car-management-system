@@ -1337,16 +1337,16 @@ const Data = ({
               <table className="min-w-full text-left border-collapse">
                 <thead className="hidden md:table-header-group bg-gray-700">
                   <tr className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
-                    <th className="p-4">Customer & ID</th>
-                    <th className="p-4">Service & Vehicle</th>
-                    <th className="p-4">Region & Region Price</th>
-                    <th className="p-4">Tracking (From/To)</th>
-                    <th className="p-4">Commission</th>
-                    <th className="p-4">Choice</th>
-                    <th className="p-4">File Return</th>
-                    <th className="p-4">Payment Details</th>
-                    <th className="p-4">Attachment</th>
-                    <th className="p-4 text-center">Action</th>
+                    <th className="p-3 min-w-[120px]">Customer & ID</th>
+                    <th className="p-3 min-w-[140px]">Service & Vehicle</th>
+                    <th className="p-3 min-w-[100px]">Region & Price</th>
+                    <th className="p-3 min-w-[130px]">Tracking (From/To)</th>
+                    <th className="p-3 min-w-[100px] text-right">Commission</th>
+                    <th className="p-3 min-w-[80px] text-right">Choice</th>
+                    <th className="p-3 min-w-[80px] text-right">File Return</th>
+                    <th className="p-3 min-w-[140px]">Payment Details</th>
+                    <th className="p-3 min-w-[80px]">Attachment</th>
+                    <th className="p-3 min-w-[100px] text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700 block md:table-row-group">
@@ -1365,7 +1365,7 @@ const Data = ({
                         key={item.id}
                         className="flex flex-col md:table-row transition-colors p-4 md:p-0 mb-4 md:mb-0 border md:border-none rounded-xl md:rounded-none bg-gray-800/50 md:bg-transparent hover:bg-gray-700/50"
                       >
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           <div className="text-sm font-bold uppercase text-white">
                             {item.partyName || "N/A"}
                           </div>
@@ -1376,7 +1376,7 @@ const Data = ({
                             {item.phone}
                           </div>
                         </td>
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           <div className="flex flex-wrap gap-1 mb-2">
                             {Array.isArray(item.serviceType) &&
                             item.serviceType.length > 0 ? (
@@ -1420,7 +1420,7 @@ const Data = ({
                             {item.model || "---"}
                           </div>
                         </td>
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           {item.region && (
                             <div className="flex flex-col gap-1">
                               <span className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded font-bold w-fit">
@@ -1435,7 +1435,7 @@ const Data = ({
                             </div>
                           )}
                         </td>
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           <div className="text-[10px] text-gray-300">
                             <span className="text-gray-500 font-bold">
                               FROM:
@@ -1458,25 +1458,25 @@ const Data = ({
                             </span>
                           )}
                         </td>
-                        {/* ✅ Commission Column - Phone View with Label */}
-                        <td className="p-4 text-sm text-gray-300">
+                        {/* ✅ Commission - Desktop (White Color, No Label) */}
+                        <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.commissionAmount > 0
-                            ? `Commission: Rs.${Number(item.commissionAmount).toLocaleString()}`
-                            : "Commission: -"}
+                            ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
+                            : "-"}
                         </td>
-                        {/* ✅ Choice Column - Phone View with Label */}
-                        <td className="p-4 text-sm text-gray-300">
+                        {/* ✅ Choice - Desktop (White Color, No Label) */}
+                        <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.choice !== undefined && item.choice !== null
-                            ? `Choice: Rs.${item.choice}`
-                            : "Choice: —"}
+                            ? `Rs.${item.choice}`
+                            : "—"}
                         </td>
-                        {/* ✅ File Return Column - Phone View with Label */}
-                        <td className="p-4 text-sm text-gray-300">
+                        {/* ✅ File Return - Desktop (White Color, No Label) */}
+                        <td className="p-3 md:p-4 block md:table-cell align-middle text-right text-white">
                           {item.fileReturn > 0
-                            ? `File Return: Rs.${Number(item.fileReturn).toLocaleString()}`
-                            : "File Return: -"}
+                            ? `Rs.${Number(item.fileReturn).toLocaleString()}`
+                            : "-"}
                         </td>
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between md:justify-start gap-2 flex-wrap">
                               <span
@@ -1537,7 +1537,7 @@ const Data = ({
                             )}
                           </div>
                         </td>
-                        <td className="p-2 md:p-4 block md:table-cell">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle">
                           <AttachmentDisplay attachment={item.attachment} />
                           {item.remarks && (
                             <div className="mt-1 space-y-1">
@@ -1563,7 +1563,7 @@ const Data = ({
                             </div>
                           )}
                         </td>
-                        <td className="p-3 md:p-4 block md:table-cell border-t md:border-none">
+                        <td className="p-3 md:p-4 block md:table-cell align-middle text-center">
                           <div className="grid grid-cols-2 gap-2 justify-end md:justify-center">
                             <button
                               onClick={() => printIndividualReceipt(item)}

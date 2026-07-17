@@ -136,6 +136,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
+        <div class="info-row"><span class="label">File Return:</span><span class="value">${(Number(item.fileReturn) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -196,7 +197,7 @@ const getServicePrice = (servicePrices, serviceName) => {
   return Number(pObj || 0);
 };
 
-// ─── PARTY PRINT ────────────────────────────────────────── (✅ UPDATED: Payment Remarks Added)
+// ─── PARTY PRINT ──────────────────────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -339,7 +340,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE PRINT ──────────────────────────────────────── (NO CHANGES)
+// ─── VEHICLE PRINT ────────────────────────────────────────
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -408,7 +409,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block ────────────────────────────────── (✅ UPDATED: Payment Remarks Added)
+// ─── Party Ledger Block ──────────────────────────────────
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -749,7 +750,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report ────────────────────────────────────────── (✅ UPDATED: Party Payment Remarks Added)
+// ─── Print Report ──────────────────────────────────────────
 const printReport = (
   reportType,
   dateRange,
@@ -860,6 +861,7 @@ const printReport = (
                 item.choice !== undefined && item.choice !== null
                   ? item.choice
                   : "—";
+              const fileReturn = Number(item.fileReturn) || 0;
               return `
           <div class="card">
             <div class="info-row"><span class="label">Customer:</span><span class="value"><strong>${item.partyName}</strong></span></div>
@@ -868,6 +870,7 @@ const printReport = (
             <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"} ${item.regionPrice ? `— Rs. ${Number(item.regionPrice).toLocaleString()}` : ""}</span></div>
             <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${commission.toLocaleString()}</span></div>
             <div class="info-row"><span class="label">Choice:</span><span class="value">${choice}</span></div>
+            <div class="info-row"><span class="label">File Return:</span><span class="value">Rs. ${fileReturn.toLocaleString()}</span></div>
             <div class="grid-info">
               <div class="item">Total: Rs. ${getItemTotal(item).toLocaleString()}</div>
               <div class="item text-green">Advance: Rs. ${getItemAdvance(item).toLocaleString()}</div>
@@ -1298,6 +1301,7 @@ const Reports = ({ customerData = [] }) => {
                           <th className="p-3">Tracking (From/To)</th>
                           <th className="p-3">Commission</th>
                           <th className="p-3">Choice</th>
+                          <th className="p-3">File Return</th>
                           <th className="p-3">Payment Details</th>
                           <th className="p-3">Attachment</th>
                           <th className="p-3 text-center">Action</th>
@@ -1380,6 +1384,12 @@ const Reports = ({ customerData = [] }) => {
                               {item.choice !== undefined && item.choice !== null
                                 ? item.choice
                                 : "—"}
+                            </td>
+                            {/* ✅ File Return Column */}
+                            <td className="p-3 text-sm text-gray-300">
+                              {item.fileReturn > 0
+                                ? `Rs. ${item.fileReturn.toLocaleString()}`
+                                : "-"}
                             </td>
                             <td className="p-3">
                               <div className="flex flex-col gap-0.5">
