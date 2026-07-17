@@ -57,13 +57,14 @@ const normalizeName = (name) => {
     .join(" ");
 };
 
-// For individual (no online payment)
+// ✅ UPDATED: File Return added to calculation
 const calculateTotalAmount = (
   prices,
   commission,
   advance,
   regionPrice = 0,
   choice = 0,
+  fileReturn = 0,
 ) => {
   const serviceSum = Object.values(prices || {}).reduce(
     (sum, v) =>
@@ -78,7 +79,8 @@ const calculateTotalAmount = (
     serviceSum +
     Number(commission || 0) +
     Number(regionPrice || 0) +
-    Number(choice || 0);
+    Number(choice || 0) +
+    Number(fileReturn || 0);
   const remaining = Math.max(total - Number(advance || 0), 0);
   return { total, remaining };
 };
@@ -495,6 +497,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     bankName: "Cash",
   });
 
+  // ✅ UPDATED: fileReturn added
   const createInitialForm = () => ({
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
@@ -515,6 +518,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     advancePaid: 0,
     remainingBalance: 0,
     choice: null,
+    fileReturn: 0,
     vehicles: [{ ...createEmptyVehicle(), id: crypto.randomUUID() }],
     receivedBy: "",
     handoverTo: "",
@@ -655,6 +659,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
           regionPrice: editingData.regionPrice ?? 0,
           conversionServiceType: editingData.conversionServiceType ?? "",
           choice: editingData.choice !== undefined ? editingData.choice : null,
+          fileReturn: editingData.fileReturn ?? 0,
         };
         setIsDebitView(false);
         setSelectedDebtor(null);
@@ -808,6 +813,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     setPartyDetailsPopup({ open: false, party: null });
   };
 
+  // ✅ UPDATED: fileReturn included
   const handleIndividualAmountChange = (field, value) => {
     const numValue = Number(value) || 0;
     if (field === "advancePaid") {
@@ -817,6 +823,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         numValue,
         formData.regionPrice,
         formData.choice,
+        formData.fileReturn,
       );
       setFormData((prev) => ({
         ...prev,
@@ -827,6 +834,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }
   };
 
+  // ✅ UPDATED: fileReturn included
   const handleIndividualRegionChange = (regionValue) => {
     setFormData((prev) => {
       const servicesTotal = Object.values(prev.servicePrices).reduce(
@@ -836,7 +844,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
       const newTotal =
         servicesTotal +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0);
+        (Number(prev.choice) || 0) +
+        (Number(prev.fileReturn) || 0);
       return {
         ...prev,
         region: regionValue,
@@ -847,6 +856,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
+  // ✅ UPDATED: fileReturn included
   const handleIndividualRegionPriceChange = (price) => {
     const regionPrice = Number(price) || 0;
     setFormData((prev) => {
@@ -858,7 +868,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         servicesTotal +
         regionPrice +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0);
+        (Number(prev.choice) || 0) +
+        (Number(prev.fileReturn) || 0);
       return {
         ...prev,
         regionPrice,
@@ -868,6 +879,7 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     });
   };
 
+  // ✅ UPDATED: fileReturn included
   const handleIndividualServicePriceChange = (service, price) => {
     const servicePrice = Number(price) || 0;
     setFormData((prev) => {
@@ -883,7 +895,8 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
         servicesTotal +
         (prev.regionPrice || 0) +
         (prev.commissionAmount || 0) +
-        (Number(prev.choice) || 0);
+        (Number(prev.choice) || 0) +
+        (Number(prev.fileReturn) || 0);
       return {
         ...prev,
         servicePrices: updatedPrices,
@@ -1504,7 +1517,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                                   servicesTotal +
                                   (prev.regionPrice || 0) +
                                   (commissionAmount || 0) +
-                                  (Number(prev.choice) || 0);
+                                  (Number(prev.choice) || 0) +
+                                  (Number(prev.fileReturn) || 0);
                                 return {
                                   ...prev,
                                   serviceType: updatedServices,
@@ -1667,7 +1681,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 />
               </div>
 
-              {/* 🔥 CHOICE FIELD — MOVED HERE (End of individual, before Payment Details) */}
+              {/* 🔥 CHOICE FIELD */}
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Choice (Additional Amount)
@@ -1687,10 +1701,43 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                         prev.advancePaid || 0,
                         prev.regionPrice || 0,
                         val || 0,
+                        prev.fileReturn || 0,
                       );
                       return {
                         ...prev,
                         choice: val,
+                        totalAmount: total,
+                        remainingBalance: remaining,
+                      };
+                    });
+                  }}
+                />
+              </div>
+
+              {/* ✅ NEW: FILE RETURN FIELD */}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  File Return
+                </label>
+                <input
+                  type="number"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                  placeholder="Enter file return amount"
+                  value={formData.fileReturn === 0 ? "" : formData.fileReturn}
+                  onChange={(e) => {
+                    const val = Number(e.target.value) || 0;
+                    setFormData((prev) => {
+                      const { total, remaining } = calculateTotalAmount(
+                        prev.servicePrices,
+                        commissionAmount,
+                        prev.advancePaid || 0,
+                        prev.regionPrice || 0,
+                        prev.choice || 0,
+                        val,
+                      );
+                      return {
+                        ...prev,
+                        fileReturn: val,
                         totalAmount: total,
                         remainingBalance: remaining,
                       };
@@ -1722,7 +1769,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                         servicesTotal +
                         (formData.regionPrice || 0) +
                         val +
-                        (Number(formData.choice) || 0);
+                        (Number(formData.choice) || 0) +
+                        (Number(formData.fileReturn) || 0);
                       setFormData((prev) => ({
                         ...prev,
                         commissionAmount: val,

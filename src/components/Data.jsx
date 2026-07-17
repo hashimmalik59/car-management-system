@@ -138,7 +138,7 @@ const AttachmentDisplay = ({ attachment }) => {
   );
 };
 
-// ─── INDIVIDUAL RECEIPT ────────────────────────── (NO CHANGES)
+// ─── INDIVIDUAL RECEIPT ──────────────────────────
 const printIndividualReceipt = (item) => {
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -159,6 +159,8 @@ const printIndividualReceipt = (item) => {
         .amount { font-size: 16px; font-weight: bold; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
         .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
+        .file-return-label { font-weight: bold; width: 160px; color: #333; }
+        .file-return-value { flex: 1; color: #222; }
       </style>
     </head>
     <body>
@@ -171,7 +173,9 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
+        <div class="info-row"><span class="label">File Return:</span><span class="value">${(Number(item.fileReturn) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${item.handoverTo || "N/A"}</span></div>
         <h3>Services:</h3>
@@ -220,7 +224,7 @@ const printIndividualReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── PARTY RECEIPT ────── (✅ UPDATED: Payment Remarks Added)
+// ─── PARTY RECEIPT ──────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -409,7 +413,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE RECEIPT ────── (NO CHANGES)
+// ─── VEHICLE RECEIPT ──────
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -532,7 +536,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── PARTY LEDGER BLOCK ────────── (NO CHANGES - Already has remarks)
+// ─── PARTY LEDGER BLOCK ──────────
 const PartyLedgerBlock = ({
   item,
   onEdit,
@@ -927,7 +931,7 @@ const PartyLedgerBlock = ({
   );
 };
 
-// ─── MAIN DATA COMPONENT ──────────────────────────────────────── (NO CHANGES to main component - already has all functionality)
+// ─── MAIN DATA COMPONENT ────────────────────────────────────────
 const Data = ({
   customerData = [],
   searchTerm = "",
@@ -1339,6 +1343,7 @@ const Data = ({
                     <th className="p-4">Tracking (From/To)</th>
                     <th className="p-4">Commission</th>
                     <th className="p-4">Choice</th>
+                    <th className="p-4">File Return</th>
                     <th className="p-4">Payment Details</th>
                     <th className="p-4">Attachment</th>
                     <th className="p-4 text-center">Action</th>
@@ -1348,7 +1353,7 @@ const Data = ({
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="9"
+                        colSpan="10"
                         className="p-10 text-center text-gray-500"
                       >
                         No individual records found.
@@ -1453,15 +1458,23 @@ const Data = ({
                             </span>
                           )}
                         </td>
+                        {/* ✅ Commission Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.commissionAmount > 0
-                            ? `Rs.${Number(item.commissionAmount).toLocaleString()}`
-                            : "-"}
+                            ? `Commission: Rs.${Number(item.commissionAmount).toLocaleString()}`
+                            : "Commission: -"}
                         </td>
+                        {/* ✅ Choice Column - Phone View with Label */}
                         <td className="p-4 text-sm text-gray-300">
                           {item.choice !== undefined && item.choice !== null
-                            ? `Rs.${item.choice}`
-                            : "—"}
+                            ? `Choice: Rs.${item.choice}`
+                            : "Choice: —"}
+                        </td>
+                        {/* ✅ File Return Column - Phone View with Label */}
+                        <td className="p-4 text-sm text-gray-300">
+                          {item.fileReturn > 0
+                            ? `File Return: Rs.${Number(item.fileReturn).toLocaleString()}`
+                            : "File Return: -"}
                         </td>
                         <td className="p-2 md:p-4 block md:table-cell">
                           <div className="flex flex-col gap-1">
