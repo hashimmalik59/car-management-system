@@ -55,40 +55,72 @@ const getServicePrice = (servicePrices, serviceName) => {
   return 0;
 };
 
-const AttachmentDisplay = ({ attachment }) => {
+// ─── ATTACHMENT DISPLAY ──────────────────────────────────────────
+const AttachmentDisplay = ({ attachment, attachments }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
-  if (!attachment) return <span className="text-gray-500 text-xs">—</span>;
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const hasMultiple =
+    attachments && Array.isArray(attachments) && attachments.length > 0;
+  const singleAttachment = attachment && !hasMultiple;
+
+  const allAttachments = hasMultiple
+    ? attachments
+    : singleAttachment
+      ? [attachment]
+      : [];
+
+  if (allAttachments.length === 0)
+    return <span className="text-gray-500 text-xs">—</span>;
 
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-  const fileName = attachment?.name || attachment?.preview || "";
-  const isImage =
-    attachment?.file?.type?.startsWith("image/") ||
-    imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
+
+  const getFileType = (att) => {
+    const fileName = att?.name || att?.preview || "";
+    const isImage =
+      att?.file?.type?.startsWith("image/") ||
+      imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
+    return isImage ? "image" : "file";
+  };
+
+  const openViewer = (index) => {
+    setSelectedIndex(index);
+    setViewerOpen(true);
+  };
 
   return (
     <>
-      <div
-        onClick={() => setViewerOpen(true)}
-        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-      >
-        {isImage ? (
-          <img
-            src={attachment.preview}
-            alt="attach"
-            className="w-6 h-6 object-cover rounded border border-gray-600"
-          />
-        ) : (
-          <span className="text-base">📄</span>
-        )}
-        <span
-          className="text-[10px] text-gray-400 truncate max-w-[100px]"
-          title={attachment.name}
-        >
-          {attachment.name}
-        </span>
+      <div className="flex flex-wrap gap-1.5">
+        {allAttachments.map((att, idx) => {
+          const isImage = getFileType(att) === "image";
+          return (
+            <div
+              key={idx}
+              onClick={() => openViewer(idx)}
+              className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity border border-gray-600 rounded p-1 bg-gray-700/50"
+            >
+              {isImage ? (
+                <img
+                  src={att.preview}
+                  alt={att.name}
+                  className="w-8 h-8 object-cover rounded"
+                />
+              ) : (
+                <span className="text-base px-1">📄</span>
+              )}
+              <span
+                className="text-[9px] text-gray-400 truncate max-w-[60px]"
+                title={att.name}
+              >
+                {att.name}
+              </span>
+            </div>
+          );
+        })}
       </div>
+
       <AnimatePresence>
-        {viewerOpen && (
+        {viewerOpen && allAttachments.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -109,27 +141,63 @@ const AttachmentDisplay = ({ attachment }) => {
               >
                 ✕
               </button>
-              {isImage ? (
-                <img
-                  src={attachment.preview}
-                  alt={attachment.name}
-                  className="max-w-full max-h-[90vh] object-contain"
-                />
-              ) : (
-                <div className="p-8 text-center">
-                  <span className="text-6xl mb-4 block">📄</span>
-                  <p className="text-gray-300 font-mono text-sm mb-4">
-                    {attachment.name}
-                  </p>
-                  <a
-                    href={attachment.preview}
-                    download={attachment.name}
-                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+
+              {allAttachments.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedIndex((prev) =>
+                        prev > 0 ? prev - 1 : allAttachments.length - 1,
+                      );
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl"
                   >
-                    Download File
-                  </a>
-                </div>
+                    ‹
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedIndex((prev) =>
+                        prev < allAttachments.length - 1 ? prev + 1 : 0,
+                      );
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl"
+                  >
+                    ›
+                  </button>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
+                    {selectedIndex + 1} / {allAttachments.length}
+                  </div>
+                </>
               )}
+
+              {allAttachments[selectedIndex] &&
+                (() => {
+                  const att = allAttachments[selectedIndex];
+                  const isImage = getFileType(att) === "image";
+                  return isImage ? (
+                    <img
+                      src={att.preview}
+                      alt={att.name}
+                      className="max-w-full max-h-[90vh] object-contain"
+                    />
+                  ) : (
+                    <div className="p-8 text-center">
+                      <span className="text-6xl mb-4 block">📄</span>
+                      <p className="text-gray-300 font-mono text-sm mb-4">
+                        {att.name}
+                      </p>
+                      <a
+                        href={att.preview}
+                        download={att.name}
+                        className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                      >
+                        Download File
+                      </a>
+                    </div>
+                  );
+                })()}
             </motion.div>
           </motion.div>
         )}
@@ -161,6 +229,10 @@ const printIndividualReceipt = (item) => {
         .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
         .file-return-label { font-weight: bold; width: 160px; color: #333; }
         .file-return-value { flex: 1; color: #222; }
+        .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+        .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+        .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
       </style>
     </head>
     <body>
@@ -207,6 +279,25 @@ const printIndividualReceipt = (item) => {
         `,
           )
           .join("")}
+        `
+            : ""
+        }
+        ${
+          item.attachments && item.attachments.length > 0
+            ? `
+        <h3>Attachments:</h3>
+        <div class="attachments-grid">
+          ${item.attachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
         `
             : ""
         }
@@ -275,6 +366,16 @@ const printPartyReceipt = (item) => {
         : item.remarks.text || item.remarks;
   }
 
+  // Get all vehicle attachments for receipt
+  const allVehicleAttachments = [];
+  vehicles.forEach((v) => {
+    if (v.attachments && Array.isArray(v.attachments)) {
+      v.attachments.forEach((att) => {
+        allVehicleAttachments.push(att);
+      });
+    }
+  });
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -303,6 +404,10 @@ const printPartyReceipt = (item) => {
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
         .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
         .vehicle-remarks { font-size: 11px; color: #555; font-style: italic; margin-top: 2px; }
+        .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+        .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+        .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
       </style>
     </head>
     <body>
@@ -410,6 +515,26 @@ const printPartyReceipt = (item) => {
             : ""
         }
 
+        ${
+          allVehicleAttachments.length > 0
+            ? `
+        <h3>📎 Vehicle Attachments:</h3>
+        <div class="attachments-grid">
+          ${allVehicleAttachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        `
+            : ""
+        }
+
         <div class="remarks-section">
           <span class="label">📝 Overall Remarks:</span>
           <span class="value">${overallRemark || "— No remarks —"}</span>
@@ -446,6 +571,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
 
   // ✅ Party payments for vehicle receipt
   const partyPayments = partyData.partyPayments || [];
+  const vehicleAttachments = vehicle.attachments || [];
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -470,6 +596,10 @@ const printVehicleReceipt = (vehicle, partyData) => {
         .payment-history .ph-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
         .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+        .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+        .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+        .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
       </style>
     </head>
     <body>
@@ -537,6 +667,26 @@ const printVehicleReceipt = (vehicle, partyData) => {
               .join("")}
           </div>
           `
+            : ""
+        }
+
+        ${
+          vehicleAttachments.length > 0
+            ? `
+        <h3>📎 Vehicle Attachments:</h3>
+        <div class="attachments-grid">
+          ${vehicleAttachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        `
             : ""
         }
 
@@ -726,7 +876,7 @@ const PartyLedgerBlock = ({
               <th className="px-4 py-2.5">Vehicle Details</th>
               <th className="px-4 py-2.5">Region & Region Price</th>
               <th className="px-4 py-2.5">Services</th>
-              <th className="px-4 py-2.5">Attachment</th>
+              <th className="px-4 py-2.5">Attachments</th>
               <th className="px-4 py-2.5 text-center">Bank</th>
               <th className="px-4 py-2.5 text-right">Total</th>
               <th className="px-4 py-2.5 text-right">Advance</th>
@@ -814,7 +964,11 @@ const PartyLedgerBlock = ({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <AttachmentDisplay attachment={v?.attachment} />
+                    {/* ✅ Vehicle Attachments Display */}
+                    <AttachmentDisplay
+                      attachment={v?.attachment}
+                      attachments={v?.attachments}
+                    />
                     {v?.remarks && (
                       <div className="mt-1 text-[9px] text-gray-400 break-words max-w-[180px]">
                         <span className="font-semibold text-gray-500">
@@ -1385,7 +1539,7 @@ const Data = ({
                     <th className="p-3 min-w-[80px] text-right">Choice</th>
                     <th className="p-3 min-w-[80px] text-right">File Return</th>
                     <th className="p-3 min-w-[140px]">Payment Details</th>
-                    <th className="p-3 min-w-[80px]">Attachment</th>
+                    <th className="p-3 min-w-[80px]">Attachments</th>
                     <th className="p-3 min-w-[100px] text-center">Action</th>
                   </tr>
                 </thead>
@@ -1575,7 +1729,10 @@ const Data = ({
                           </div>
                         </td>
                         <td className="p-3 md:p-4 block md:table-cell align-middle">
-                          <AttachmentDisplay attachment={item.attachment} />
+                          <AttachmentDisplay
+                            attachment={item.attachment}
+                            attachments={item.attachments}
+                          />
                           {item.remarks && (
                             <div className="mt-1 space-y-1">
                               <div className="text-[10px] text-gray-400 italic break-words">
