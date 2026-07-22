@@ -1242,7 +1242,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           )}
 
-          {/* Common fields — Party Name / Dropdown */}
+          {/* ─── COMMON FIELDS ─── */}
+          {/* 🔥 Party Name / Dropdown */}
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-gray-400 uppercase">
               {isDebitView
@@ -1348,6 +1349,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             )}
           </div>
 
+          {/* ─── PHONE + CNIC ─── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1384,6 +1386,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           </div>
 
+          {/* ─── RECEIVED FROM + HANDOVER TO ─── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1417,13 +1420,14 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           </div>
 
-          {/* Individual section */}
+          {/* ─── INDIVIDUAL SECTION ─── */}
           {formData.type === "individual" && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              {/* ✅ Vehicle No + Model + Bank (3 columns) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Vehicle No
+                    Vehicle No *
                   </label>
                   <input
                     type="text"
@@ -1450,70 +1454,73 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                     }
                   />
                 </div>
-              </div>
-
-              {/* 🔥 BANK DROPDOWN FOR INDIVIDUAL — ADDED HERE */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Bank / Payment Method
-                </label>
-                <select
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
-                  value={formData.bankName || "Cash"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bankName: e.target.value })
-                  }
-                >
-                  {bankOptions.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Region
-                </label>
-                <select
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
-                  value={formData.region || ""}
-                  onChange={(e) => handleIndividualRegionChange(e.target.value)}
-                >
-                  <option value="">Select Region</option>
-                  {regionOptions.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {formData.region && (
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Region Custom Price (Rs.)
+                    Bank / Payment Method
                   </label>
-                  <input
-                    type="number"
+                  <select
                     className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
-                    value={
-                      formData.regionPrice === 0 ? "" : formData.regionPrice
-                    }
+                    value={formData.bankName || "Cash"}
                     onChange={(e) =>
-                      handleIndividualRegionPriceChange(e.target.value)
+                      setFormData({ ...formData, bankName: e.target.value })
                     }
-                    placeholder="Region price"
-                  />
+                  >
+                    {bankOptions.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
+              </div>
 
+              {/* ✅ Region + Region Price (2 columns) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Region
+                  </label>
+                  <select
+                    className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
+                    value={formData.region || ""}
+                    onChange={(e) =>
+                      handleIndividualRegionChange(e.target.value)
+                    }
+                  >
+                    <option value="">Select Region</option>
+                    {regionOptions.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {formData.region && (
+                  <div className="flex flex-col">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Region Custom Price (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500"
+                      value={
+                        formData.regionPrice === 0 ? "" : formData.regionPrice
+                      }
+                      onChange={(e) =>
+                        handleIndividualRegionPriceChange(e.target.value)
+                      }
+                      placeholder="Region price"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* ✅ Services - 4 columns */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Services
                 </label>
-                <div className="grid grid-cols-2 gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700">
                   {serviceOptions
                     .filter((s) => s !== "Online")
                     .map((s) => (
@@ -1588,8 +1595,9 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               </div>
 
+              {/* ✅ Conversion Details (conditional) */}
               {formData.serviceType.includes("Conversion") && (
-                <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1 mb-3">
+                <div className="flex flex-col bg-gray-700 p-3 rounded-xl border border-gray-600 gap-1">
                   <label className="text-[10px] font-bold text-blue-400 uppercase">
                     Conversion Details (Specify Type)
                   </label>
@@ -1609,7 +1617,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* ✅ Token Tax From + Token Tax To (2 columns) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Token Tax From
@@ -1638,6 +1647,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               </div>
 
+              {/* ✅ Attachment */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Attachment
@@ -1698,6 +1708,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 )}
               </div>
 
+              {/* ✅ Remarks */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">
                   Remarks
@@ -1713,85 +1724,76 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 />
               </div>
 
-              {/* 🔥 CHOICE FIELD */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Choice (Additional Amount)
-                </label>
-                <input
-                  type="number"
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter choice amount"
-                  value={formData.choice === null ? "" : formData.choice}
-                  onChange={(e) => {
-                    const val =
-                      e.target.value === "" ? null : Number(e.target.value);
-                    setFormData((prev) => {
-                      const { total, remaining } = calculateTotalAmount(
-                        prev.servicePrices,
-                        commissionAmount,
-                        prev.advancePaid || 0,
-                        prev.regionPrice || 0,
-                        val || 0,
-                        prev.fileReturn || 0,
-                      );
-                      return {
-                        ...prev,
-                        choice: val,
-                        totalAmount: total,
-                        remainingBalance: remaining,
-                      };
-                    });
-                  }}
-                />
-              </div>
-
-              {/* ✅ NEW: FILE RETURN FIELD */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  File Return
-                </label>
-                <input
-                  type="number"
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter file return amount"
-                  value={formData.fileReturn === 0 ? "" : formData.fileReturn}
-                  onChange={(e) => {
-                    const val = Number(e.target.value) || 0;
-                    setFormData((prev) => {
-                      const { total, remaining } = calculateTotalAmount(
-                        prev.servicePrices,
-                        commissionAmount,
-                        prev.advancePaid || 0,
-                        prev.regionPrice || 0,
-                        prev.choice || 0,
-                        val,
-                      );
-                      return {
-                        ...prev,
-                        fileReturn: val,
-                        totalAmount: total,
-                        remainingBalance: remaining,
-                      };
-                    });
-                  }}
-                />
-              </div>
-
-              {/* 🔥 PAYMENT DETAILS — END MEIN */}
-              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
-                <div className="text-[10px] font-bold text-gray-400 uppercase">
-                  Payment Details
+              {/* ✅✅✅ NEW: Choice + File Return + Others (3 columns) ✅✅✅ */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Choice (Additional Amount)
+                  </label>
+                  <input
+                    type="number"
+                    className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                    placeholder="Enter choice amount"
+                    value={formData.choice === null ? "" : formData.choice}
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === "" ? null : Number(e.target.value);
+                      setFormData((prev) => {
+                        const { total, remaining } = calculateTotalAmount(
+                          prev.servicePrices,
+                          commissionAmount,
+                          prev.advancePaid || 0,
+                          prev.regionPrice || 0,
+                          val || 0,
+                          prev.fileReturn || 0,
+                        );
+                        return {
+                          ...prev,
+                          choice: val,
+                          totalAmount: total,
+                          remainingBalance: remaining,
+                        };
+                      });
+                    }}
+                  />
                 </div>
-
-                <div>
-                  {/* ✅ FIX: "Third-Party Commission" → "Others" */}
-                  <label className="text-[10px] font-semibold text-gray-300 block mb-1">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    File Return
+                  </label>
+                  <input
+                    type="number"
+                    className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                    placeholder="Enter file return amount"
+                    value={formData.fileReturn === 0 ? "" : formData.fileReturn}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setFormData((prev) => {
+                        const { total, remaining } = calculateTotalAmount(
+                          prev.servicePrices,
+                          commissionAmount,
+                          prev.advancePaid || 0,
+                          prev.regionPrice || 0,
+                          prev.choice || 0,
+                          val,
+                        );
+                        return {
+                          ...prev,
+                          fileReturn: val,
+                          totalAmount: total,
+                          remainingBalance: remaining,
+                        };
+                      });
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase">
                     Others (Rs.)
                   </label>
                   <input
                     type="number"
-                    value={commissionAmount}
+                    value={commissionAmount === 0 ? "" : commissionAmount}
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       setCommissionAmount(val);
@@ -1814,12 +1816,18 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                         ),
                       }));
                     }}
-                    className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
-                    placeholder="0"
+                    className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                    placeholder="Enter others amount"
                   />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
+              {/* ✅✅✅ NEW: Total + Advance + Remaining (3 columns) ✅✅✅ */}
+              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3">
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                  Payment Summary
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="text-[10px] font-semibold text-gray-300">
                       Total Amount (Rs.)
@@ -1847,15 +1855,16 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                       className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
                     />
                   </div>
-                </div>
-
-                <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
-                  <span className="text-[10px] font-bold text-gray-300">
-                    Remaining Balance
-                  </span>
-                  <span className="text-base font-bold text-blue-400">
-                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
-                  </span>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Remaining Balance
+                    </label>
+                    <div className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full flex items-center justify-between px-3">
+                      <span className="text-base font-bold text-blue-400">
+                        Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
