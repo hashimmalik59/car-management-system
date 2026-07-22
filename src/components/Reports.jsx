@@ -26,40 +26,71 @@ const getIndividualServicePrice = (servicePrices, serviceName) => {
   return Number(val || 0);
 };
 
-// ─── Attachment Display ──────────────────────────────────
-const AttachmentDisplay = ({ attachment }) => {
+// ─── Attachment Display (Multiple Support) ──────────────────────────────────
+const AttachmentDisplay = ({ attachment, attachments }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
-  if (!attachment) return <span className="text-gray-400 text-xs">—</span>;
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const hasMultiple =
+    attachments && Array.isArray(attachments) && attachments.length > 0;
+  const singleAttachment = attachment && !hasMultiple;
+
+  const allAttachments = hasMultiple
+    ? attachments
+    : singleAttachment
+      ? [attachment]
+      : [];
+
+  if (allAttachments.length === 0)
+    return <span className="text-gray-400 text-xs">—</span>;
 
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
-  const fileName = attachment?.name || attachment?.preview || "";
-  const isImage =
-    attachment?.file?.type?.startsWith("image/") ||
-    imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
+
+  const getFileType = (att) => {
+    const fileName = att?.name || att?.preview || "";
+    const isImage =
+      att?.file?.type?.startsWith("image/") ||
+      imageExtensions.some((ext) => fileName.toLowerCase().includes(ext));
+    return isImage ? "image" : "file";
+  };
+
+  const openViewer = (index) => {
+    setSelectedIndex(index);
+    setViewerOpen(true);
+  };
 
   return (
     <>
-      <div
-        onClick={() => setViewerOpen(true)}
-        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80"
-      >
-        {isImage ? (
-          <img
-            src={attachment.preview}
-            alt="attach"
-            className="w-6 h-6 object-cover rounded border border-gray-600"
-          />
-        ) : (
-          <span className="text-base">📄</span>
-        )}
-        <span
-          className="text-[10px] text-gray-400 truncate max-w-[100px]"
-          title={attachment.name}
-        >
-          {attachment.name}
-        </span>
+      <div className="flex flex-wrap gap-1.5">
+        {allAttachments.map((att, idx) => {
+          const isImage = getFileType(att) === "image";
+          return (
+            <div
+              key={idx}
+              onClick={() => openViewer(idx)}
+              className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity border border-gray-600 rounded p-1 bg-gray-700/50"
+            >
+              {isImage ? (
+                <img
+                  src={att.preview}
+                  alt={att.name}
+                  className="w-8 h-8 object-cover rounded"
+                />
+              ) : (
+                <span className="text-base px-1">📄</span>
+              )}
+              <span
+                className="text-[9px] text-gray-400 truncate max-w-[60px]"
+                title={att.name}
+              >
+                {att.name}
+              </span>
+            </div>
+          );
+        })}
       </div>
-      {viewerOpen && (
+
+      {viewerOpen && allAttachments.length > 0 && (
         <div
           onClick={() => setViewerOpen(false)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
@@ -74,27 +105,63 @@ const AttachmentDisplay = ({ attachment }) => {
             >
               ✕
             </button>
-            {isImage ? (
-              <img
-                src={attachment.preview}
-                alt={attachment.name}
-                className="max-w-full max-h-[90vh] object-contain"
-              />
-            ) : (
-              <div className="p-8 text-center">
-                <span className="text-6xl mb-4 block">📄</span>
-                <p className="text-gray-300 font-mono text-sm mb-4">
-                  {attachment.name}
-                </p>
-                <a
-                  href={attachment.preview}
-                  download={attachment.name}
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+
+            {allAttachments.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedIndex((prev) =>
+                      prev > 0 ? prev - 1 : allAttachments.length - 1,
+                    );
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl"
                 >
-                  Download File
-                </a>
-              </div>
+                  ‹
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedIndex((prev) =>
+                      prev < allAttachments.length - 1 ? prev + 1 : 0,
+                    );
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl"
+                >
+                  ›
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
+                  {selectedIndex + 1} / {allAttachments.length}
+                </div>
+              </>
             )}
+
+            {allAttachments[selectedIndex] &&
+              (() => {
+                const att = allAttachments[selectedIndex];
+                const isImage = getFileType(att) === "image";
+                return isImage ? (
+                  <img
+                    src={att.preview}
+                    alt={att.name}
+                    className="max-w-full max-h-[90vh] object-contain"
+                  />
+                ) : (
+                  <div className="p-8 text-center">
+                    <span className="text-6xl mb-4 block">📄</span>
+                    <p className="text-gray-300 font-mono text-sm mb-4">
+                      {att.name}
+                    </p>
+                    <a
+                      href={att.preview}
+                      download={att.name}
+                      className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                    >
+                      Download File
+                    </a>
+                  </div>
+                );
+              })()}
           </div>
         </div>
       )}
@@ -122,6 +189,10 @@ const printIndividualReceipt = (item) => {
       .amount { font-size: 16px; font-weight: bold; }
       h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
+      .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+      .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+      .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+      .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
     </style>
     </head>
     <body>
@@ -134,7 +205,7 @@ const printIndividualReceipt = (item) => {
         <div class="info-row"><span class="label">Model:</span><span class="value">${item.model || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"}</span></div>
         <div class="info-row"><span class="label">Region Price:</span><span class="value">Rs. ${(Number(item.regionPrice) || 0).toLocaleString()}</span></div>
-        <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="label">Others:</span><span class="value">Rs. ${(Number(item.commissionAmount) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Choice:</span><span class="value">${item.choice !== undefined && item.choice !== null ? item.choice : "—"}</span></div>
         <div class="info-row"><span class="label">File Return:</span><span class="value">${(Number(item.fileReturn) || 0).toLocaleString()}</span></div>
         <div class="info-row"><span class="label">Received From:</span><span class="value">${item.receivedBy || "N/A"}</span></div>
@@ -175,6 +246,25 @@ const printIndividualReceipt = (item) => {
             : ""
         }
         ${
+          item.attachments && item.attachments.length > 0
+            ? `
+        <h3>Attachments:</h3>
+        <div class="attachments-grid">
+          ${item.attachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        `
+            : ""
+        }
+        ${
           item.remarks
             ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</span></div>`
             : ""
@@ -197,7 +287,7 @@ const getServicePrice = (servicePrices, serviceName) => {
   return Number(pObj || 0);
 };
 
-// ─── PARTY PRINT ────────────────────────────────────────── (✅ UPDATED: File Return Added)
+// ─── PARTY PRINT ──────────────────────────────────────────
 const printPartyReceipt = (item) => {
   const vehicles = item.vehicles ?? [];
   const totalAllVehicles = sumVehicleField(vehicles, "vehicleTotal");
@@ -217,6 +307,16 @@ const printPartyReceipt = (item) => {
 
   // ✅ Get party payments with remarks
   const partyPayments = item.partyPayments || [];
+
+  // ✅ Get all vehicle attachments for receipt
+  const allVehicleAttachments = [];
+  vehicles.forEach((v) => {
+    if (v.attachments && Array.isArray(v.attachments)) {
+      v.attachments.forEach((att) => {
+        allVehicleAttachments.push(att);
+      });
+    }
+  });
 
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
@@ -240,6 +340,10 @@ const printPartyReceipt = (item) => {
       h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
       .payment-remark { font-size: 12px; color: #555; font-style: italic; margin-left: 10px; }
       .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+      .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+      .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+      .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+      .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
     </style>
     </head>
     <body>
@@ -305,6 +409,25 @@ const printPartyReceipt = (item) => {
           </tfoot>
         </table>
         ${
+          allVehicleAttachments.length > 0
+            ? `
+        <h3>📎 Vehicle Attachments:</h3>
+        <div class="attachments-grid">
+          ${allVehicleAttachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        `
+            : ""
+        }
+        ${
           onlinePaymentEnabled
             ? `
           <div style="margin-top:15px; border-top:1px solid #ccc; padding-top:10px;">
@@ -347,7 +470,7 @@ const printPartyReceipt = (item) => {
   printWindow.document.close();
 };
 
-// ─── VEHICLE PRINT ──────────────────────────────────────── (✅ UPDATED: File Return Added)
+// ─── VEHICLE PRINT ────────────────────────────────────────
 const printVehicleReceipt = (vehicle, partyData) => {
   const total = Number(vehicle.vehicleTotal || 0);
   const advance = Number(vehicle.vehicleAdvance || 0);
@@ -359,6 +482,10 @@ const printVehicleReceipt = (vehicle, partyData) => {
         `${s} — Rs. ${getServicePrice(vehicle.servicePrices, s).toLocaleString()}`,
     )
     .join("<br/>");
+
+  // ✅ Get vehicle attachments
+  const vehicleAttachments = vehicle.attachments || [];
+
   const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -377,6 +504,10 @@ const printVehicleReceipt = (vehicle, partyData) => {
       .amount { font-size: 16px; font-weight: bold; }
       .service-box { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px; }
       h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+      .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+      .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+      .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+      .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
     </style>
     </head>
     <body>
@@ -409,6 +540,25 @@ const printVehicleReceipt = (vehicle, partyData) => {
         <div class="info-row"><span class="label">Received From:</span><span class="value">${partyData.receivedBy || "N/A"}</span></div>
         <div class="info-row"><span class="label">Handover To:</span><span class="value">${partyData.handoverTo || "N/A"}</span></div>
         ${vehicle.remarks ? `<div class="info-row"><span class="label">Remarks:</span><span class="value">${vehicle.remarks}</span></div>` : ""}
+        ${
+          vehicleAttachments.length > 0
+            ? `
+        <h3>📎 Vehicle Attachments:</h3>
+        <div class="attachments-grid">
+          ${vehicleAttachments
+            .map(
+              (att) => `
+            <div class="attachment-item">
+              <img src="${att.preview}" alt="${att.name}" />
+              <div class="name">${att.name}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+        `
+            : ""
+        }
         <div class="footer"><p>Thank you for choosing Iqra Motor Insurance</p><p>Shop # 51, Aman Business Center, Near Hazakhawani Chowk, Ring Road, Peshawar</p></div>
       </div>
       <script>window.print();</script>
@@ -418,7 +568,7 @@ const printVehicleReceipt = (vehicle, partyData) => {
   printWindow.document.close();
 };
 
-// ─── Party Ledger Block ────────────────────────────────── (✅ UPDATED: File Return Added)
+// ─── Party Ledger Block ──────────────────────────────────
 const PartyLedgerBlock = ({ item }) => {
   const vehicles = Array.isArray(item?.vehicles) ? item.vehicles : [];
   const hasVehicles = vehicles.length > 0;
@@ -484,7 +634,7 @@ const PartyLedgerBlock = ({ item }) => {
               <th className="px-4 py-2">Vehicle Details</th>
               <th className="px-4 py-2">Region & Region Price</th>
               <th className="px-4 py-2">Services</th>
-              <th className="px-4 py-2">Attachment & Remarks</th>
+              <th className="px-4 py-2">Attachments & Remarks</th>
               <th className="px-4 py-2 text-center">Bank</th>
               <th className="px-4 py-2 text-right">Total</th>
               <th className="px-4 py-2 text-right">Advance</th>
@@ -561,7 +711,10 @@ const PartyLedgerBlock = ({ item }) => {
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    <AttachmentDisplay attachment={v.attachment} />
+                    <AttachmentDisplay
+                      attachment={v.attachment}
+                      attachments={v.attachments}
+                    />
                     {v.remarks && (
                       <div className="mt-1 text-[9px] text-gray-400 break-words max-w-[180px]">
                         <span className="font-semibold text-gray-500">
@@ -774,7 +927,7 @@ const getItemAdvance = (item) => {
   return Number(item.advancePaid || 0);
 };
 
-// ─── Print Report ────────────────────────────────────────── (✅ UPDATED: File Return Added in Party Section)
+// ─── Print Report ──────────────────────────────────────────
 const printReport = (
   reportType,
   dateRange,
@@ -830,6 +983,7 @@ const printReport = (
         .grid-info .item { font-weight: bold; font-size: 14px; }
         .text-green { color: #27ae60; }
         .text-red { color: #c0392b; }
+        .text-yellow { color: #d4a017; }
         table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; color: #1a1a1a; }
@@ -844,6 +998,10 @@ const printReport = (
         .payment-history .ph-amount { color: #27ae60; font-weight: bold; }
         .payment-history .ph-remarks { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
         h3 { font-size: 16px; color: #1a1a1a; margin: 15px 0 10px 0; }
+        .attachments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .attachment-item { border: 1px solid #ddd; border-radius: 5px; padding: 5px; text-align: center; width: 80px; }
+        .attachment-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 3px; }
+        .attachment-item .name { font-size: 10px; color: #555; margin-top: 3px; word-break: break-all; }
       </style>
     </head>
     <body>
@@ -880,19 +1038,39 @@ const printReport = (
                     </div>
                   `
                   : "";
-              const commission = Number(item.commissionAmount) || 0;
+              const others = Number(item.commissionAmount) || 0;
               const choice =
                 item.choice !== undefined && item.choice !== null
                   ? item.choice
                   : "—";
               const fileReturn = Number(item.fileReturn) || 0;
+              const attachmentsHtml =
+                item.attachments && item.attachments.length > 0
+                  ? `
+                    <div style="margin-top:8px; border-top:1px solid #ddd; padding-top:5px;">
+                      <strong>Attachments:</strong>
+                      <div class="attachments-grid">
+                        ${item.attachments
+                          .map(
+                            (att) => `
+                          <div class="attachment-item">
+                            <img src="${att.preview}" alt="${att.name}" />
+                            <div class="name">${att.name}</div>
+                          </div>
+                        `,
+                          )
+                          .join("")}
+                      </div>
+                    </div>
+                  `
+                  : "";
               return `
           <div class="card">
             <div class="info-row"><span class="label">Customer:</span><span class="value"><strong>${item.partyName}</strong></span></div>
             <div class="info-row"><span class="label">Phone:</span><span class="value">${item.phone || "N/A"}</span></div>
             <div class="info-row"><span class="label">Vehicle:</span><span class="value">${item.plate || "N/A"} (${item.model || "N/A"})</span></div>
             <div class="info-row"><span class="label">Region:</span><span class="value">${item.region || "N/A"} ${item.regionPrice ? `— Rs. ${Number(item.regionPrice).toLocaleString()}` : ""}</span></div>
-            <div class="info-row"><span class="label">Commission:</span><span class="value">Rs. ${commission.toLocaleString()}</span></div>
+            <div class="info-row"><span class="label">Others:</span><span class="value">Rs. ${others.toLocaleString()}</span></div>
             <div class="info-row"><span class="label">Choice:</span><span class="value">${choice}</span></div>
             <div class="info-row"><span class="label">File Return:</span><span class="value">Rs. ${fileReturn.toLocaleString()}</span></div>
             <div class="grid-info">
@@ -901,6 +1079,7 @@ const printReport = (
               <div class="item text-red">Remaining: Rs. ${getItemRemaining(item).toLocaleString()}</div>
             </div>
             ${paymentsHtml}
+            ${attachmentsHtml}
             ${
               item.remarks
                 ? `<div class="remarks-text"><strong>Remarks:</strong> ${typeof item.remarks === "string" ? item.remarks : item.remarks.text || item.remarks}</div>`
@@ -952,6 +1131,37 @@ const printReport = (
                 item.vehicles,
                 "vehicleFileReturn",
               );
+
+              // ✅ Get all vehicle attachments for report
+              const allVehicleAttachments = [];
+              (item.vehicles || []).forEach((v) => {
+                if (v.attachments && Array.isArray(v.attachments)) {
+                  v.attachments.forEach((att) => {
+                    allVehicleAttachments.push(att);
+                  });
+                }
+              });
+              const attachmentsHtml =
+                allVehicleAttachments.length > 0
+                  ? `
+                    <div style="margin-top:8px; border-top:1px solid #ddd; padding-top:5px;">
+                      <strong>📎 Vehicle Attachments:</strong>
+                      <div class="attachments-grid">
+                        ${allVehicleAttachments
+                          .map(
+                            (att) => `
+                          <div class="attachment-item">
+                            <img src="${att.preview}" alt="${att.name}" />
+                            <div class="name">${att.name}</div>
+                          </div>
+                        `,
+                          )
+                          .join("")}
+                      </div>
+                    </div>
+                  `
+                  : "";
+
               return `
           <div class="card">
             <div class="info-row"><span class="label">Party:</span><span class="value"><strong>${item.partyName}</strong></span></div>
@@ -982,6 +1192,7 @@ const printReport = (
               <div class="item text-yellow">File Return: Rs. ${(totalVehicleFileReturn || 0).toLocaleString()}</div>
               <div class="item text-red">Remaining: Rs. ${sumVehicleField(item.vehicles, "vehicleRemaining").toLocaleString()}</div>
             </div>
+            ${attachmentsHtml}
             ${
               onlinePaymentEnabled
                 ? `
@@ -1330,11 +1541,11 @@ const Reports = ({ customerData = [] }) => {
                           <th className="p-3">Service & Vehicle</th>
                           <th className="p-3">Region & Region Price</th>
                           <th className="p-3">Tracking (From/To)</th>
-                          <th className="p-3">Commission</th>
+                          <th className="p-3">Others</th>
                           <th className="p-3">Choice</th>
                           <th className="p-3">File Return</th>
                           <th className="p-3">Payment Details</th>
-                          <th className="p-3">Attachment</th>
+                          <th className="p-3">Attachments</th>
                           <th className="p-3 text-center">Action</th>
                         </tr>
                       </thead>
@@ -1480,7 +1691,10 @@ const Reports = ({ customerData = [] }) => {
                               </div>
                             </td>
                             <td className="p-3">
-                              <AttachmentDisplay attachment={item.attachment} />
+                              <AttachmentDisplay
+                                attachment={item.attachment}
+                                attachments={item.attachments}
+                              />
                               {item.remarks && (
                                 <div className="mt-1 text-[9px] text-gray-400">
                                   <span className="font-semibold">
