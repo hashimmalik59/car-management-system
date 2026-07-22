@@ -232,7 +232,8 @@ const VehicleCard = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* ✅ Vehicle No + Model + Bank (3 columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
             Vehicle No
@@ -258,46 +259,65 @@ const VehicleCard = ({
             onChange={(e) => onChange(index, "model", e.target.value)}
           />
         </div>
+        <div className="flex flex-col">
+          <label className={`text-[10px] font-bold uppercase ${accentText}`}>
+            Vehicle Bank Account
+          </label>
+          <select
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
+            value={vehicle.bankName || "Cash"}
+            onChange={(e) => onChange(index, "bankName", e.target.value)}
+          >
+            {bankOptions.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="flex flex-col">
-        <label className="text-[10px] font-bold text-gray-400 uppercase">
-          Region
-        </label>
-        <select
-          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
-          value={vehicle.region || ""}
-          onChange={(e) => handleRegionChange(e.target.value)}
-        >
-          <option value="">Select Region</option>
-          {regionOptions.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {vehicle.region && (
+      {/* ✅ Region + Region Price (2 columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
-            Region Custom Price (Rs.)
+            Region
           </label>
-          <input
-            type="number"
+          <select
             className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
-            value={vehicle.regionPrice === 0 ? "" : vehicle.regionPrice}
-            onChange={(e) => handleRegionPriceChange(e.target.value)}
-            placeholder="Region price"
-          />
+            value={vehicle.region || ""}
+            onChange={(e) => handleRegionChange(e.target.value)}
+          >
+            <option value="">Select Region</option>
+            {regionOptions.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
+        {vehicle.region && (
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              Region Custom Price (Rs.)
+            </label>
+            <input
+              type="number"
+              className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
+              value={vehicle.regionPrice === 0 ? "" : vehicle.regionPrice}
+              onChange={(e) => handleRegionPriceChange(e.target.value)}
+              placeholder="Region price"
+            />
+          </div>
+        )}
+      </div>
 
+      {/* ✅ Services - 4 columns */}
       <div className="flex flex-col gap-1">
         <label className="text-[10px] font-bold text-gray-400 uppercase">
           Services
         </label>
-        <div className="grid grid-cols-2 gap-2 bg-gray-900 p-2.5 rounded-lg border border-gray-700">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-gray-900 p-2.5 rounded-lg border border-gray-700">
           {serviceOptions.map((service) => (
             <div
               key={service}
@@ -349,7 +369,8 @@ const VehicleCard = ({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* ✅ Token Tax From + Token Tax To (2 columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-gray-400 uppercase">
             Token Tax From
@@ -374,80 +395,66 @@ const VehicleCard = ({
         </div>
       </div>
 
-      {/* ✅ NEW: Vehicle File Return Field */}
-      <div className="flex flex-col">
-        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
-          File Return (Vehicle)
-        </label>
-        <input
-          type="number"
-          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
-          placeholder="Enter file return amount"
-          value={
-            vehicle.vehicleFileReturn === 0 ? "" : vehicle.vehicleFileReturn
-          }
-          onChange={(e) => handleVehicleFileReturnChange(e.target.value)}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
-          Attachment
-        </label>
-        {!vehicle.attachment ? (
-          <label
-            className={`flex items-center justify-center gap-2 p-3 border-2 border-dashed ${accentBorder} rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700`}
-          >
-            <span className={`text-lg ${accentText}`}>📎</span>
-            <span className="text-[11px] text-gray-300">Upload Doc/Image</span>
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf"
-              onChange={handleFileChange}
-            />
+      {/* ✅ File Return + Attachment (2 columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="flex flex-col">
+          <label className={`text-[10px] font-bold uppercase ${accentText}`}>
+            File Return (Vehicle)
           </label>
-        ) : (
-          <div className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg">
-            {vehicle.attachment.preview &&
-            vehicle.attachment?.file?.type?.startsWith("image/") ? (
-              <img
-                src={vehicle.attachment.preview}
-                alt="preview"
-                className="w-10 h-10 object-cover rounded"
-              />
-            ) : (
-              <span className={`text-2xl ${accentText}`}>📄</span>
-            )}
-            <span className="text-[11px] flex-1 truncate text-gray-200">
-              {vehicle.attachment.name}
-            </span>
-            <button
-              type="button"
-              onClick={removeAttachment}
-              className="text-red-400 hover:text-red-300"
+          <input
+            type="number"
+            className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder} placeholder:text-gray-500`}
+            placeholder="Enter file return amount"
+            value={
+              vehicle.vehicleFileReturn === 0 ? "" : vehicle.vehicleFileReturn
+            }
+            onChange={(e) => handleVehicleFileReturnChange(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className={`text-[10px] font-bold uppercase ${accentText}`}>
+            Attachment
+          </label>
+          {!vehicle.attachment ? (
+            <label
+              className={`flex items-center justify-center gap-2 p-3 border-2 border-dashed ${accentBorder} rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700`}
             >
-              ✕
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col">
-        <label className={`text-[10px] font-bold uppercase ${accentText}`}>
-          Vehicle Bank Account
-        </label>
-        <select
-          className={`rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:${accentBorder}`}
-          value={vehicle.bankName || "Cash"}
-          onChange={(e) => onChange(index, "bankName", e.target.value)}
-        >
-          {bankOptions.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+              <span className={`text-lg ${accentText}`}>📎</span>
+              <span className="text-[11px] text-gray-300">
+                Upload Doc/Image
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*,.pdf"
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : (
+            <div className="flex items-center gap-2 p-2 bg-gray-700 border border-gray-600 rounded-lg">
+              {vehicle.attachment.preview &&
+              vehicle.attachment?.file?.type?.startsWith("image/") ? (
+                <img
+                  src={vehicle.attachment.preview}
+                  alt="preview"
+                  className="w-10 h-10 object-cover rounded"
+                />
+              ) : (
+                <span className={`text-2xl ${accentText}`}>📄</span>
+              )}
+              <span className="text-[11px] flex-1 truncate text-gray-200">
+                {vehicle.attachment.name}
+              </span>
+              <button
+                type="button"
+                onClick={removeAttachment}
+                className="text-red-400 hover:text-red-300"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col">
@@ -1242,115 +1249,76 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           )}
 
-          {/* ─── COMMON FIELDS ─── */}
-          {/* 🔥 Party Name / Dropdown */}
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">
-              {isDebitView
-                ? "Select Debtor / Party Name"
-                : isPartyOrDebit
-                  ? "Business / Party Name"
-                  : "Customer Name"}
-            </label>
+          {/* ✅ Party Name + Phone + NTN (3 columns) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                {isDebitView
+                  ? "Select Debtor / Party Name"
+                  : isPartyOrDebit
+                    ? "Business / Party Name"
+                    : "Customer Name"}
+              </label>
 
-            {/* 🔥 Dropdown for Debit view */}
-            {isDebitView && (
-              <div className="mb-2">
-                <select
-                  className="w-full rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-red-500"
-                  value={selectedDebtor?.id || ""}
-                  onChange={handleDebtorSelect}
-                >
-                  <option value="">— Select Debtor —</option>
-                  {activeDebtors.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.partyName} — Balance: Rs.{" "}
-                      {Number(entry.amount).toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-                {activeDebtors.length === 0 && (
-                  <p className="text-[10px] text-yellow-500 mt-1">
-                    ⚠️ No active debtors found. Add qarzdaar in Tab 5 (Debit)
-                    first.
-                  </p>
+              {/* 🔥 Dropdown for Debit view */}
+              {isDebitView && (
+                <div className="mb-2">
+                  <select
+                    className="w-full rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-red-500"
+                    value={selectedDebtor?.id || ""}
+                    onChange={handleDebtorSelect}
+                  >
+                    <option value="">— Select Debtor —</option>
+                    {activeDebtors.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.partyName} — Balance: Rs.{" "}
+                        {Number(entry.amount).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                  {activeDebtors.length === 0 && (
+                    <p className="text-[10px] text-yellow-500 mt-1">
+                      ⚠️ No active debtors found. Add qarzdaar in Tab 5 (Debit)
+                      first.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 🔥 Manual input for Party Name */}
+              <div className="relative">
+                <input
+                  type="text"
+                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500 w-full pr-10"
+                  placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
+                  required={!isDebitView}
+                  value={formData.partyName}
+                  onChange={handlePartyNameChange}
+                  disabled={!!selectedDebtor && isDebitView}
+                />
+                {/* 🔥 TICK/CROSS ICON — SIRF DEBIT VIEW MEIN */}
+                {isDebitView && formData.partyName?.trim() && (
+                  <button
+                    type="button"
+                    onClick={openPartyDetailsPopup}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-lg"
+                  >
+                    {debitEntries.some(
+                      (entry) =>
+                        normalizeName(entry.partyName) ===
+                        normalizeName(formData.partyName),
+                    ) ? (
+                      <span className="text-green-500 hover:opacity-80 cursor-pointer">
+                        ✅
+                      </span>
+                    ) : (
+                      <span className="text-red-500">❌</span>
+                    )}
+                  </button>
                 )}
               </div>
-            )}
-
-            {/* 🔥 Manual input for Party Name */}
-            <div className="relative">
-              <input
-                type="text"
-                className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm focus:border-blue-500 outline-none placeholder:text-gray-500 w-full pr-10"
-                placeholder={isPartyOrDebit ? "Al-Madina Motors" : "Ali Khan"}
-                required={!isDebitView}
-                value={formData.partyName}
-                onChange={handlePartyNameChange}
-                disabled={!!selectedDebtor && isDebitView}
-              />
-              {/* 🔥 TICK/CROSS ICON — SIRF DEBIT VIEW MEIN */}
-              {isDebitView && formData.partyName?.trim() && (
-                <button
-                  type="button"
-                  onClick={openPartyDetailsPopup}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-lg"
-                >
-                  {debitEntries.some(
-                    (entry) =>
-                      normalizeName(entry.partyName) ===
-                      normalizeName(formData.partyName),
-                  ) ? (
-                    <span className="text-green-500 hover:opacity-80 cursor-pointer">
-                      ✅
-                    </span>
-                  ) : (
-                    <span className="text-red-500">❌</span>
-                  )}
-                </button>
-              )}
             </div>
 
-            {/* 🔥 Live balance display for Debit view */}
-            {isDebitView && selectedDebtor && (
-              <div className="mt-2 bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-gray-400 uppercase font-bold">
-                    Current Balance
-                  </span>
-                  <span className="text-lg font-bold text-red-400">
-                    Rs. {selectedBalance.toLocaleString()}
-                  </span>
-                </div>
-                {partySummary.remainingBalance > 0 && (
-                  <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-600">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold">
-                      After Save
-                    </span>
-                    <span className="text-sm font-bold text-blue-400">
-                      Rs. {partySummary.finalBalance.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 🔥 Small hint text */}
-            {isDebitView && formData.partyName?.trim() && !selectedDebtor && (
-              <p className="text-[9px] text-gray-500 mt-1">
-                {debitEntries.some(
-                  (entry) =>
-                    normalizeName(entry.partyName) ===
-                    normalizeName(formData.partyName),
-                )
-                  ? "💡 Click ✅ to view party details"
-                  : "❌ Party not found in Debit Ledger"}
-              </p>
-            )}
-          </div>
-
-          {/* ─── PHONE + CNIC ─── */}
-          <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Phone
@@ -1366,6 +1334,7 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 disabled={!!selectedDebtor && isDebitView}
               />
             </div>
+
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 {isPartyOrDebit ? "NTN / Reg No" : "CNIC"}
@@ -1386,8 +1355,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
             </div>
           </div>
 
-          {/* ─── RECEIVED FROM + HANDOVER TO ─── */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* ✅ Received From + Handover To (2 columns) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="flex flex-col">
               <label className="text-[10px] font-bold text-gray-400 uppercase">
                 Received From
@@ -1905,70 +1874,71 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
               </div>
 
-              {/* 🔥 CHOICE FIELD — END MEIN */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Choice (Additional Amount)
-                </label>
-                <input
-                  type="number"
-                  className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
-                  placeholder="Enter choice amount"
-                  value={formData.choice === null ? "" : formData.choice}
-                  onChange={(e) => {
-                    const val =
-                      e.target.value === "" ? null : Number(e.target.value);
-                    setFormData((prev) => ({
-                      ...prev,
-                      choice: val,
-                    }));
-                  }}
-                />
-              </div>
-
-              {/* 🔥 ONLINE PAYMENT — END MEIN */}
-              <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
-                <label className="flex items-center gap-2 cursor-pointer text-green-400">
+              {/* ✅ Choice + Online Payment (2 columns) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Choice (Additional Amount)
+                  </label>
                   <input
-                    type="checkbox"
-                    className="w-4 h-4 accent-green-500"
-                    checked={formData.onlinePaymentEnabled || false}
-                    onChange={handlePartyOnlinePaymentToggle}
+                    type="number"
+                    className="rounded p-2 border border-gray-600 bg-gray-700 text-white text-sm outline-none focus:border-blue-500 placeholder:text-gray-500"
+                    placeholder="Enter choice amount"
+                    value={formData.choice === null ? "" : formData.choice}
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === "" ? null : Number(e.target.value);
+                      setFormData((prev) => ({
+                        ...prev,
+                        choice: val,
+                      }));
+                    }}
                   />
-                  <span className="text-[11px] font-medium">
-                    💳 Online Payment (Party)
-                  </span>
-                </label>
-                {formData.onlinePaymentEnabled && (
-                  <div className="ml-6 space-y-2">
+                </div>
+
+                <div className="flex flex-col gap-2 border border-green-600/30 rounded-lg p-3 bg-green-900/10">
+                  <label className="flex items-center gap-2 cursor-pointer text-green-400">
                     <input
-                      type="number"
-                      placeholder="Online Payment Custom Price (Rs.)"
-                      className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
-                      value={
-                        formData.onlinePayment === 0
-                          ? ""
-                          : formData.onlinePayment
-                      }
-                      onChange={handlePartyOnlinePaymentChange}
+                      type="checkbox"
+                      className="w-4 h-4 accent-green-500"
+                      checked={formData.onlinePaymentEnabled || false}
+                      onChange={handlePartyOnlinePaymentToggle}
                     />
-                    <textarea
-                      placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
-                      className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
-                      rows="2"
-                      value={formData.onlinePaymentNotes || ""}
-                      onChange={handlePartyOnlinePaymentNotesChange}
-                    />
-                  </div>
-                )}
+                    <span className="text-[11px] font-medium">
+                      💳 Online Payment (Party)
+                    </span>
+                  </label>
+                  {formData.onlinePaymentEnabled && (
+                    <div className="ml-6 space-y-2">
+                      <input
+                        type="number"
+                        placeholder="Online Payment Custom Price (Rs.)"
+                        className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+                        value={
+                          formData.onlinePayment === 0
+                            ? ""
+                            : formData.onlinePayment
+                        }
+                        onChange={handlePartyOnlinePaymentChange}
+                      />
+                      <textarea
+                        placeholder="Notes about online payment (e.g., transaction ID, bank name, etc.)"
+                        className="w-full rounded p-1.5 border border-gray-600 bg-gray-700 text-gray-200 text-[11px] outline-none placeholder:text-gray-500 focus:border-green-500"
+                        rows="2"
+                        value={formData.onlinePaymentNotes || ""}
+                        onChange={handlePartyOnlinePaymentNotesChange}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* 🔥 PAYMENT SUMMARY — END MEIN */}
-              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3 space-y-2">
-                <div className="text-[10px] font-bold text-gray-400 uppercase">
+              {/* ✅ Payment Summary - Total + Advance + Remaining (3 columns) */}
+              <div className="bg-gray-700 rounded-lg border border-gray-600 p-3">
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">
                   Payment Summary
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="text-[10px] font-semibold text-gray-300">
                       Total Amount (Rs.)
@@ -1997,14 +1967,16 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                       className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full outline-none focus:border-blue-500"
                     />
                   </div>
-                </div>
-                <div className="flex justify-between bg-gray-800 px-3 py-2 rounded-md">
-                  <span className="text-[10px] font-bold text-gray-300">
-                    Remaining Balance
-                  </span>
-                  <span className="text-base font-bold text-blue-400">
-                    Rs. {(formData.remainingBalance || 0).toLocaleString()}
-                  </span>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-300">
+                      Remaining Balance
+                    </label>
+                    <div className="rounded p-2 border border-gray-600 bg-gray-800 text-white text-sm w-full flex items-center justify-between px-3">
+                      <span className="text-base font-bold text-blue-400">
+                        Rs. {(formData.remainingBalance || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
