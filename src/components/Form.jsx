@@ -1785,8 +1785,9 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                 </div>
 
                 <div>
+                  {/* ✅ FIX: "Third-Party Commission" → "Others" */}
                   <label className="text-[10px] font-semibold text-gray-300 block mb-1">
-                    Third-Party Commission (Rs.)
+                    Others (Rs.)
                   </label>
                   <input
                     type="number"
