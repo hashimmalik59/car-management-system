@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import ImageUpload from "./ImageUpload"; // ✅ Naya component import
 import { db } from "../firebase";
 import {
   collection,
@@ -8,6 +9,10 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
+
+// ✅ Cloudinary configuration (FREE image hosting)
+const CLOUD_NAME = "t137mzk2"; // ← Your Cloudinary cloud name
+const UPLOAD_PRESET = "auto_khata_upload"; // ← Your upload preset
 
 const serviceOptions = [
   "New Registration",
@@ -85,6 +90,29 @@ const calculateTotalAmount = (
   return { total, remaining };
 };
 
+// ⚠️ PURANA UPLOAD FUNCTION - COMMENT KAR DIYA (Ab ImageUpload component use karo)
+/*
+const uploadToCloudinary = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+  formData.append("folder", "auto-khata");
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || "Upload failed");
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+};
+*/
+
 // ==================== VEHICLE CARD ====================
 const VehicleCard = ({
   vehicle,
@@ -109,33 +137,35 @@ const VehicleCard = ({
 
   const currentAdvance = Number(vehicle.vehicleAdvance) || 0;
 
-  // ✅ NEW: Handle multiple attachments for vehicle
-  const handleVehicleAttachmentsChange = (e) => {
+  // ✅ Vehicle attachments with Cloudinary (PURANA CODE - COMMENT KAR DIYA)
+  /*
+  const handleVehicleAttachmentsChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
     const newAttachments = [];
-    let loaded = 0;
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+    for (const file of files) {
+      try {
+        // const url = await uploadToCloudinary(file);
         newAttachments.push({
-          file: file,
+          url: url,
           name: file.name,
-          preview: reader.result,
+          preview: URL.createObjectURL(file),
           id: `vatt_${Date.now()}_${Math.random()}`,
         });
-        loaded++;
-        if (loaded === files.length) {
-          const currentAtts = vehicle.attachments || [];
-          onChange(index, "attachments", [...currentAtts, ...newAttachments]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
+      } catch (error) {
+        console.error("Vehicle upload failed:", error);
+        alert("Failed to upload: " + file.name);
+      }
+    }
 
+    const currentAtts = vehicle.attachments || [];
+    onChange(index, "attachments", [...currentAtts, ...newAttachments]);
+  };
+  */
+
+  // ✅ Remove vehicle attachment (local state only)
   const removeVehicleAttachment = (attId) => {
     const currentAtts = vehicle.attachments || [];
     onChange(
@@ -439,20 +469,8 @@ const VehicleCard = ({
             Attachments
           </label>
 
-          {/* Upload Button */}
-          <label
-            className={`flex items-center justify-center gap-2 p-2 border-2 border-dashed ${accentBorder} rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700`}
-          >
-            <span className={`text-lg ${accentText}`}>📎</span>
-            <span className="text-[11px] text-gray-300">Upload Files</span>
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf"
-              multiple
-              onChange={handleVehicleAttachmentsChange}
-            />
-          </label>
+          {/* 🆕 NEW: ImageUpload Component - Purane upload button ki jagah */}
+          <ImageUpload />
 
           {/* Attachments List */}
           {vehicleAttachments.length > 0 && (
@@ -1004,34 +1022,35 @@ const Form = ({ onAddCustomer, editingData, onCancelEdit, user }) => {
     }));
   };
 
-  // ✅ NEW: Handle multiple attachments for Individual
-  const handleIndividualAttachmentsChange = (e) => {
+  // ⚠️ PURANA ATTACHMENT FUNCTION - COMMENT KAR DIYA
+  /*
+  const handleIndividualAttachmentsChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
     const newAttachments = [];
-    let loaded = 0;
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+    for (const file of files) {
+      try {
+        // const url = await uploadToCloudinary(file);
         newAttachments.push({
-          file: file,
+          url: url,
           name: file.name,
-          preview: reader.result,
+          preview: URL.createObjectURL(file),
           id: `att_${Date.now()}_${Math.random()}`,
         });
-        loaded++;
-        if (loaded === files.length) {
-          setFormData((prev) => ({
-            ...prev,
-            attachments: [...(prev.attachments || []), ...newAttachments],
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Failed to upload: " + file.name);
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      attachments: [...(prev.attachments || []), ...newAttachments],
+    }));
   };
+  */
 
   const removeIndividualAttachment = (id) => {
     setFormData((prev) => ({
@@ -1172,8 +1191,42 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
       }),
     };
 
+    // ✅ Clean data before saving (remove preview, keep URL)
+    const cleanDataForFirestore = (data) => {
+      const clean = JSON.parse(JSON.stringify(data));
+
+      // Clean individual attachments
+      if (clean.attachments) {
+        clean.attachments = clean.attachments.map((att) => {
+          const cleanAtt = { ...att };
+          delete cleanAtt.preview; // Remove local preview
+          return cleanAtt;
+        });
+      }
+
+      // Clean vehicle attachments
+      if (clean.vehicles) {
+        clean.vehicles = clean.vehicles.map((v) => {
+          const cleanV = { ...v };
+          if (cleanV.attachments) {
+            cleanV.attachments = cleanV.attachments.map((att) => {
+              const cleanAtt = { ...att };
+              delete cleanAtt.preview;
+              return cleanAtt;
+            });
+          }
+          return cleanV;
+        });
+      }
+
+      return clean;
+    };
+
+    // ✅ Clean data before saving
+    const cleanData = cleanDataForFirestore(finalData);
+
     // ─── SAVE TO CUSTOMER LEDGER ───
-    const result = await onAddCustomer(finalData);
+    const result = await onAddCustomer(cleanData);
     if (result && result.success) {
       alert("Record Saved/Updated Successfully!");
       setFormData(createInitialForm());
@@ -1691,20 +1744,8 @@ Pehle Tab 5 (Debit) mein balance update karein.`);
                   Attachments (Multiple)
                 </label>
 
-                {/* Upload Button */}
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-blue-500 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
-                  <span className="text-blue-400 text-lg">📎</span>
-                  <span className="text-[11px] text-gray-300">
-                    Upload Multiple Files
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.pdf"
-                    multiple
-                    onChange={handleIndividualAttachmentsChange}
-                  />
-                </label>
+                {/* 🆕 NEW: ImageUpload Component */}
+                <ImageUpload />
 
                 {/* Attachments List */}
                 {formData.attachments && formData.attachments.length > 0 && (
