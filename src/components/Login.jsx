@@ -11,13 +11,18 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    // BLOCKED: Access is permanently disabled
+    alert("Access denied. System is locked.");
+    return;
+
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.error(error.message);
       alert("Invalid email or password");
-      setIsSubmitting(false); // Error par loading band taake user dubara koshish kare
+      setIsSubmitting(false);
     }
   };
 
@@ -54,15 +59,14 @@ const Login = () => {
           />
         </div>
 
-        {/* Password Field - FIXED NESTING */}
+        {/* Password Field */}
         <div>
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
             Password
           </label>
-          {/* Relative wrapper jo button ko input ke andar fixed alignment mein rakhega */}
           <div className="relative">
             <input
-              type={showPassword ? "text" : "password"} // Dynamic type switching
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition duration-200"
@@ -70,15 +74,13 @@ const Login = () => {
               required
             />
 
-            {/* Absolute element input block ke andar perfectly centered */}
             <button
-              type="button" // Zaroori hai taake form automatic submit na ho click par
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1 transition-transform active:scale-95 select-none bg-transparent border-none outline-none"
               title={showPassword ? "Hide Password" : "Show Password"}
             >
               {showPassword ? (
-                /* Eye Off Icon (SVG) */
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -94,7 +96,6 @@ const Login = () => {
                   />
                 </svg>
               ) : (
-                /* Eye On Icon (SVG) */
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
