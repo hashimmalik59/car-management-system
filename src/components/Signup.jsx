@@ -11,6 +11,11 @@ const Signup = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    
+    // BLOCKED: Registration is permanently disabled
+    alert("Access denied. System is locked.");
+    return;
+
     setIsSubmitting(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
@@ -146,3 +151,4 @@ const Signup = () => {
 };
 
 export default Signup;
+      
