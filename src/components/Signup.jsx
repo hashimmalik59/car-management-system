@@ -7,22 +7,20 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // 1. Eye toggle state add ki
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    
-    // BLOCKED: Registration is permanently disabled
-    alert("Access denied. System is locked.");
-    return;
-
     setIsSubmitting(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      alert("Account created successfully!");
+      // Yahan redirect kar sakte hain, e.g.:
+      // navigate("/dashboard");
     } catch (error) {
       console.error(error.message);
       alert("Incorrect format or email already in use");
-      setIsSubmitting(false); // 2. BUG FIXED: Error par false taake button wapas chal sakay
+      setIsSubmitting(false); // Sirf error par reset
     }
   };
 
@@ -64,10 +62,9 @@ const Signup = () => {
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
             Password
           </label>
-          {/* 3. Relative Wrapper button ko andar fit karne ke liye */}
           <div className="relative">
             <input
-              type={showPassword ? "text" : "password"} // Dynamic input type
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition duration-200"
@@ -75,16 +72,15 @@ const Signup = () => {
               minLength={6}
               required
             />
-            {/* 4. Absolute Eye Button */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-xl cursor-pointer select-none bg-transparent border-none outline-none p-1 transition-transform active:scale-95"
+              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer select-none bg-transparent border-none outline-none p-1 transition-transform active:scale-95"
               title={showPassword ? "Hide Password" : "Show Password"}
             >
-              <span className="text-white">
+              <span className="text-gray-500 dark:text-white">
                 {showPassword ? (
-                  /* 1. Eye Off Icon (SVG) */
+                  /* Eye Off Icon (SVG) */
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -100,7 +96,7 @@ const Signup = () => {
                     />
                   </svg>
                 ) : (
-                  /* 2. Eye On Icon (SVG) */
+                  /* Eye On Icon (SVG) */
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -151,4 +147,3 @@ const Signup = () => {
 };
 
 export default Signup;
-      
