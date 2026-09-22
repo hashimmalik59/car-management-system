@@ -11,18 +11,15 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // BLOCKED: Access is permanently disabled
-    alert("Access denied. System is locked.");
-    return;
-
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Success — yahan redirect kar sakte hain, e.g.:
+      // navigate("/dashboard");
     } catch (error) {
       console.error(error.message);
       alert("Invalid email or password");
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Sirf error par reset
     }
   };
 
@@ -81,6 +78,7 @@ const Login = () => {
               title={showPassword ? "Hide Password" : "Show Password"}
             >
               {showPassword ? (
+                /* Eye Off Icon */
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -96,6 +94,7 @@ const Login = () => {
                   />
                 </svg>
               ) : (
+                /* Eye On Icon */
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
